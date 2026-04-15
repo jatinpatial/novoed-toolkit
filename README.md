@@ -2,31 +2,28 @@
 
 **BCG U × NovoEd** — Design and generate professional HTML components and interactive SCORM activities for NovoEd courses.
 
-## What's inside
+## What's Inside
 
-- **16 HTML Components** — Banners, callouts, tables, cards, timelines, stats, and more. Copy-paste into NovoEd.
-- **10 SCORM Interactives** — Flip cards, accordions, tabs, stacked cards, cycle diagrams, and more. Download as SCORM .zip.
-- **BCG & BCG U branding** — Switch between brand themes instantly.
-- **Live preview** — See exactly how components look before using them.
-- **Zero dependencies** — Single HTML file, works offline, no build tools needed.
+- **16 HTML Components** — Banners, callouts, tables, cards, timelines, stats, and more
+- **10 SCORM Interactives** — Flip cards, accordions, tabs, stacked cards, cycle diagrams, and more
+- **BCG & BCG U branding** — Switch between brand themes instantly
+- **Live preview** — See exactly how components look before using them
+- **AI Content Generator** — Describe what you need and AI creates the component ([Open AI Chat](https://claude.ai/project/019d8ffd-704f-72ca-b771-e1b61ce90680))
 
-## How to use
+## Live Link
 
-1. Open `index.html` in any browser (or visit the GitHub Pages link)
-2. Pick HTML Components or SCORM Interactives
-3. Select a component, edit content, preview
-4. **HTML**: Copy the code → NovoEd → Contents → HTML
-5. **SCORM**: Download .zip → NovoEd → SCORM/AICC → Upload
+👉 **https://jatinpatial.github.io/novoed-toolkit/**
 
-## Live link
+## How to Use
 
-👉 **https://YOUR_USERNAME.github.io/novoed-toolkit/**
+### HTML Components
+Copy the code → NovoEd → Add element → Contents → HTML. Also works in Quiz & Survey edit view.
 
-_(Replace with your actual GitHub Pages URL after setup)_
+### SCORM Interactives
+Download .zip → NovoEd → Add element → SCORM/AICC → Upload the zip file.
 
-## Updating
-
-Replace `index.html` with the latest version from Claude and push. Changes go live within ~1 minute.
+### AI Generation
+Click "Open AI Chat" on the home page → Describe what you need → AI suggests components with content → Use in the toolkit.
 
 ## Feedback
 
