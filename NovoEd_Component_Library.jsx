@@ -1,36 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NovoEd Component Library</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',system-ui,sans-serif;background:#F7F8FA;color:#1a1a2e;}
-button,input,textarea{font-family:inherit;}
-button{cursor:pointer;transition:all 0.2s;}
-input,textarea{transition:border-color 0.2s;}
-input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
-.btn-back:hover{color:#29BA74!important;}
-.btn-pri:hover{filter:brightness(0.92);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;}
-.btn-sec:hover{background:#E6F7EF!important;border-color:#29BA74!important;}
-.btn-add:hover{background:#29BA74!important;color:#fff!important;}
-.btn-del:hover{color:#ef4444!important;}
-.btn-copy:hover{border-color:#29BA74!important;color:#29BA74!important;}
-.comp-card:hover{border-color:#29BA74!important;box-shadow:0 4px 20px rgba(41,186,116,0.15)!important;transform:translateY(-2px);}
-.mode-card:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,0.12)!important;}
-.filter-tab{padding:6px 16px;border-radius:20px;border:1.5px solid #E8E8E8;background:#fff;font-size:11px;font-weight:600;color:#888;cursor:pointer;transition:all 0.2s;}
-.filter-tab:hover{border-color:#29BA74;color:#29BA74;}
-.filter-tab.active{background:#29BA74;border-color:#29BA74;color:#fff;}
-::-webkit-scrollbar{width:5px;height:5px;}
-::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
-</style>
-</head>
-<body>
-<div id="root"></div>
-<script>
+import { useState } from "react";
 
 /* ── Brand Tokens ── */
 const B = {
@@ -47,80 +15,43 @@ function esc(s) {
 /* ── Fisher-Yates Shuffle ── */
 function shuffle(arr){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
-/* ── SVG Thumbnails ── */
-const T=i=>'<svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg" style="display:block;width:80px;height:48px;">'+i+'</svg>';
-const THUMBS={
-  highlight:T('<rect width="80" height="48" rx="4" fill="#197A56"/><rect x="8" y="13" width="64" height="9" rx="2" fill="rgba(255,255,255,0.92)"/><rect x="18" y="28" width="44" height="5" rx="2" fill="rgba(255,255,255,0.5)"/>'),
-  callout:T('<rect x="0" y="2" width="4" height="44" rx="2" fill="#29BA74"/><rect x="8" y="2" width="70" height="44" rx="3" fill="#E6F7EF"/><circle cx="19" cy="12" r="5" fill="#29BA74"/><rect x="30" y="9" width="40" height="5" rx="2" fill="#197A56" opacity="0.7"/><rect x="14" y="23" width="58" height="4" rx="2" fill="#ccc"/><rect x="14" y="31" width="48" height="4" rx="2" fill="#ddd"/>'),
-  quote:T('<rect x="0" y="4" width="4" height="40" rx="2" fill="#29BA74"/><rect x="8" y="4" width="70" height="40" rx="3" fill="#F5F5F5"/><rect x="14" y="13" width="52" height="4" rx="2" fill="#ccc"/><rect x="14" y="21" width="44" height="4" rx="2" fill="#ccc"/><rect x="14" y="29" width="48" height="4" rx="2" fill="#ccc"/><rect x="14" y="38" width="22" height="3" rx="2" fill="#29BA74"/>'),
-  divider:T('<line x1="0" y1="24" x2="24" y2="24" stroke="#29BA74" stroke-width="2"/><rect x="26" y="17" width="28" height="14" rx="7" fill="#E6F7EF"/><line x1="56" y1="24" x2="80" y2="24" stroke="#29BA74" stroke-width="2"/>'),
-  table:T('<rect width="80" height="14" rx="3" fill="#197A56"/><rect x="2" y="16" width="76" height="8" rx="1" fill="#F5F5F5"/><rect x="2" y="26" width="76" height="8" rx="1" fill="#fff"/><rect x="2" y="36" width="76" height="8" rx="1" fill="#F5F5F5"/><rect x="28" y="0" width="1" height="48" fill="rgba(255,255,255,0.15)"/>'),
-  compare:T('<rect x="0" y="0" width="22" height="48" rx="2" fill="#E8E8E8"/><rect x="24" y="0" width="26" height="13" rx="2" fill="#197A56"/><rect x="52" y="0" width="28" height="13" rx="2" fill="#29BA74"/><rect x="24" y="16" width="26" height="8" rx="1" fill="#F5F5F5"/><rect x="52" y="16" width="28" height="8" rx="1" fill="#F5F5F5"/><rect x="24" y="27" width="26" height="8" rx="1" fill="#fff"/><rect x="52" y="27" width="28" height="8" rx="1" fill="#fff"/><rect x="24" y="38" width="26" height="8" rx="1" fill="#F5F5F5"/><rect x="52" y="38" width="28" height="8" rx="1" fill="#F5F5F5"/>'),
-  glossary:T('<rect x="0" y="2" width="24" height="8" rx="2" fill="#29BA74"/><rect x="28" y="2" width="50" height="8" rx="2" fill="#E8E8E8"/><rect x="0" y="14" width="20" height="8" rx="2" fill="#197A56"/><rect x="28" y="14" width="50" height="8" rx="2" fill="#F5F5F5"/><rect x="0" y="26" width="26" height="8" rx="2" fill="#29BA74"/><rect x="28" y="26" width="50" height="8" rx="2" fill="#E8E8E8"/><rect x="0" y="38" width="18" height="8" rx="2" fill="#197A56"/><rect x="28" y="38" width="50" height="8" rx="2" fill="#F5F5F5"/>'),
-  cards:T('<rect x="0" y="4" width="24" height="40" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="0" y="4" width="24" height="5" rx="2" fill="#29BA74"/><rect x="28" y="4" width="24" height="40" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="28" y="4" width="24" height="5" rx="2" fill="#197A56"/><rect x="56" y="4" width="24" height="40" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="56" y="4" width="24" height="5" rx="2" fill="#29BA74"/>'),
-  columns:T('<rect x="0" y="0" width="22" height="5" rx="2" fill="#29BA74"/><rect x="0" y="8" width="22" height="38" rx="2" fill="#F5F5F5"/><rect x="29" y="0" width="22" height="5" rx="2" fill="#197A56"/><rect x="29" y="8" width="22" height="38" rx="2" fill="#F5F5F5"/><rect x="58" y="0" width="22" height="5" rx="2" fill="#29BA74"/><rect x="58" y="8" width="22" height="38" rx="2" fill="#F5F5F5"/>'),
-  process:T('<rect x="0" y="8" width="17" height="32" rx="3" fill="#197A56"/><rect x="21" y="8" width="17" height="32" rx="3" fill="#29BA74"/><rect x="42" y="8" width="17" height="32" rx="3" fill="#197A56"/><rect x="63" y="8" width="17" height="32" rx="3" fill="#29BA74"/><rect x="4" y="13" width="9" height="10" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="25" y="13" width="9" height="10" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="46" y="13" width="9" height="10" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="67" y="13" width="9" height="10" rx="1" fill="rgba(255,255,255,0.5)"/>'),
-  stats:T('<rect x="4" y="4" width="20" height="36" rx="2" fill="#E6F7EF"/><rect x="7" y="10" width="14" height="16" rx="1" fill="#29BA74"/><rect x="7" y="30" width="14" height="4" rx="1" fill="#aaa"/><rect x="30" y="4" width="20" height="36" rx="2" fill="#E6F7EF"/><rect x="33" y="10" width="14" height="16" rx="1" fill="#197A56"/><rect x="33" y="30" width="14" height="4" rx="1" fill="#aaa"/><rect x="56" y="4" width="20" height="36" rx="2" fill="#E6F7EF"/><rect x="59" y="10" width="14" height="16" rx="1" fill="#29BA74"/><rect x="59" y="30" width="14" height="4" rx="1" fill="#aaa"/>'),
-  iconrow:T('<circle cx="13" cy="17" r="9" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><rect x="4" y="30" width="18" height="3" rx="2" fill="#ccc"/><circle cx="40" cy="17" r="9" fill="#E6F7EF" stroke="#197A56" stroke-width="1.5"/><rect x="31" y="30" width="18" height="3" rx="2" fill="#ccc"/><circle cx="67" cy="17" r="9" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><rect x="58" y="30" width="18" height="3" rx="2" fill="#ccc"/>'),
-  timeline:T('<rect x="10" y="0" width="2" height="48" rx="1" fill="#E8E8E8"/><circle cx="11" cy="8" r="5" fill="#29BA74"/><rect x="20" y="5" width="52" height="5" rx="2" fill="#ccc"/><rect x="20" y="14" width="40" height="3" rx="2" fill="#E8E8E8"/><circle cx="11" cy="26" r="5" fill="#197A56"/><rect x="20" y="23" width="52" height="5" rx="2" fill="#ccc"/><rect x="20" y="32" width="34" height="3" rx="2" fill="#E8E8E8"/><circle cx="11" cy="42" r="5" fill="#29BA74"/><rect x="20" y="39" width="52" height="5" rx="2" fill="#ccc"/>'),
-  numbered:T('<rect x="0" y="2" width="13" height="13" rx="2" fill="#29BA74"/><rect x="17" y="5" width="55" height="5" rx="2" fill="#ccc"/><rect x="17" y="13" width="44" height="3" rx="2" fill="#E8E8E8"/><rect x="0" y="19" width="13" height="13" rx="2" fill="#197A56"/><rect x="17" y="22" width="55" height="5" rx="2" fill="#ccc"/><rect x="17" y="30" width="38" height="3" rx="2" fill="#E8E8E8"/><rect x="0" y="36" width="13" height="12" rx="2" fill="#29BA74"/><rect x="17" y="39" width="55" height="5" rx="2" fill="#ccc"/>'),
-  checklist:T('<rect x="0" y="2" width="12" height="12" rx="2" fill="#29BA74"/><rect x="17" y="5" width="55" height="5" rx="2" fill="#ccc"/><rect x="0" y="18" width="12" height="12" rx="2" fill="#197A56"/><rect x="17" y="21" width="45" height="5" rx="2" fill="#ccc"/><rect x="0" y="34" width="12" height="12" rx="2" fill="#29BA74"/><rect x="17" y="37" width="50" height="5" rx="2" fill="#ccc"/>'),
-  progress:T('<rect x="0" y="16" width="25" height="8" rx="2" fill="#29BA74"/><rect x="27" y="16" width="25" height="8" rx="2" fill="#29BA74"/><rect x="54" y="16" width="26" height="8" rx="2" fill="#E8E8E8"/><rect x="1" y="28" width="20" height="4" rx="2" fill="#ccc"/><rect x="29" y="28" width="20" height="4" rx="2" fill="#ccc"/><rect x="56" y="28" width="18" height="4" rx="2" fill="#E8E8E8"/>'),
-  keypoints:T('<rect x="0" y="0" width="4" height="48" rx="2" fill="#29BA74"/><rect x="8" y="3" width="66" height="9" rx="2" fill="#E6F7EF"/><circle cx="15" cy="22" r="4" fill="#29BA74"/><rect x="24" y="19" width="48" height="5" rx="2" fill="#ccc"/><circle cx="15" cy="34" r="4" fill="#197A56"/><rect x="24" y="31" width="42" height="5" rx="2" fill="#ccc"/><circle cx="15" cy="44" r="4" fill="#29BA74"/><rect x="24" y="41" width="48" height="5" rx="2" fill="#ddd"/>'),
-  faq:T('<rect x="0" y="2" width="60" height="7" rx="2" fill="#29BA74"/><rect x="0" y="12" width="76" height="4" rx="2" fill="#E8E8E8"/><rect x="0" y="19" width="60" height="4" rx="2" fill="#E8E8E8"/><rect x="0" y="29" width="64" height="7" rx="2" fill="#197A56"/><rect x="0" y="40" width="76" height="4" rx="2" fill="#E8E8E8"/>'),
-  twostat:T('<rect x="0" y="4" width="32" height="40" rx="3" fill="#E6F7EF"/><rect x="6" y="12" width="20" height="18" rx="2" fill="#29BA74"/><rect x="36" y="8" width="40" height="8" rx="2" fill="#197A56"/><rect x="36" y="20" width="40" height="4" rx="2" fill="#E8E8E8"/><rect x="36" y="28" width="32" height="4" rx="2" fill="#E8E8E8"/><rect x="36" y="36" width="38" height="4" rx="2" fill="#ddd"/>'),
-  badge:T('<rect x="0" y="15" width="30" height="16" rx="8" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><rect x="34" y="15" width="26" height="16" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/><rect x="64" y="15" width="16" height="16" rx="8" fill="#F5F5F5" stroke="#ccc" stroke-width="1.5"/>'),
-  s_flipcard:T('<rect x="2" y="3" width="34" height="42" rx="4" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="2" y="3" width="34" height="18" rx="3" fill="#E6F7EF"/><circle cx="19" cy="12" r="6" fill="#29BA74"/><rect x="44" y="3" width="34" height="42" rx="4" fill="#197A56"/><rect x="48" y="15" width="26" height="4" rx="2" fill="rgba(255,255,255,0.7)"/><rect x="48" y="23" width="22" height="4" rx="2" fill="rgba(255,255,255,0.45)"/>'),
-  s_accordion:T('<rect x="0" y="1" width="80" height="13" rx="3" fill="#E6F7EF"/><rect x="4" y="4" width="60" height="6" rx="2" fill="#29BA74" opacity="0.8"/><rect x="72" y="4" width="6" height="6" rx="1" fill="#29BA74"/><rect x="0" y="17" width="80" height="13" rx="3" fill="#F5F5F5" stroke="#E8E8E8" stroke-width="1"/><rect x="0" y="33" width="80" height="13" rx="3" fill="#F5F5F5" stroke="#E8E8E8" stroke-width="1"/>'),
-  s_tabs:T('<rect x="0" y="0" width="26" height="12" rx="3" fill="#197A56"/><rect x="28" y="0" width="24" height="12" rx="3" fill="#E8E8E8"/><rect x="54" y="0" width="26" height="12" rx="3" fill="#E8E8E8"/><rect x="0" y="14" width="80" height="34" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="8" y="22" width="64" height="4" rx="2" fill="#ccc"/><rect x="8" y="30" width="50" height="4" rx="2" fill="#E8E8E8"/>'),
-  s_reveal:T('<rect x="0" y="2" width="80" height="12" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><circle cx="9" cy="8" r="4" fill="#E8E8E8"/><rect x="18" y="5" width="44" height="5" rx="2" fill="#ccc"/><rect x="68" y="5" width="8" height="5" rx="1" fill="#29BA74"/><rect x="0" y="18" width="80" height="12" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><circle cx="9" cy="24" r="4" fill="#E8E8E8"/><rect x="0" y="34" width="80" height="12" rx="3" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/>'),
-  s_stepper:T('<circle cx="10" cy="24" r="7" fill="#197A56"/><rect x="18" y="23" width="16" height="2" fill="#29BA74"/><circle cx="40" cy="24" r="7" fill="#29BA74"/><rect x="48" y="23" width="16" height="2" fill="#E8E8E8"/><circle cx="70" cy="24" r="7" fill="#fff" stroke="#E8E8E8" stroke-width="2"/>'),
-  s_stacked:T('<rect x="12" y="14" width="44" height="30" rx="4" fill="#E8E8E8" transform="rotate(-6,34,29)"/><rect x="8" y="10" width="44" height="30" rx="4" fill="#F0EDE8" transform="rotate(-2,30,25)"/><rect x="4" y="6" width="44" height="30" rx="4" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/>'),
-  s_cycle:T('<circle cx="40" cy="24" r="16" fill="none" stroke="#E8E8E8" stroke-width="3"/><circle cx="40" cy="8" r="7" fill="#29BA74"/><circle cx="55" cy="33" r="7" fill="#197A56"/><circle cx="25" cy="33" r="7" fill="#29BA74"/>'),
-  s_sort:T('<rect x="0" y="2" width="70" height="10" rx="3" fill="#fff" stroke="#29BA74" stroke-width="1.5"/><rect x="73" y="4" width="5" height="6" rx="1" fill="#29BA74"/><rect x="0" y="16" width="70" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="73" y="18" width="5" height="6" rx="1" fill="#ccc"/><rect x="0" y="30" width="70" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="73" y="32" width="5" height="6" rx="1" fill="#ccc"/>'),
-  s_match:T('<rect x="0" y="4" width="32" height="10" rx="3" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><rect x="48" y="4" width="32" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><line x1="32" y1="9" x2="48" y2="9" stroke="#29BA74" stroke-width="1.5"/><rect x="0" y="19" width="32" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="48" y="19" width="32" height="10" rx="3" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><line x1="32" y1="24" x2="48" y2="24" stroke="#29BA74" stroke-width="1.5"/><rect x="0" y="34" width="32" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><rect x="48" y="34" width="32" height="10" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/>'),
-  s_timeline_i:T('<rect x="10" y="0" width="2" height="48" rx="1" fill="#E8E8E8"/><circle cx="11" cy="10" r="6" fill="#29BA74"/><rect x="20" y="4" width="52" height="5" rx="2" fill="#ccc"/><rect x="20" y="13" width="44" height="4" rx="2" fill="#E8E8E8"/><rect x="20" y="20" width="38" height="4" rx="2" fill="#E8E8E8"/><circle cx="11" cy="32" r="5" fill="#fff" stroke="#E8E8E8" stroke-width="2"/><rect x="20" y="29" width="52" height="5" rx="2" fill="#ccc"/><circle cx="11" cy="44" r="5" fill="#fff" stroke="#E8E8E8" stroke-width="2"/><rect x="20" y="41" width="52" height="5" rx="2" fill="#ccc"/>'),
-  s_quiz:T('<rect x="0" y="0" width="80" height="13" rx="3" fill="#E6F7EF"/><rect x="4" y="3" width="64" height="6" rx="2" fill="#197A56" opacity="0.8"/><rect x="0" y="17" width="80" height="7" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><circle cx="6" cy="20" r="3" fill="#E8E8E8"/><rect x="14" y="18" width="50" height="4" rx="2" fill="#ccc"/><rect x="0" y="28" width="80" height="7" rx="3" fill="#E6F7EF" stroke="#29BA74" stroke-width="1.5"/><circle cx="6" cy="31" r="3" fill="#29BA74"/><rect x="14" y="29" width="50" height="4" rx="2" fill="#29BA74" opacity="0.4"/><rect x="0" y="39" width="80" height="7" rx="3" fill="#fff" stroke="#E8E8E8" stroke-width="1.5"/><circle cx="6" cy="42" r="3" fill="#E8E8E8"/>'),
-  s_poll:T('<rect x="0" y="4" width="60" height="7" rx="2" fill="#29BA74"/><rect x="62" y="5" width="16" height="5" rx="2" fill="#ccc"/><rect x="0" y="15" width="46" height="7" rx="2" fill="#197A56"/><rect x="48" y="16" width="16" height="5" rx="2" fill="#ccc"/><rect x="0" y="26" width="36" height="7" rx="2" fill="#29BA74"/><rect x="38" y="27" width="16" height="5" rx="2" fill="#ccc"/><rect x="0" y="37" width="28" height="7" rx="2" fill="#197A56"/><rect x="30" y="38" width="16" height="5" rx="2" fill="#ccc"/>'),
-};
-
 /* ── Component Registries ── */
 const HTML_COMPS = [
-  { id:"highlight", n:"Banner",        d:"Full-width gradient header banner",      ic:"★", cat:"layout"   },
-  { id:"callout",   n:"Callout",       d:"Info, tip, warning or success box",      ic:"!", cat:"content"  },
-  { id:"quote",     n:"Blockquote",    d:"Pull quote with green accent bar",       ic:"❝", cat:"content"  },
-  { id:"divider",   n:"Divider",       d:"Labeled section separator",             ic:"—", cat:"layout"   },
-  { id:"table",     n:"Table",         d:"Green header with alternating rows",     ic:"▦", cat:"data"     },
-  { id:"compare",   n:"Comparison",    d:"Side-by-side two-column comparison",    ic:"⇔", cat:"data"     },
-  { id:"glossary",  n:"Glossary",      d:"Term–definition pairs",                 ic:"Aa",cat:"data"     },
-  { id:"cards",     n:"Cards",         d:"2–3 content cards side by side",        ic:"▦", cat:"layout"   },
-  { id:"columns",   n:"Columns",       d:"Multi-column text layout",              ic:"║", cat:"layout"   },
-  { id:"process",   n:"Process",       d:"Numbered steps in a row",               ic:"→", cat:"layout"   },
-  { id:"stats",     n:"Statistics",    d:"Big numbers with labels",               ic:"#", cat:"data"     },
-  { id:"iconrow",   n:"Icons",         d:"Symbol icons with labels in a row",     ic:"●", cat:"layout"   },
-  { id:"timeline",  n:"Timeline",      d:"Vertical timeline with dots",           ic:"│", cat:"content"  },
-  { id:"numbered",  n:"Numbered list", d:"Green numbered items with descriptions",ic:"1.",cat:"content"  },
-  { id:"checklist", n:"Checklist",     d:"Green checkmark list",                  ic:"✓", cat:"content"  },
-  { id:"progress",  n:"Progress bar",  d:"Stage completion tracker",              ic:"━", cat:"layout"   },
-  { id:"keypoints", n:"Key Takeaways", d:"Highlighted bullet summary box",        ic:"★", cat:"content"  },
-  { id:"faq",       n:"FAQ",           d:"Question & answer pairs",               ic:"?", cat:"content"  },
-  { id:"twostat",   n:"Stat Highlight",d:"One big stat with supporting text",     ic:"#", cat:"data"     },
-  { id:"badge",     n:"Label Badges",  d:"Colored pill tags — skills, topics",    ic:"◉", cat:"layout"   },
+  { id:"highlight", n:"Banner",        d:"Full-width gradient header banner",      ic:"★", cat:"layout"  },
+  { id:"callout",   n:"Callout",       d:"Info, tip, warning or success box",      ic:"!", cat:"content" },
+  { id:"quote",     n:"Blockquote",    d:"Pull quote with green accent bar",       ic:"❝", cat:"content" },
+  { id:"divider",   n:"Divider",       d:"Labeled section separator",             ic:"—", cat:"layout"  },
+  { id:"table",     n:"Table",         d:"Green header with alternating rows",     ic:"▦", cat:"data"    },
+  { id:"compare",   n:"Comparison",    d:"Side-by-side two-column comparison",    ic:"⇔", cat:"data"    },
+  { id:"glossary",  n:"Glossary",      d:"Term–definition pairs",                 ic:"Aa",cat:"data"    },
+  { id:"cards",     n:"Cards",         d:"2–3 content cards side by side",        ic:"▦", cat:"layout"  },
+  { id:"columns",   n:"Columns",       d:"Multi-column text layout",              ic:"║", cat:"layout"  },
+  { id:"process",   n:"Process",       d:"Numbered steps in a row",               ic:"→", cat:"layout"  },
+  { id:"stats",     n:"Statistics",    d:"Big numbers with labels",               ic:"#", cat:"data"    },
+  { id:"iconrow",   n:"Icons",         d:"Symbol icons with labels in a row",     ic:"●", cat:"layout"  },
+  { id:"timeline",  n:"Timeline",      d:"Vertical timeline with dots",           ic:"│", cat:"content" },
+  { id:"numbered",  n:"Numbered list", d:"Green numbered items with descriptions",ic:"1.",cat:"content" },
+  { id:"checklist", n:"Checklist",     d:"Green checkmark list",                  ic:"✓", cat:"content" },
+  { id:"progress",  n:"Progress bar",  d:"Stage completion tracker",              ic:"━", cat:"layout"  },
+  { id:"keypoints", n:"Key Takeaways", d:"Highlighted bullet summary box",        ic:"★", cat:"content" },
+  { id:"faq",       n:"FAQ",           d:"Question & answer pairs",               ic:"?", cat:"content" },
+  { id:"twostat",   n:"Stat Highlight",d:"One big stat with supporting text",     ic:"#", cat:"data"    },
+  { id:"badge",     n:"Label Badges",  d:"Colored pill tags — skills, topics",    ic:"◉", cat:"layout"  },
 ];
 
 const SCORM_COMPS = [
-  { id:"s_flipcard",   n:"Flip cards",         d:"Click cards to flip and reveal back content",    ic:"↻", cat:"interactive" },
-  { id:"s_accordion",  n:"Accordion",          d:"Click to expand/collapse sections",              ic:"▼", cat:"interactive" },
-  { id:"s_tabs",       n:"Tabs",               d:"Switch between tabbed content panels",           ic:"▭", cat:"interactive" },
-  { id:"s_reveal",     n:"Click to reveal",    d:"Hidden content revealed behind buttons",         ic:"◉", cat:"interactive" },
-  { id:"s_stepper",    n:"Step by step",       d:"Navigate through steps with next/prev",         ic:"→", cat:"interactive" },
-  { id:"s_stacked",    n:"Stacked cards",      d:"Overlapping cards, click to expand",            ic:"▣", cat:"interactive" },
-  { id:"s_cycle",      n:"Cycle diagram",      d:"Circular process with click-to-expand nodes",   ic:"⟳", cat:"interactive" },
+  { id:"s_flipcard",   n:"Flip cards",          d:"Click cards to flip and reveal back content",   ic:"↻", cat:"interactive" },
+  { id:"s_accordion",  n:"Accordion",           d:"Click to expand/collapse sections",             ic:"▼", cat:"interactive" },
+  { id:"s_tabs",       n:"Tabs",                d:"Switch between tabbed content panels",          ic:"▭", cat:"interactive" },
+  { id:"s_reveal",     n:"Click to reveal",     d:"Hidden content revealed behind buttons",        ic:"◉", cat:"interactive" },
+  { id:"s_stepper",    n:"Step by step",        d:"Navigate through steps with next/prev",        ic:"→", cat:"interactive" },
+  { id:"s_stacked",    n:"Stacked cards",       d:"Overlapping cards, click to expand",           ic:"▣", cat:"interactive" },
+  { id:"s_cycle",      n:"Cycle diagram",       d:"Circular process with click-to-expand nodes",  ic:"⟳", cat:"interactive" },
   { id:"s_timeline_i", n:"Interactive timeline",d:"Click timeline points for details",            ic:"│", cat:"interactive" },
-  { id:"s_sort",       n:"Drag to sort",       d:"Drag items into the correct order",             ic:"↕", cat:"assessment"  },
-  { id:"s_match",      n:"Matching",           d:"Match terms with definitions",                  ic:"⇄", cat:"assessment"  },
-  { id:"s_quiz",       n:"Multiple Choice",    d:"Question with 4 options and instant feedback",  ic:"?", cat:"assessment"  },
-  { id:"s_poll",       n:"Opinion Poll",       d:"Vote and see animated bar chart results",       ic:"📊",cat:"assessment"  },
+  { id:"s_sort",       n:"Drag to sort",        d:"Drag items into the correct order",            ic:"↕", cat:"assessment"  },
+  { id:"s_match",      n:"Matching",            d:"Match terms with definitions",                 ic:"⇄", cat:"assessment"  },
+  { id:"s_quiz",       n:"Multiple Choice",     d:"Question with 4 options and instant feedback", ic:"?", cat:"assessment"  },
+  { id:"s_poll",       n:"Opinion Poll",        d:"Vote and see animated bar chart results",      ic:"📊",cat:"assessment"  },
 ];
 
 /* ── HTML Generator ── */
@@ -393,7 +324,7 @@ function genSCORMhtml(sel, data, brand) {
 
   } else if (sel === "s_accordion") {
     h += '.item{margin-bottom:10px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);box-shadow:0 2px 12px rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.05);animation:fadeUp 0.5s ease both;transition:box-shadow 0.3s;}' +
-      '.item:nth-child(1){animation-delay:0.1s}.item:nth-child(2){animation-delay:0.18s}.item:nth-child(3){animation-delay:0.26s}.item:nth-child(4){animation-delay:0.34s}.item:nth-child(5){animation-delay:0.42s}.item:nth-child(6){animation-delay:0.5s}.item:nth-child(7){animation-delay:0.58s}.item:nth-child(8){animation-delay:0.66s}' +
+      '.item:nth-child(1){animation-delay:0.15s}.item:nth-child(2){animation-delay:0.25s}.item:nth-child(3){animation-delay:0.35s}.item:nth-child(4){animation-delay:0.45s}' +
       '.item:hover{box-shadow:0 4px 20px rgba(0,0,0,0.08);}' +
       '.header{padding:18px 22px;cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;transition:all 0.3s;}' +
       '.header .num{width:28px;height:28px;background:linear-gradient(135deg,'+b2.pri+','+b2.priDk+');border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;margin-right:14px;flex-shrink:0;}' +
@@ -402,7 +333,7 @@ function genSCORMhtml(sel, data, brand) {
       '.item.open .arrow{transform:rotate(180deg);background:'+b2.pri+';color:#fff;}' +
       '.body{max-height:0;overflow:hidden;transition:max-height 0.5s cubic-bezier(0.4,0,0.2,1);}' +
       '.body-inner{padding:0 22px 20px 64px;font-size:13px;color:'+b2.txL+';line-height:1.8;}' +
-      '.item.open .body{max-height:600px;}';
+      '.item.open .body{max-height:300px;}';
     h += '</style></head><body><div class="container">';
     h += pageHeader;
     items.forEach((it, i) => {
@@ -434,7 +365,7 @@ function genSCORMhtml(sel, data, brand) {
       '.reveal-btn .icon{width:36px;height:36px;background:linear-gradient(135deg,'+b2.priLt+','+b2.pri+'22);border-radius:10px;display:flex;align-items:center;justify-content:center;color:'+b2.pri+';font-size:14px;transition:all 0.4s;flex-shrink:0;}' +
       '.reveal-btn.open .icon{background:linear-gradient(135deg,'+b2.pri+','+b2.priDk+');color:#fff;transform:rotate(90deg);}' +
       '.reveal-content{max-height:0;overflow:hidden;transition:max-height 0.5s cubic-bezier(0.4,0,0.2,1),opacity 0.3s;opacity:0;}' +
-      '.reveal-content.open{max-height:600px;opacity:1;}' +
+      '.reveal-content.open{max-height:300px;opacity:1;}' +
       '.reveal-inner{padding:16px 22px 20px 72px;font-size:13px;color:'+b2.txL+';line-height:1.85;}';
     h += '</style></head><body><div class="container">';
     h += pageHeader;
@@ -676,7 +607,7 @@ function genSCORMhtml(sel, data, brand) {
     h += '</div></body></html>';
 
   } else {
-    h += '</style></head><body><div class="container"><div style="padding:40px;text-align:center;"><p style="font-size:16px;font-weight:600;color:'+b2.tx+';margin-bottom:8px;">Coming soon</p></div></div></body></html>';
+    h += '</style></head><body><div class="container"><div style="padding:40px;text-align:center;"><p style="font-size:16px;font-weight:600;color:'+b2.tx+';margin-bottom:8px;">'+esc(compTitle)+'</p><p style="color:'+b2.txL+';">This interactive component is coming soon.</p></div></div></body></html>';
   }
   return h;
 }
@@ -762,325 +693,475 @@ function downloadSCORM(sel, data, brand) {
   a.click();
 }
 
-
-/* ── Toast ── */
-function toast(msg,ok){var t=document.createElement("div");t.style.cssText="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(0);background:"+(ok===false?"#ef4444":ok?"#197A56":"#1a1a2e")+";color:#fff;padding:10px 22px;border-radius:24px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);transition:opacity 0.4s,transform 0.4s;white-space:nowrap;";t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.style.opacity="0";t.style.transform="translateX(-50%) translateY(8px)";},1600);setTimeout(function(){t.parentNode&&t.parentNode.removeChild(t);},2100);}
-
-/* ── Vanilla UI Engine ── */
-var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all" };
-function setState(p) { Object.assign(state, p); render(); }
-function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
-function doSelect(id) {
-  var d = deepClone(DEFAULTS[id] || {});
-  if (!id.startsWith("s_")) setState({ sel:id, data:d, output:genHTML(id,state.brand,d), scormPreview:"", cat:"all" });
-  else setState({ sel:id, data:d, output:"", scormPreview:genSCORMhtml(id,d,state.brand), cat:"all" });
+/* ── Brand Switcher ── */
+function BrandSwitch({ brand, setBrand, size = "md" }) {
+  const pad = size === "sm" ? "5px 12px" : "8px 18px";
+  const fs = size === "sm" ? 11 : 12;
+  return (
+    <div style={{ display:"flex", background:"#f0f0f0", borderRadius: size === "sm" ? 6 : 8, overflow:"hidden" }}>
+      {Object.entries(B).map(([k, v]) => (
+        <button key={k} onClick={() => setBrand(k)} style={{ padding: pad, border:"none", cursor:"pointer", fontSize: fs, fontWeight:600, background: brand === k ? v.pri : "transparent", color: brand === k ? "#fff" : "#888", transition:"all 0.15s" }}>
+          {v.n}
+        </button>
+      ))}
+    </div>
+  );
 }
-/* Live preview update — only touches preview/code elements, preserves editor focus */
-function updatePreviewOnly() {
-  if (!state.sel||!state.data) return;
-  if (!state.sel.startsWith("s_")) {
-    state.output = genHTML(state.sel, state.brand, state.data);
-    var p=document.getElementById("htmlPreview"), c=document.getElementById("codeOutput");
-    if(p) p.innerHTML=state.output;
-    if(c) c.value=state.output;
-  } else {
-    state.scormPreview = genSCORMhtml(state.sel, state.data, state.brand);
-    var f=document.getElementById("scormFrame");
-    if(f) f.srcdoc=state.scormPreview;
+
+/* ── Main App ── */
+export default function App() {
+  const [brand, setBrand] = useState("bcg");
+  const [mode, setMode] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [data, setData] = useState(null);
+  const [output, setOutput] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [scormPreview, setScormPreview] = useState("");
+  const [search, setSearch] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState(null);
+  const b = B[brand];
+
+  async function aiGenerate() {
+    if (!aiPrompt.trim() || aiLoading) return;
+    setAiLoading(true);
+    setAiResults(null);
+    try {
+      const allComps = [...HTML_COMPS.map(c=>({...c,t:"html"})), ...SCORM_COMPS.map(c=>({...c,t:"scorm"}))];
+      const compList = allComps.map(c => c.id + ": " + c.n + " (" + c.d + ") [" + c.t.toUpperCase() + "]").join("\n");
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are a NovoEd course content generator. Given a user request, generate content for the BEST matching component(s).
+
+Available components:
+${compList}
+
+User request: "${aiPrompt}"
+
+Respond ONLY with a JSON object (no markdown, no backticks, no preamble):
+{
+  "suggestions": [
+    {
+      "component_id": "the component id",
+      "component_type": "html or scorm",
+      "component_name": "name",
+      "why": "one line why this fits",
+      "data": { the component data matching its DEFAULTS structure exactly }
+    }
+  ]
+}
+
+Generate 2-3 suggestions with the best matching components. For items arrays, generate 3-5 items with realistic, professional content based on the user's request. Include title and body fields for SCORM components. Keep content concise and BCG-professional in tone.`
+          }]
+        })
+      });
+      const result = await response.json();
+      const text = result.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setAiResults(parsed.suggestions || []);
+    } catch (err) {
+      console.error("AI generation error:", err);
+      setAiResults([]);
+    }
+    setAiLoading(false);
   }
-}
-var _scormTimer=null;
-function updateFieldLive(f,v) {
-  state.data[f]=v;
-  if (!state.sel.startsWith("s_")) { updatePreviewOnly(); }
-  else { clearTimeout(_scormTimer); _scormTimer=setTimeout(updatePreviewOnly,600); }
-}
-function updateItemLive(i,f,v) {
-  state.data.items[i][f]=v;
-  if (!state.sel.startsWith("s_")) { updatePreviewOnly(); }
-  else { clearTimeout(_scormTimer); _scormTimer=setTimeout(updatePreviewOnly,600); }
-}
-function doRegen() {
-  if (!state.sel||!state.data) return;
-  if (!state.sel.startsWith("s_")) setState({output:genHTML(state.sel,state.brand,state.data)});
-  else setState({scormPreview:genSCORMhtml(state.sel,state.data,state.brand)});
-}
-function switchBrand(k) { state.brand=k; if(state.sel)doRegen(); else render(); }
-function updateField(f,v) { state.data[f]=v; }
-function updateItem(i,f,v) { state.data.items[i][f]=v; }
-function removeItem(i) { state.data.items.splice(i,1); render(); }
-function addItem() {
-  var t=state.data.items[0]||{}, n={title:""};
-  if(t.desc!==undefined)n.desc=""; if(t.desc2!==undefined)n.desc2=""; if(t.icon!==undefined)n.icon="●"; if(t.img!==undefined)n.img=""; if(t.color!==undefined)n.color="green";
-  state.data.items.push(n); render();
-}
-function handleCopy() {
-  navigator.clipboard.writeText(state.output).then(function(){
-    toast("✓ Copied to clipboard", true);
-  });
-}
-function exportJSON() {
-  navigator.clipboard.writeText(JSON.stringify(state.data, null, 2)).then(function(){ toast("✓ JSON copied", true); });
-}
-function importJSON() {
-  var raw=prompt("Paste component JSON:");
-  if(!raw) return;
-  try { var d=JSON.parse(raw); state.data=d; doRegen(); toast("✓ JSON imported", true); }
-  catch(e) { toast("Invalid JSON", false); }
-}
-function homeSearchUpdate(val) {
-  var box=document.getElementById("searchResults");
-  if(!val){box.style.display="none";return;}
-  var sq=val.toLowerCase(), b=B[state.brand];
-  var all=HTML_COMPS.map(function(c){return Object.assign({},c,{t:"HTML"});}).concat(SCORM_COMPS.map(function(c){return Object.assign({},c,{t:"SCORM"});}));
-  var hits=all.filter(function(c){return c.n.toLowerCase().indexOf(sq)>=0||c.d.toLowerCase().indexOf(sq)>=0;});
-  if(hits.length===0){box.innerHTML='<div style="padding:16px;text-align:center;font-size:11px;color:#aaa;">No results for "'+esc(val)+'"</div>';box.style.display="block";return;}
-  var h="";hits.slice(0,8).forEach(function(c){
-    h+='<div onclick="setState({mode:\''+(c.t==="HTML"?"html":"scorm")+'\',search:\'\'});doSelect(\''+c.id+'\');" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid '+b.n1+';" onmouseover="this.style.background=\''+b.n1+'\'" onmouseout="this.style.background=\'transparent\'">';
-    if(THUMBS[c.id]) h+='<div style="border-radius:5px;overflow:hidden;border:1px solid '+b.n2+';flex-shrink:0;">'+THUMBS[c.id]+'</div>';
-    h+='<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:'+b.tx+';">'+c.n+'</div><div style="font-size:10px;color:#aaa;">'+c.d+'</div></div>';
-    h+='<span style="font-size:9px;padding:2px 8px;background:'+(c.t==="HTML"?b.priLt:"#EDE9FE")+';color:'+(c.t==="HTML"?b.pri:"#7C3AED")+';border-radius:10px;font-weight:700;white-space:nowrap;">'+c.t+'</span></div>';
-  });
-  box.innerHTML=h;box.style.display="block";
-}
 
-function brandBtns(sz){
-  var bk=state.brand,r='<div style="display:flex;background:#F0F0F0;border-radius:'+(sz==="sm"?6:8)+'px;overflow:hidden;border:1px solid #E0E0E0;">';
-  Object.keys(B).forEach(function(k){var v=B[k],p=sz==="sm"?"5px 12px":"8px 18px",f=sz==="sm"?11:12;
-    r+='<button onclick="switchBrand(\''+k+'\')" style="padding:'+p+';border:none;cursor:pointer;font-size:'+f+'px;font-weight:600;background:'+(bk===k?v.pri:"transparent")+';color:'+(bk===k?"#fff":"#888")+';transition:all 0.15s;">'+v.n+'</button>';
-  });return r+'</div>';
-}
-function render() {
-  var root=document.getElementById("root"), b=B[state.brand];
+  function applyAiSuggestion(suggestion) {
+    const compType = suggestion.component_type;
+    const compId = suggestion.component_id;
+    setMode(compType);
+    setSel(compId);
+    const d = JSON.parse(JSON.stringify(suggestion.data));
+    setData(d);
+    if (compType === "html") {
+      setOutput(genHTML(compId, brand, d));
+      setScormPreview("");
+    } else {
+      setOutput("");
+      setScormPreview(genSCORMhtml(compId, d, brand));
+    }
+    setAiResults(null);
+    setAiPrompt("");
+  }
 
-  /* ─── HOME SCREEN ─── */
-  if(!state.mode){
-    var hm='<div>';
-    /* Hero */
-    hm+='<div style="background:'+b.grad+';padding:44px 0 36px;position:relative;overflow:hidden;margin-bottom:0;">';
-    hm+='<svg style="position:absolute;top:0;right:0;width:480px;height:100%;opacity:0.1;" viewBox="0 0 480 220" fill="none"><circle cx="400" cy="40" r="110" fill="#fff"/><circle cx="300" cy="190" r="70" fill="#fff"/><circle cx="460" cy="155" r="80" fill="#fff"/><rect x="200" y="10" width="50" height="50" rx="14" fill="#fff" transform="rotate(20 225 35)"/><rect x="320" y="110" width="38" height="38" rx="10" fill="#fff" transform="rotate(-12 339 129)"/></svg>';
-    hm+='<div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 40px;">';
-    hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.65);margin-bottom:10px;">BCG U × NovoEd</div>';
-    hm+='<div style="font-size:36px;font-weight:300;color:#fff;line-height:1.2;margin-bottom:10px;letter-spacing:-0.5px;">Component Toolkit</div>';
-    hm+='<div style="font-size:13px;color:rgba(255,255,255,0.78);line-height:1.65;max-width:520px;margin-bottom:22px;">Build professional HTML embeds and interactive SCORM activities for NovoEd — no coding required.</div>';
-    /* Stat pills */
-    hm+='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-    [['20','HTML Components'],['12','SCORM Activities'],['2','Brand Themes'],['6','New ✦']].forEach(function(s){
-      hm+='<div style="padding:5px 14px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:20px;border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:600;"><span style="font-size:15px;font-weight:700;margin-right:5px;">'+s[0]+'</span>'+s[1]+'</div>';
+  function doSelect(id) {
+    setSel(id);
+    const d = JSON.parse(JSON.stringify(DEFAULTS[id] || {}));
+    setData(d);
+    if (!id.startsWith("s_")) {
+      setOutput(genHTML(id, brand, d));
+      setScormPreview("");
+    } else {
+      setOutput("");
+      setScormPreview(genSCORMhtml(id, d, brand));
+    }
+  }
+
+  function doRegen() {
+    if (sel && data && !sel.startsWith("s_")) setOutput(genHTML(sel, brand, data));
+    if (sel && data && sel.startsWith("s_")) setScormPreview(genSCORMhtml(sel, data, brand));
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(output).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     });
-    hm+='</div></div></div>';
-    /* Content */
-    hm+='<div style="max-width:1100px;margin:0 auto;padding:28px 40px 40px;">';
-    /* Search + Brand row */
-    hm+='<div style="display:flex;gap:12px;align-items:center;margin-bottom:24px;"><div style="flex:1;position:relative;">'
-      +'<input id="homeSearch" oninput="homeSearchUpdate(this.value)" placeholder="Search all 32 components…" style="width:100%;padding:10px 14px 10px 36px;border:1.5px solid '+b.n2+';border-radius:10px;font-size:12px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.04);"/>'
-      +'<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#bbb;">⌕</span>'
-      +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.1);z-index:50;max-height:260px;overflow:auto;"></div>'
-      +'</div>'+brandBtns("md")+'</div>';
-    /* Mode cards */
-    hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">';
-    /* HTML card */
-    hm+='<div class="mode-card" onclick="setState({mode:\'html\'})" style="background:#fff;border:2px solid '+b.n2+';border-radius:16px;padding:26px 24px;cursor:pointer;transition:all 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
-    hm+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      +'<div style="width:42px;height:42px;background:'+b.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;">📋</div>'
-      +'<div><div style="font-size:16px;font-weight:700;color:'+b.tx+';">HTML Components</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:1px;">Copy & paste into NovoEd</div></div></div>';
-    hm+='<div style="font-size:12px;color:'+b.txL+';line-height:1.7;margin-bottom:14px;">Static visual embeds — banners, cards, tables, timelines, key takeaways, FAQs, stats, and more.</div>';
-    /* Mini thumbnail strip */
-    hm+='<div style="display:flex;gap:6px;margin-bottom:14px;overflow:hidden;">';
-    ["cards","timeline","stats","keypoints","twostat"].forEach(function(id){ if(THUMBS[id]) hm+='<div style="border-radius:6px;overflow:hidden;border:1px solid '+b.n2+';flex-shrink:0;">'+THUMBS[id]+'</div>'; });
-    hm+='</div>';
-    hm+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
-    ["Seamless","Instant load","Native look","4 NEW"].forEach(function(tag,i){
-      var isNew=i===3;
-      hm+='<span style="font-size:9px;padding:2px 8px;background:'+(isNew?b.pri+'22':(b.pri+'12'))+';color:'+(isNew?b.priDk:b.pri)+';border-radius:10px;font-weight:700;border:1px solid '+(isNew?b.pri+'44':'transparent')+';white-space:nowrap;">'+tag+'</span>';
-    });
-    hm+='</div><div style="font-size:12px;color:'+b.pri+';font-weight:700;">Browse 20 components →</div></div>';
-    /* SCORM card */
-    hm+='<div class="mode-card" onclick="setState({mode:\'scorm\'})" style="background:#fff;border:2px solid '+b.n2+';border-radius:16px;padding:26px 24px;cursor:pointer;transition:all 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
-    hm+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      +'<div style="width:42px;height:42px;background:linear-gradient(135deg,#7C3AED,#4F46E5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;">✦</div>'
-      +'<div><div style="font-size:16px;font-weight:700;color:'+b.tx+';">SCORM Interactives</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:1px;">Download .zip → upload to NovoEd</div></div></div>';
-    hm+='<div style="font-size:12px;color:'+b.txL+';line-height:1.7;margin-bottom:14px;">Animated activities — flip cards, accordions, quizzes, polls, drag-to-sort, cycle diagrams, and more.</div>';
-    hm+='<div style="display:flex;gap:6px;margin-bottom:14px;overflow:hidden;">';
-    ["s_flipcard","s_accordion","s_quiz","s_poll","s_cycle"].forEach(function(id){ if(THUMBS[id]) hm+='<div style="border-radius:6px;overflow:hidden;border:1px solid #E8E8E8;flex-shrink:0;">'+THUMBS[id]+'</div>'; });
-    hm+='</div>';
-    hm+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
-    ["Animated","Interactive","Engaging","2 NEW"].forEach(function(tag,i){
-      var isNew=i===3;
-      hm+='<span style="font-size:9px;padding:2px 8px;background:'+(isNew?"#EDE9FE":"#F3F0FF")+';color:'+(isNew?"#5B21B6":"#7C3AED")+';border-radius:10px;font-weight:700;border:1px solid '+(isNew?"#C4B5FD22":"transparent")+';white-space:nowrap;">'+tag+'</span>';
-    });
-    hm+='</div><div style="font-size:12px;color:#7C3AED;font-weight:700;">Browse 12 activities →</div></div>';
-    hm+='</div>'; /* end mode cards grid */
-    /* AI panel */
-    hm+='<div style="margin-bottom:20px;padding:20px 24px;background:#fff;border-radius:16px;border:1.5px solid '+b.n2+';box-shadow:0 2px 8px rgba(0,0,0,0.04);display:flex;align-items:center;gap:16px;">';
-    hm+='<div style="width:44px;height:44px;background:'+b.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⚡</div>';
-    hm+='<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:'+b.tx+';">AI Content Generator</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:2px;line-height:1.5;">Describe what you need and AI picks the best component and fills in the content — ready to export.</div></div>';
-    hm+='<a href="https://claude.ai/project/019d8ffd-704f-72ca-b771-e1b61ce90680" target="_blank" style="padding:10px 22px;border-radius:10px;background:'+b.grad+';color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 4px 14px '+b.pri+'33;">Open AI Chat →</a>';
-    hm+='</div>';
-    /* Whats new + feedback row */
-    hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
-    hm+='<div style="padding:18px 20px;background:'+b.n1+';border-radius:14px;border:1px solid '+b.n2+';">'
-      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.1</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.7;"><strong>+4 HTML:</strong> Key Takeaways, FAQ, Stat Highlight, Label Badges<br><strong>+2 SCORM:</strong> Multiple Choice Quiz, Opinion Poll<br><span style="color:'+b.txL+';">Live editing, JSON import/export, SVG thumbnails, category filters.</span></div>'
-      +'</div>';
-    hm+='<div style="padding:18px 20px;background:'+b.priLt+';border-radius:14px;border:1px solid '+b.pri+'22;display:flex;align-items:center;gap:14px;">'
-      +'<div style="width:36px;height:36px;background:'+b.pri+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;">✉</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.6;"><strong>Feedback or ideas?</strong><br>Email <a href="mailto:jatin.patial@bcg.com" style="color:'+b.pri+';font-weight:700;">jatin.patial@bcg.com</a></div>'
-      +'</div>';
-    hm+='</div>';
-    hm+='</div></div>'; /* end content + outer */
-    root.innerHTML=hm; return;
   }
 
-  /* ─── LIST SCREEN ─── */
-  if(!state.sel){
-    var allCs=state.mode==="html"?HTML_COMPS:SCORM_COMPS;
-    var sq=state.search?state.search.toLowerCase():"";
-    /* Category filter */
-    var cats=state.mode==="html"?["all","layout","content","data"]:["all","interactive","assessment"];
-    var filtered=allCs.filter(function(c){
-      var matchCat=(state.cat==="all"||c.cat===state.cat);
-      var matchSq=!sq||(c.n.toLowerCase().indexOf(sq)>=0||c.d.toLowerCase().indexOf(sq)>=0);
-      return matchCat&&matchSq;
-    });
-    var lb=state.mode==="html"?"HTML Components":"SCORM Interactives";
-    var ht=state.mode==="html"?"Copy code → NovoEd → Contents → HTML block.":"Download .zip → NovoEd → Add Content → SCORM/AICC block.";
-    var hb=state.mode==="html"?b.priLt:"#EDE9FE", hc=state.mode==="html"?b.pri:"#7C3AED";
-    var h='<div style="max-width:1100px;margin:0 auto;padding:20px 32px;color:'+b.tx+';">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
-      +'<button class="btn-back" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\'})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#999;font-weight:600;">← Back</button>'
-      +'<div style="display:flex;gap:10px;align-items:center;"><span style="font-size:14px;font-weight:700;color:'+b.tx+';">'+lb+'</span>'+brandBtns("sm")+'</div>'
-      +'</div>';
-    /* Search */
-    h+='<input value="'+esc(state.search)+'" oninput="state.search=this.value;render();" placeholder="Search…" style="width:100%;padding:10px 14px;border:1.5px solid '+b.n2+';border-radius:10px;font-size:12px;margin-bottom:14px;background:#fff;"/>';
-    /* Category pills */
-    h+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
-    cats.forEach(function(cat){ h+='<button class="filter-tab'+(state.cat===cat?" active":"")+'" onclick="state.cat=\''+cat+'\';render();">'+cat.charAt(0).toUpperCase()+cat.slice(1)+'</button>'; });
-    h+='</div>';
-    /* Usage tip */
-    h+='<div style="padding:10px 14px;background:'+hb+';margin-bottom:18px;font-size:11px;color:'+hc+';font-weight:500;border-radius:10px;border:1px solid '+hc+'22;">'+ht+'</div>';
-    /* Grid */
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-    if(filtered.length===0) h+='<div style="grid-column:1/-1;padding:32px;text-align:center;color:#aaa;font-size:12px;">No components match.</div>';
-    filtered.forEach(function(c){
-      h+='<button class="comp-card" onclick="doSelect(\''+c.id+'\')" style="padding:14px 16px;border-radius:14px;border:1.5px solid '+b.n2+';background:#fff;cursor:pointer;text-align:left;display:flex;gap:14px;align-items:flex-start;transition:all 0.2s;">';
-      if(THUMBS[c.id]) h+='<div style="border-radius:8px;overflow:hidden;border:1px solid '+b.n2+';flex-shrink:0;">'+THUMBS[c.id]+'</div>';
-      h+='<div style="flex:1;min-width:0;padding-top:2px;"><div style="font-size:13px;font-weight:700;color:'+b.tx+';margin-bottom:3px;">'+c.n+'</div><div style="font-size:11px;color:'+b.txL+';line-height:1.5;">'+c.d+'</div></div>';
-      h+='</button>';
-    });
-    h+='</div></div>';
-    root.innerHTML=h; return;
+  /* ── HOME SCREEN ── */
+  if (!mode) return (
+    <div style={{ maxWidth:880, margin:"0 auto", padding:"0 16px 20px", fontFamily:"'Trebuchet MS', system-ui, sans-serif", color:b.tx }}>
+      {/* Banner with abstract SVG art */}
+      <div style={{ background:b.grad, padding:"36px 40px", marginBottom:24, position:"relative", overflow:"hidden" }}>
+        <svg style={{ position:"absolute", top:0, right:0, width:320, height:"100%", opacity:0.12 }} viewBox="0 0 320 200" fill="none"><circle cx="280" cy="40" r="80" fill="#fff"/><circle cx="220" cy="160" r="50" fill="#fff"/><circle cx="320" cy="140" r="60" fill="#fff"/><rect x="160" y="20" width="40" height="40" rx="10" fill="#fff" transform="rotate(20 180 40)"/><rect x="240" y="100" width="30" height="30" rx="8" fill="#fff" transform="rotate(-15 255 115)"/><polygon points="180,80 200,60 220,80" fill="#fff" opacity="0.6"/><polygon points="260,50 280,30 300,50 290,70 270,70" fill="#fff" opacity="0.4"/></svg>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:2.5, color:"rgba(255,255,255,0.7)", marginBottom:8 }}>BCG U × NovoEd</div>
+          <div style={{ fontSize:28, fontWeight:200, color:"#fff", lineHeight:1.3, marginBottom:6 }}>Component Toolkit</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", lineHeight:1.6, maxWidth:500 }}>Design and generate professional HTML components and interactive SCORM activities for NovoEd courses — no coding required.</div>
+        </div>
+      </div>
+
+      {/* Search + Brand row */}
+      <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:20 }}>
+        <div style={{ flex:1, position:"relative" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search components..." style={{ width:"100%", padding:"9px 14px 9px 32px", border:"1.5px solid "+b.n2, borderRadius:8, fontSize:12, outline:"none", background:"#fff" }} onFocus={e => e.target.style.borderColor=b.pri} onBlur={e => { setTimeout(() => { if(!document.activeElement.closest('.sr')) setSearch(""); }, 200); e.target.style.borderColor=b.n2; }} />
+          <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:"#bbb" }}>⌕</span>
+          {search && (() => {
+            const sq = search.toLowerCase();
+            const all = [...HTML_COMPS.map(c=>({...c,t:"HTML"})), ...SCORM_COMPS.map(c=>({...c,t:"SCORM"}))];
+            const hits = all.filter(c => c.n.toLowerCase().includes(sq) || c.d.toLowerCase().includes(sq));
+            return hits.length > 0 ? (
+              <div className="sr" style={{ position:"absolute", top:"100%", left:0, right:0, marginTop:4, background:"#fff", border:"1.5px solid "+b.n2, borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,0.1)", zIndex:50, maxHeight:240, overflow:"auto" }}>
+                {hits.slice(0,8).map(c => (
+                  <div key={c.id} style={{ padding:"10px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid "+b.n1 }} onClick={() => { setMode(c.t === "HTML" ? "html" : "scorm"); doSelect(c.id); setSearch(""); }} onMouseEnter={e => e.currentTarget.style.background=b.n1} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    <span style={{ fontSize:14, color:b.pri }}>{c.ic}</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:600, color:b.tx }}>{c.n}</div>
+                      <div style={{ fontSize:10, color:"#999" }}>{c.d}</div>
+                    </div>
+                    <span style={{ marginLeft:"auto", fontSize:9, padding:"2px 6px", background:c.t==="HTML"?b.priLt:"#FFF8E6", color:c.t==="HTML"?b.pri:"#856404", borderRadius:4, fontWeight:600 }}>{c.t}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="sr" style={{ position:"absolute", top:"100%", left:0, right:0, marginTop:4, background:"#fff", border:"1.5px solid "+b.n2, borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,0.1)", zIndex:50, padding:"16px", textAlign:"center", fontSize:11, color:"#999" }}>
+                No components match "{search}"
+              </div>
+            );
+          })()}
+        </div>
+        <BrandSwitch brand={brand} setBrand={setBrand} />
+      </div>
+
+      {/* AI Content Generator */}
+      <div style={{ marginBottom:24, padding:"20px 22px", background:"#fff", borderRadius:14, border:"1.5px solid "+b.n2, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+          <div style={{ width:32, height:32, background:b.grad, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, color:"#fff" }}>⚡</div>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:b.tx }}>AI Content Generator</div>
+            <div style={{ fontSize:10, color:"#999" }}>Describe what you need — AI will create the component for you</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} onKeyDown={e => { if(e.key==="Enter") aiGenerate(); }} placeholder='e.g. "Create a 4-step process for AI adoption" or "Flip cards explaining RAG, LLM, and Fine-tuning"' style={{ flex:1, padding:"10px 14px", border:"1.5px solid "+b.n2, borderRadius:8, fontSize:12, outline:"none" }} onFocus={e=>e.target.style.borderColor=b.pri} onBlur={e=>e.target.style.borderColor=b.n2} />
+          <button onClick={aiGenerate} disabled={aiLoading} style={{ padding:"10px 20px", borderRadius:8, border:"none", background:aiLoading?"#ccc":b.grad, color:"#fff", fontSize:12, fontWeight:600, cursor:aiLoading?"wait":"pointer", whiteSpace:"nowrap", transition:"all 0.2s" }} onMouseEnter={e=>{if(!aiLoading){e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.15)";}}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+            {aiLoading ? "Generating..." : "Generate ⚡"}
+          </button>
+        </div>
+
+        {/* AI Results */}
+        {aiLoading && (
+          <div style={{ marginTop:16, textAlign:"center", padding:20 }}>
+            <div style={{ fontSize:12, color:b.pri, fontWeight:600 }}>Creating your components...</div>
+            <div style={{ fontSize:11, color:"#999", marginTop:4 }}>AI is analyzing your request and generating content</div>
+          </div>
+        )}
+        {aiResults && aiResults.length === 0 && (
+          <div style={{ marginTop:12, padding:12, background:b.n1, borderRadius:8, fontSize:11, color:"#999", textAlign:"center" }}>
+            Couldn't generate results. Try rephrasing your request.
+          </div>
+        )}
+        {aiResults && aiResults.length > 0 && (
+          <div style={{ marginTop:14 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>AI Suggestions — click to use</div>
+            {aiResults.map((s, i) => (
+              <div key={i} onClick={() => applyAiSuggestion(s)} style={{ padding:"14px 16px", background:b.n1, borderRadius:10, marginBottom:8, cursor:"pointer", border:"1.5px solid transparent", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=b.pri;e.currentTarget.style.background=b.priLt;}} onMouseLeave={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background=b.n1;}}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:9, padding:"2px 6px", background:s.component_type==="html"?b.priLt:"#FFF8E6", color:s.component_type==="html"?b.pri:"#856404", borderRadius:4, fontWeight:700 }}>{s.component_type.toUpperCase()}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:b.tx }}>{s.component_name}</span>
+                </div>
+                <div style={{ fontSize:11, color:b.txL, lineHeight:1.5 }}>{s.why}</div>
+                {s.data?.items && <div style={{ fontSize:10, color:"#aaa", marginTop:4 }}>{s.data.items.length} items: {s.data.items.map(it=>it.title).join(", ")}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tool cards with context */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:28 }}>
+        <div onClick={() => setMode("html")} style={{ padding:"24px 22px", border:"2px solid "+b.pri, cursor:"pointer", background:b.priLt, borderRadius:12, transition:"transform 0.15s, box-shadow 0.15s" }} onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+            <div style={{ width:38, height:38, background:b.pri, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#fff" }}>📋</div>
+            <div style={{ fontSize:15, fontWeight:700 }}>HTML Components</div>
+          </div>
+          <div style={{ fontSize:11, color:b.txL, lineHeight:1.7, marginBottom:10 }}>Static visual components — tables, banners, cards, timelines, stats, and more. Copy and paste directly into NovoEd.</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
+            {[{l:"Seamless",c:b.pri},{l:"Fast loading",c:b.pri},{l:"Native look",c:b.pri}].map((t,i) => <span key={i} style={{ fontSize:9, padding:"2px 8px", background:b.pri+"15", color:t.c, borderRadius:10, fontWeight:600 }}>{t.l}</span>)}
+          </div>
+          <div style={{ fontSize:10, color:b.txL, lineHeight:1.6, padding:"8px 10px", background:"rgba(255,255,255,0.6)", borderRadius:6, fontStyle:"italic" }}>Looks like a native part of NovoEd, loads instantly. Best for visual formatting, data display, and structured content.</div>
+          <div style={{ fontSize:11, color:b.pri, marginTop:10, fontWeight:700 }}>16 components →</div>
+        </div>
+        <div onClick={() => setMode("scorm")} style={{ padding:"24px 22px", border:"2px solid "+b.n2, cursor:"pointer", background:b.wh, borderRadius:12, transition:"transform 0.15s, box-shadow 0.15s" }} onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+            <div style={{ width:38, height:38, background:b.n2, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>✨</div>
+            <div style={{ fontSize:15, fontWeight:700 }}>SCORM Interactives</div>
+          </div>
+          <div style={{ fontSize:11, color:b.txL, lineHeight:1.7, marginBottom:10 }}>Fully interactive activities with animations — flip cards, accordions, stacked cards, cycle diagrams, and more.</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
+            {[{l:"Animated",c:"#D4A017"},{l:"Interactive",c:"#D4A017"},{l:"Engaging",c:"#D4A017"}].map((t,i) => <span key={i} style={{ fontSize:9, padding:"2px 8px", background:"#FFF8E6", color:t.c, borderRadius:10, fontWeight:600 }}>{t.l}</span>)}
+          </div>
+          <div style={{ fontSize:10, color:b.txL, lineHeight:1.6, padding:"8px 10px", background:b.n1, borderRadius:6, fontStyle:"italic" }}>Rich animations and click interactions. Loads in an iframe — may take a moment. Best for engaging learner activities.</div>
+          <div style={{ fontSize:11, color:b.pri, marginTop:10, fontWeight:700 }}>10 activities →</div>
+        </div>
+      </div>
+
+      {/* What's New */}
+      <div style={{ marginBottom:24 }}>
+        <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:b.pri, marginBottom:10 }}>What's New</div>
+        <div style={{ padding:"16px 20px", background:b.n1, borderRadius:10, border:"1px solid "+b.n2 }}>
+          <div style={{ fontSize:13, color:b.tx, lineHeight:1.7 }}>
+            <span style={{ fontWeight:700 }}>v1.0 — Launch</span><br/>
+            <span style={{ color:b.txL }}>16 HTML components + 10 SCORM interactives with BCG & BCG U branding, live preview, and one-click SCORM download. More components coming soon!</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Feedback */}
+      <div style={{ padding:"14px 20px", background:b.priLt, borderRadius:10, border:"1px solid "+b.pri+"22", display:"flex", alignItems:"center", gap:14 }}>
+        <div style={{ width:32, height:32, background:b.pri, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:"#fff", flexShrink:0 }}>✉</div>
+        <div style={{ fontSize:12, color:b.tx, lineHeight:1.6 }}>
+          <span style={{ fontWeight:600 }}>Feedback or suggestions?</span> Drop a note at{" "}
+          <span style={{ color:b.pri, fontWeight:700, textDecoration:"underline", cursor:"pointer" }} onClick={() => window.open("mailto:jatin.patial@bcg.com")}>jatin.patial@bcg.com</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ── LIST SCREEN ── */
+  if (!sel) {
+    const allComps = mode === "html" ? HTML_COMPS : SCORM_COMPS;
+    const comps = search ? allComps.filter(c => c.n.toLowerCase().includes(search.toLowerCase()) || c.d.toLowerCase().includes(search.toLowerCase())) : allComps;
+    return (
+      <div style={{ maxWidth:880, margin:"0 auto", padding:"20px 16px", fontFamily:"'Trebuchet MS', system-ui, sans-serif", color:b.tx }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
+          <button onClick={() => { setMode(null); setSearch(""); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, color:"#999" }}>← Back</button>
+          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+            <span style={{ fontSize:13, fontWeight:700, color:b.pri }}>{mode === "html" ? "HTML Components" : "SCORM Interactives"}</span>
+            <BrandSwitch brand={brand} setBrand={setBrand} size="sm" />
+          </div>
+        </div>
+        {/* Search box */}
+        <div style={{ marginBottom:14 }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={"Search " + (mode === "html" ? "HTML components" : "SCORM interactives") + "..."} style={{ width:"100%", padding:"10px 14px 10px 36px", border:"1.5px solid "+b.n2, borderRadius:10, fontSize:12, outline:"none", background:"#fff url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23999\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\"/></svg>') 12px center no-repeat" }} onFocus={e => e.target.style.borderColor=b.pri} onBlur={e => e.target.style.borderColor=b.n2} />
+        </div>
+        <div style={{ padding:"10px 14px", background: mode === "html" ? b.priLt : "#FFF8E6", marginBottom:16, fontSize:11, color: mode === "html" ? b.pri : "#856404", fontWeight:500, borderRadius:8 }}>
+          {mode === "html" ? "Copy code → NovoEd → Contents → HTML. Also works in Quiz & Survey edit view." : "Download as SCORM .zip → Upload to NovoEd's SCORM/AICC block."}
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {comps.length === 0 && <div style={{ gridColumn:"1/-1", padding:24, textAlign:"center", color:"#999", fontSize:12 }}>No components match "{search}"</div>}
+          {comps.map(c => (
+            <button key={c.id} onClick={() => doSelect(c.id)} style={{ padding:"14px 16px", borderRadius:12, border:"1.5px solid #e8e8e8", background:"#fff", cursor:"pointer", textAlign:"left", transition:"border-color 0.15s, box-shadow 0.15s" }} onMouseEnter={e => { e.currentTarget.style.borderColor=b.pri; e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.06)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor="#e8e8e8"; e.currentTarget.style.boxShadow="none"; }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                <span style={{ fontSize:16, color:b.pri }}>{c.ic}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:b.tx }}>{c.n}</span>
+              </div>
+              <div style={{ fontSize:11, color:"#999" }}>{c.d}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  /* ─── EDITOR SCREEN ─── */
-  var iS=state.sel.startsWith("s_"), cl=iS?SCORM_COMPS:HTML_COMPS, cn="", compCat="";
-  cl.forEach(function(c){if(c.id===state.sel){cn=c.n;compCat=c.cat;}});
-  var d=state.data;
-  var fld='<div style="font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">'
-    +'<span>Edit Fields</span>'
-    +'<div style="display:flex;gap:6px;">'
-    +'<button onclick="exportJSON()" style="padding:3px 10px;border-radius:6px;border:1px solid '+b.n2+';background:#fff;font-size:9px;font-weight:700;color:'+b.txL+';cursor:pointer;" title="Copy data as JSON">⬆ Export</button>'
-    +'<button onclick="importJSON()" style="padding:3px 10px;border-radius:6px;border:1px solid '+b.n2+';background:#fff;font-size:9px;font-weight:700;color:'+b.txL+';cursor:pointer;" title="Import JSON data">⬇ Import</button>'
-    +'</div></div>';
-  var fs='width:100%;padding:8px 10px;border:1.5px solid '+b.n2+';border-radius:8px;font-size:12px;background:#fff;color:'+b.tx+';margin-bottom:6px;';
-  var fst='width:100%;padding:8px 10px;border:1.5px solid '+b.n2+';border-radius:8px;font-size:12px;resize:vertical;background:#fff;color:'+b.tx+';margin-bottom:6px;';
-  if(d.col1!==undefined) fld+='<input class="field-input" value="'+esc(d.col1)+'" oninput="updateFieldLive(\'col1\',this.value)" placeholder="Column 1 header" style="'+fs+'margin-bottom:4px;"/><input class="field-input" value="'+esc(d.col2||"")+'" oninput="updateFieldLive(\'col2\',this.value)" placeholder="Column 2 header" style="'+fs+'"/>';
-  if(d.stat!==undefined) fld+='<input class="field-input" value="'+esc(d.stat)+'" oninput="updateFieldLive(\'stat\',this.value)" placeholder="Big stat (e.g. 87%)" style="'+fs+'"/>';
-  if(d.label!==undefined) fld+='<input class="field-input" value="'+esc(d.label)+'" oninput="updateFieldLive(\'label\',this.value)" placeholder="Stat label" style="'+fs+'"/>';
-  if(d.title!==undefined) fld+='<input class="field-input" value="'+esc(d.title)+'" oninput="updateFieldLive(\'title\',this.value)" placeholder="Title / Heading" style="'+fs+';font-weight:600;"/>';
-  if(d.body!==undefined) fld+='<textarea class="field-input" oninput="updateFieldLive(\'body\',this.value)" rows="3" placeholder="Body / Subtitle" style="'+fst+'">'+esc(d.body)+'</textarea>';
-  if(d.author!==undefined) fld+='<input class="field-input" value="'+esc(d.author)+'" oninput="updateFieldLive(\'author\',this.value)" placeholder="Author name" style="'+fs+'"/>';
-  if(d.type!==undefined){
-    fld+='<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">';
-    ["info","tip","warning","success"].forEach(function(t){fld+='<button onclick="updateFieldLive(\'type\',\''+t+'\');render();" style="padding:4px 10px;border:1.5px solid '+(d.type===t?b.pri:b.n2)+';background:'+(d.type===t?b.priLt:"#fff")+';color:'+(d.type===t?b.pri:b.txL)+';font-size:10px;font-weight:600;cursor:pointer;border-radius:6px;">'+t+'</button>';});
-    fld+='</div>';
-  }
-  if(iS){
-    var curBg=d.bg||"gradient";
-    fld+='<div style="display:flex;gap:5px;margin-bottom:8px;align-items:center;"><span style="font-size:10px;font-weight:600;color:#aaa;margin-right:4px;">BG:</span>'
-      +'<button onclick="updateFieldLive(\'bg\',\'gradient\');doRegen();" style="padding:4px 10px;border:1.5px solid '+(curBg==="gradient"?b.pri:b.n2)+';background:'+(curBg==="gradient"?b.priLt:"#fff")+';color:'+(curBg==="gradient"?b.pri:b.txL)+';font-size:10px;font-weight:600;cursor:pointer;border-radius:6px;">Gradient</button>'
-      +'<button onclick="updateFieldLive(\'bg\',\'none\');doRegen();" style="padding:4px 10px;border:1.5px solid '+(curBg==="none"?b.pri:b.n2)+';background:'+(curBg==="none"?b.priLt:"#fff")+';color:'+(curBg==="none"?b.pri:b.txL)+';font-size:10px;font-weight:600;cursor:pointer;border-radius:6px;">White</button>'
-      +'</div>';
-  }
-  if(d.active!==undefined){
-    fld+='<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:600;color:#aaa;margin-bottom:4px;">Active step: <strong style="color:'+b.pri+';">'+d.active+'</strong></div>'
-      +'<input type="range" min="0" max="'+((d.items?d.items.length:1)-1)+'" value="'+d.active+'" oninput="updateFieldLive(\'active\',parseInt(this.value));render();" style="width:100%;accent-color:'+b.pri+';"/></div>';
-  }
-  if(d.items){
-    d.items.forEach(function(it,i){
-      var isQuizQ=state.sel==="s_quiz"&&i===0;
-      fld+='<div style="margin-bottom:6px;padding:10px 10px 8px;background:#FAFAFA;border-radius:10px;border:1px solid '+b.n2+';">';
-      fld+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:'+(it.desc!==undefined||it.img!==undefined?'6px':'0')+';"><span style="font-size:9px;font-weight:700;color:'+b.pri+';">'+(isQuizQ?"Q":"#"+(i+1))+'</span>';
-      if(it.icon!==undefined) fld+='<input value="'+esc(it.icon)+'" oninput="updateItemLive('+i+',\'icon\',this.value)" style="width:34px;padding:5px 4px;border:1.5px solid '+b.n2+';border-radius:6px;font-size:14px;text-align:center;background:#fff;"/>';
-      fld+='<input class="field-input" value="'+esc(it.title)+'" oninput="updateItemLive('+i+',\'title\',this.value)" placeholder="'+(isQuizQ?"Question text":"Title")+'" style="flex:1;padding:6px 8px;border:1.5px solid '+b.n2+';border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:'+b.tx+';"/>';
-      if(d.items.length>1) fld+='<button class="btn-del" onclick="removeItem('+i+')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:13px;padding:0 2px;line-height:1;">✕</button>';
-      fld+='</div>';
-      if(it.img!==undefined) fld+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;"><span style="font-size:10px;color:#bbb;">🖼</span><input class="field-input" value="'+esc(it.img)+'" oninput="updateItemLive('+i+',\'img\',this.value)" placeholder="Image URL" style="flex:1;padding:5px 8px;border:1.5px solid '+b.n2+';border-radius:6px;font-size:10px;color:#666;background:#fff;"/></div>';
-      if(it.color!==undefined){
-        fld+='<div style="display:flex;gap:4px;margin-top:4px;">';
-        ["green","blue","orange","gray"].forEach(function(col){fld+='<button onclick="updateItemLive('+i+',\'color\',\''+col+'\');render();" style="padding:3px 8px;border:1.5px solid '+(it.color===col?b.pri:b.n2)+';background:'+(it.color===col?b.priLt:"#fff")+';color:'+(it.color===col?b.pri:b.txL)+';font-size:9px;font-weight:700;cursor:pointer;border-radius:5px;">'+col+'</button>';});
-        fld+='</div>';
-      }
-      if(it.desc!==undefined&&it.color===undefined){
-        /* Quiz correct/wrong toggle */
-        if(state.sel==="s_quiz"&&i>0){
-          fld+='<div style="display:flex;gap:4px;margin-top:4px;">'
-            +'<button onclick="updateItemLive('+i+',\'desc\',\'1\');render();" style="flex:1;padding:3px 0;border:1.5px solid '+(it.desc==="1"?'#22c55e':b.n2)+';background:'+(it.desc==="1"?'#f0fdf4':"#fff")+';color:'+(it.desc==="1"?'#15803d':b.txL)+';font-size:10px;font-weight:700;cursor:pointer;border-radius:6px;">✓ Correct</button>'
-            +'<button onclick="updateItemLive('+i+',\'desc\',\'0\');render();" style="flex:1;padding:3px 0;border:1.5px solid '+(it.desc!=="1"?'#ef4444':b.n2)+';background:'+(it.desc!=="1"?'#fef2f2':"#fff")+';color:'+(it.desc!=="1"?'#b91c1c':b.txL)+';font-size:10px;font-weight:700;cursor:pointer;border-radius:6px;">✗ Wrong</button>'
-            +'</div>';
-        } else if(state.sel!=="s_quiz") {
-          fld+='<textarea class="field-input" oninput="updateItemLive('+i+',\'desc\',this.value)" placeholder="'+(state.sel==="s_poll"?"Vote % to reveal":"Description")+'" rows="2" style="width:100%;padding:6px 8px;border:1.5px solid '+b.n2+';border-radius:6px;font-size:10px;resize:none;background:#fff;color:'+b.tx+';">'+esc(it.desc)+'</textarea>';
-        }
-      }
-      if(it.desc2!==undefined) fld+='<textarea class="field-input" oninput="updateItemLive('+i+',\'desc2\',this.value)" placeholder="Column 2" rows="2" style="width:100%;padding:6px 8px;border:1.5px solid '+b.n2+';border-radius:6px;font-size:10px;resize:none;background:#fff;color:'+b.tx+';margin-top:4px;">'+esc(it.desc2)+'</textarea>';
-      fld+='</div>';
-    });
-    fld+='<button class="btn-add" onclick="addItem()" style="font-size:10px;padding:5px 12px;border-radius:8px;border:1.5px solid '+b.pri+';background:transparent;color:'+b.pri+';cursor:pointer;font-weight:700;margin-top:2px;">+ Add item</button>';
-  }
-  /* Action buttons */
-  if(!iS) fld+='<button class="btn-pri" onclick="doRegen()" style="width:100%;padding:11px;border-radius:10px;border:none;background:'+b.grad+';color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-top:12px;box-shadow:0 4px 14px '+b.pri+'33;">↺ Refresh Preview</button>';
-  else fld+='<div style="display:flex;gap:8px;margin-top:12px;"><button class="btn-sec" onclick="doRegen()" style="flex:1;padding:11px;border-radius:10px;border:2px solid '+b.pri+';background:#fff;color:'+b.pri+';font-size:12px;font-weight:700;cursor:pointer;">↺ Update Preview</button><button class="btn-pri" onclick="downloadSCORM(state.sel,state.data,state.brand)" style="flex:1;padding:11px;border-radius:10px;border:none;background:'+b.grad+';color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px '+b.pri+'33;">⬇ Download .zip</button></div>';
+  /* ── EDITOR SCREEN ── */
+  const isScorm = sel.startsWith("s_");
+  const compName = (isScorm ? SCORM_COMPS : HTML_COMPS).find(c => c.id === sel)?.n;
 
-  /* Preview pane */
-  var prev='<div style="font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">Live Preview</div>';
-  if(!iS){
-    prev+='<div id="htmlPreview" style="border:1.5px solid '+b.n2+';border-radius:12px;padding:18px;background:#fff;min-height:200px;overflow:auto;">'+state.output+'</div>';
-    prev+='<div style="margin-top:10px;">';
-    prev+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;">HTML Code</span>'
-      +'<button class="btn-copy" onclick="handleCopy()" style="font-size:10px;padding:4px 12px;border-radius:6px;border:1.5px solid '+b.n2+';background:#fff;color:'+b.txL+';cursor:pointer;font-weight:700;">⎘ Copy</button></div>';
-    prev+='<textarea id="codeOutput" readonly onclick="this.select()" style="width:100%;min-height:100px;padding:10px 12px;border:2px solid '+b.pri+'44;font-size:10px;font-family:monospace;color:#555;background:#FAFAFA;resize:vertical;cursor:pointer;border-radius:10px;line-height:1.5;">'+esc(state.output)+'</textarea>';
-    prev+='</div>';
-  } else {
-    prev+='<div style="border:1.5px solid '+b.n2+';border-radius:12px;overflow:hidden;">'
-      +'<div style="padding:8px 14px;background:'+b.n1+';display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid '+b.n2+';">'
-      +'<span style="font-size:10px;font-weight:700;color:'+b.txL+';">Interactive Preview</span>'
-      +'<span style="font-size:9px;color:#aaa;">Click to interact ↓</span></div>'
-      +'<iframe id="scormFrame" style="width:100%;height:560px;border:none;display:block;" sandbox="allow-scripts allow-same-origin"></iframe></div>';
-    prev+='<div style="margin-top:8px;padding:8px 12px;background:#EDE9FE;font-size:10px;color:#7C3AED;font-weight:600;border-radius:8px;">SCORM 1.2 — Download .zip → NovoEd → Add Content → SCORM/AICC</div>';
-  }
+  return (
+    <div style={{ maxWidth:880, margin:"0 auto", padding:"20px 16px", fontFamily:"'Trebuchet MS', system-ui, sans-serif", color:b.tx }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+        <button onClick={() => { setSel(null); setOutput(""); setCopied(false); setScormPreview(""); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, color:"#999", transition:"color 0.15s" }} onMouseEnter={e=>e.currentTarget.style.color=b.pri} onMouseLeave={e=>e.currentTarget.style.color="#999"}>← Back</button>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:12, fontWeight:700, color:b.pri }}>{compName}</span>
+          <span style={{ fontSize:10, padding:"2px 8px", background: isScorm ? "#FFF8E6" : b.priLt, color: isScorm ? "#856404" : b.pri, fontWeight:600, borderRadius:4 }}>{isScorm ? "SCORM" : "HTML"}</span>
+          <BrandSwitch brand={brand} setBrand={(k) => { setBrand(k); if (!isScorm) setOutput(genHTML(sel, k, data)); else setScormPreview(genSCORMhtml(sel, data, k)); }} size="sm" />
+        </div>
+      </div>
 
-  var h='<div style="max-width:1200px;margin:0 auto;padding:20px 32px;color:'+b.tx+';">';
-  /* Header */
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">'
-    +'<button class="btn-back" onclick="setState({sel:null,output:\'\',scormPreview:\'\'})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#999;font-weight:600;">← Back</button>'
-    +'<div style="display:flex;gap:8px;align-items:center;">'
-    +'<span style="font-size:14px;font-weight:700;color:'+b.tx+';">'+cn+'</span>'
-    +'<span style="font-size:10px;padding:3px 10px;background:'+(iS?"#EDE9FE":b.priLt)+';color:'+(iS?"#7C3AED":b.pri)+';font-weight:700;border-radius:20px;border:1px solid '+(iS?"#C4B5FD":""+b.pri+"44")+';">'+(iS?"SCORM":"HTML")+'</span>'
-    +brandBtns("sm")
-    +'</div></div>';
-  /* 2-col layout */
-  h+='<div style="display:grid;grid-template-columns:360px 1fr;gap:20px;">'
-    +'<div style="background:#fff;border-radius:14px;border:1.5px solid '+b.n2+';padding:16px;max-height:calc(100vh - 140px);overflow-y:auto;">'+fld+'</div>'
-    +'<div>'+prev+'</div>'
-    +'</div></div>';
-  root.innerHTML=h;
-  if(iS&&state.scormPreview){setTimeout(function(){var f=document.getElementById("scormFrame");if(f)f.srcdoc=state.scormPreview;},50);}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+        {/* ── LEFT: EDITOR ── */}
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Edit</div>
+
+          {data?.col1 !== undefined && (
+            <div style={{ marginBottom:8 }}>
+              <input value={data.col1} onChange={e => setData({...data, col1: e.target.value})} placeholder="Col 1" style={{ width:"100%", padding:"6px 8px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:11, fontWeight:600, marginBottom:4, outline:"none" }} />
+              <input value={data.col2} onChange={e => setData({...data, col2: e.target.value})} placeholder="Col 2" style={{ width:"100%", padding:"6px 8px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:11, fontWeight:600, outline:"none" }} />
+            </div>
+          )}
+
+          {data?.title !== undefined && (
+            <input value={data.title} onChange={e => setData({...data, title: e.target.value})} placeholder="Title / Heading" style={{ width:"100%", padding:"8px 10px", border:"1px solid #e5e5e5", borderRadius:6, fontSize:12, fontWeight:600, marginBottom:6, outline:"none" }} />
+          )}
+
+          {data?.body !== undefined && (
+            <textarea value={data.body} onChange={e => setData({...data, body: e.target.value})} rows={2} placeholder="Subtitle / Description" style={{ width:"100%", padding:"8px 10px", border:"1px solid #e5e5e5", borderRadius:6, fontSize:12, resize:"vertical", outline:"none", marginBottom:6 }} />
+          )}
+
+          {isScorm && (
+            <div style={{ display:"flex", gap:4, marginBottom:8, alignItems:"center" }}>
+              <span style={{ fontSize:10, fontWeight:600, color:"#888", marginRight:4 }}>Background:</span>
+              {[{v:"gradient",l:"Gradient"},{v:"none",l:"Plain white"}].map(o => (
+                <button key={o.v} onClick={() => setData({...data, bg: o.v})} style={{ padding:"4px 10px", border:"1px solid "+((data.bg||"gradient")===o.v?b.pri:"#ddd"), background:(data.bg||"gradient")===o.v?b.priLt:"#fff", color:(data.bg||"gradient")===o.v?b.pri:b.txL, fontSize:10, fontWeight:600, cursor:"pointer", borderRadius:4, transition:"all 0.15s" }}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {data?.author !== undefined && (
+            <input value={data.author} onChange={e => setData({...data, author: e.target.value})} placeholder="Author" style={{ width:"100%", padding:"6px 10px", border:"1px solid #e5e5e5", borderRadius:6, fontSize:11, marginBottom:6, outline:"none" }} />
+          )}
+
+          {data?.type !== undefined && (
+            <div style={{ display:"flex", gap:4, marginBottom:8 }}>
+              {["info","tip","warning","success"].map(t => (
+                <button key={t} onClick={() => setData({...data, type: t})} style={{ padding:"4px 10px", border:"1px solid "+(data.type === t ? b.pri : "#ddd"), background: data.type === t ? b.priLt : "#fff", color: data.type === t ? b.pri : b.txL, fontSize:10, fontWeight:600, cursor:"pointer", borderRadius:4, transition:"all 0.15s" }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {data?.active !== undefined && (
+            <div style={{ marginBottom:8 }}>
+              <label style={{ fontSize:10, fontWeight:600, color:"#888" }}>Active step: {data.active}</label>
+              <input type="range" min={0} max={(data.items?.length || 1) - 1} value={data.active} onChange={e => setData({...data, active: parseInt(e.target.value)})} style={{ width:"100%", accentColor: b.pri }} />
+            </div>
+          )}
+
+          {data?.items && data.items.map((it, i) => (
+            <div key={i} style={{ marginBottom:6, padding:8, background:"#FAFAFA", borderRadius:6 }}>
+              <div style={{ display:"flex", gap:4, alignItems:"center", marginBottom:3 }}>
+                <span style={{ fontSize:10, fontWeight:700, color:b.pri }}>#{i+1}</span>
+                {it.icon !== undefined && (
+                  <input value={it.icon} onChange={e => { const n = [...data.items]; n[i] = {...n[i], icon: e.target.value}; setData({...data, items: n}); }} style={{ width:36, padding:"5px 4px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:14, outline:"none", textAlign:"center" }} />
+                )}
+                <input value={it.title} onChange={e => { const n = [...data.items]; n[i] = {...n[i], title: e.target.value}; setData({...data, items: n}); }} placeholder="Title" style={{ flex:1, padding:"5px 6px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:11, fontWeight:600, outline:"none" }} />
+                {data.items.length > 1 && (
+                  <button onClick={() => setData({...data, items: data.items.filter((_, j) => j !== i)})} style={{ background:"none", border:"none", color:"#ccc", cursor:"pointer", fontSize:12, transition:"color 0.15s" }} onMouseEnter={e=>e.currentTarget.style.color="#e74c3c"} onMouseLeave={e=>e.currentTarget.style.color="#ccc"}>✕</button>
+                )}
+              </div>
+              {it.img !== undefined && (
+                <div style={{ display:"flex", gap:4, alignItems:"center", marginBottom:3 }}>
+                  <span style={{ fontSize:9, color:"#aaa", flexShrink:0 }}>🖼</span>
+                  <input value={it.img} onChange={e => { const n = [...data.items]; n[i] = {...n[i], img: e.target.value}; setData({...data, items: n}); }} placeholder="Image URL (paste link)" style={{ flex:1, padding:"4px 6px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:10, outline:"none", color:"#666" }} />
+                  {it.img && <img src={it.img} style={{ width:24, height:24, objectFit:"cover", borderRadius:3, border:"1px solid #e5e5e5" }} onError={e => e.target.style.display="none"} />}
+                </div>
+              )}
+              {it.desc !== undefined && (
+                <textarea value={it.desc} onChange={e => { const n = [...data.items]; n[i] = {...n[i], desc: e.target.value}; setData({...data, items: n}); }} placeholder="Description" rows={2} style={{ width:"100%", padding:"5px 6px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:10, resize:"none", outline:"none" }} />
+              )}
+              {it.desc2 !== undefined && (
+                <textarea value={it.desc2} onChange={e => { const n = [...data.items]; n[i] = {...n[i], desc2: e.target.value}; setData({...data, items: n}); }} placeholder="Column 2" rows={2} style={{ width:"100%", padding:"5px 6px", border:"1px solid #e5e5e5", borderRadius:4, fontSize:10, resize:"none", outline:"none", marginTop:3 }} />
+              )}
+            </div>
+          ))}
+
+          {data?.items && (
+            <button onClick={() => {
+              const tpl = data.items[0] || {};
+              const nw = { title: "" };
+              if (tpl.desc !== undefined) nw.desc = "";
+              if (tpl.desc2 !== undefined) nw.desc2 = "";
+              if (tpl.icon !== undefined) nw.icon = "●";
+              if (tpl.img !== undefined) nw.img = "";
+              setData({...data, items: [...data.items, nw]});
+            }} style={{ fontSize:10, padding:"4px 10px", borderRadius:4, border:"1px solid "+b.pri, background:"transparent", color:b.pri, cursor:"pointer", fontWeight:600, transition:"all 0.15s" }} onMouseEnter={e=>{e.currentTarget.style.background=b.pri;e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=b.pri;}}>
+              + Add
+            </button>
+          )}
+
+          {!isScorm && (
+            <button onClick={doRegen} style={{ width:"100%", padding:"10px", borderRadius:8, border:"none", background:b.pri, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", marginTop:10, transition:"all 0.2s" }} onMouseEnter={e => {e.currentTarget.style.background=b.priDk;e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.15)";}} onMouseLeave={e => {e.currentTarget.style.background=b.pri;e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+              Update preview
+            </button>
+          )}
+
+          {isScorm && (
+            <div style={{ display:"flex", gap:8, marginTop:10 }}>
+              <button onClick={doRegen} style={{ flex:1, padding:"10px", borderRadius:8, border:"2px solid "+b.pri, background:"#fff", color:b.pri, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background=b.priLt;e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="none";}}>
+                Update preview
+              </button>
+              <button onClick={() => downloadSCORM(sel, data, brand)} style={{ flex:1, padding:"10px", borderRadius:8, border:"none", background:b.pri, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background=b.priDk;e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.15)";}} onMouseLeave={e=>{e.currentTarget.style.background=b.pri;e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                ⬇ Download .zip
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT: PREVIEW ── */}
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Preview</div>
+
+          {!isScorm && (
+            <div style={{ border:"1px solid #eee", borderRadius:10, padding:16, background:"#fff", minHeight:200, overflow:"auto" }} dangerouslySetInnerHTML={{ __html: output }} />
+          )}
+
+          {isScorm && scormPreview && (
+            <div style={{ border:"1px solid #eee", borderRadius:10, overflow:"hidden", background:"#fff" }}>
+              <div style={{ padding:"8px 12px", background:b.n1, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:10, fontWeight:700, color:b.txL, textTransform:"uppercase", letterSpacing:0.5 }}>Live Interactive Preview</span>
+                <span style={{ fontSize:9, color:"#aaa" }}>Try clicking / interacting below</span>
+              </div>
+              <iframe
+                srcDoc={scormPreview}
+                style={{ width:"100%", height:560, border:"none", display:"block" }}
+                sandbox="allow-scripts allow-same-origin"
+                title="SCORM Preview"
+              />
+            </div>
+          )}
+
+          {!isScorm && (
+            <div style={{ marginTop:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:1 }}>HTML Code</div>
+                <button onClick={handleCopy} style={{ fontSize:10, padding:"3px 10px", borderRadius:4, border:"1px solid "+(copied ? b.pri : "#ddd"), background: copied ? b.priLt : "#fff", color: copied ? b.pri : "#888", cursor:"pointer", fontWeight:600, transition:"all 0.2s" }}>
+                  {copied ? "✓ Copied!" : "Copy"}
+                </button>
+              </div>
+              <textarea readOnly value={output} onClick={e => { e.target.focus(); e.target.select(); }} style={{ width:"100%", height:120, padding:10, border:"2px solid "+b.pri, fontSize:10, fontFamily:"monospace", color:"#444", background:"#FAFAFA", resize:"vertical", cursor:"pointer", borderRadius:6 }} />
+            </div>
+          )}
+
+          <div style={{ marginTop:8, padding:10, background:b.n1, fontSize:10, color:"#888", borderRadius:6 }}>
+            <strong style={{ color:b.tx }}>{isScorm ? "Upload:" : "NovoEd:"}</strong>{" "}
+            {isScorm ? "Download .zip → NovoEd → Add SCORM/AICC → Upload" : "Copy code → NovoEd → Contents → HTML. Also works in Quiz & Survey edit view."}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
-render();
-
-</script>
-</body>
-</html>
