@@ -7,8 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* --- BCG Henderson Sans (drop .woff2 files into ./fonts/ to activate) --- */
+@font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Thin.woff2') format('woff2');    font-weight:100; font-style:normal; font-display:swap; }
+@font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Light.woff2') format('woff2');   font-weight:300; font-style:normal; font-display:swap; }
+@font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Regular.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Bold.woff2') format('woff2');    font-weight:700; font-style:normal; font-display:swap; }
+/* --- BCG Henderson Serif --- */
+@font-face { font-family:'BCG Henderson Serif'; src:url('./fonts/BCGHendersonSerif-Regular.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+/* --- Brand font stack tokens (Henderson → Trebuchet → Inter → system) --- */
+:root {
+  --bcgu-font: 'BCG Henderson Sans', 'Trebuchet MS', 'Inter', system-ui, sans-serif;
+  --bcgu-font-serif: 'BCG Henderson Serif', Georgia, serif;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',system-ui,sans-serif;background:#F7F8FA;color:#1a1a2e;}
+body{font-family:var(--bcgu-font);background:#F7F8FA;color:#1a1a2e;}
 button,input,textarea{font-family:inherit;}
 button{cursor:pointer;transition:all 0.2s;}
 input,textarea{transition:border-color 0.2s;}
@@ -34,14 +46,14 @@ input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
 
 /* ── Brand Tokens ── */
 const B = {
-  bcg: { n:"BCG", pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", tx:"#333333", txL:"#666666", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #29BA74, #1B7A4F)", font:"'Inter',system-ui,sans-serif", dir:"ltr" },
-  bcgu: { n:"BCG U", pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", tx:"#323232", txL:"#666666", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #197A56, #0D3B2C)", font:"'Inter',system-ui,sans-serif", dir:"ltr" },
-  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", tx:"#1F2937", txL:"#6B7280", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #6366F1, #4338CA)", font:"'Inter',system-ui,sans-serif", dir:"ltr" },
+  bcg: { n:"BCG", pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", tx:"#333333", txL:"#666666", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #29BA74, #1B7A4F)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcgu: { n:"BCG U", pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", tx:"#323232", txL:"#666666", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #197A56, #0D3B2C)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
+  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", tx:"#1F2937", txL:"#6B7280", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #6366F1, #4338CA)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
 };
 
 /* ── Language / Font presets ── */
 const LANG_PRESETS = {
-  en:  { n:"English",    dir:"ltr", font:"'Inter',system-ui,sans-serif" },
+  en:  { n:"English",    dir:"ltr", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif" },
   ar:  { n:"العربية",    dir:"rtl", font:"'Noto Sans Arabic','Cairo','Tajawal',Tahoma,sans-serif" },
   he:  { n:"עברית",       dir:"rtl", font:"'Noto Sans Hebrew',Arial,sans-serif" },
   fr:  { n:"Français",   dir:"ltr", font:"'Inter','Helvetica Neue',sans-serif" },
@@ -699,7 +711,7 @@ function genSCORMhtml(sel, data, brand) {
     '@keyframes scaleIn{from{opacity:0;transform:scale(0.93)}to{opacity:1;transform:scale(1)}}' +
     '@keyframes dotPop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}' +
     'html,body{height:100%;}' +
-    'body{font-family:'+(b2.font||'"Segoe UI",Trebuchet MS,system-ui,sans-serif')+';padding:0;margin:0;background:'+bgStyle+';color:'+b2.tx+';display:flex;align-items:center;justify-content:center;min-height:100%;}' +
+    'body{font-family:'+(b2.font||"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif")+';padding:0;margin:0;background:'+bgStyle+';color:'+b2.tx+';display:flex;align-items:center;justify-content:center;min-height:100%;}' +
     '.container{width:100%;max-width:720px;margin:0 auto;padding:28px 32px;}' +
     '.page-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:'+b2.pri+';margin-bottom:5px;animation:fadeIn 0.5s ease;}' +
     '.page-subtitle{font-size:19px;font-weight:300;color:'+b2.tx+';margin-bottom:22px;animation:fadeUp 0.5s ease 0.1s both;line-height:1.4;}' +
