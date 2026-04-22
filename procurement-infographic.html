@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Process</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f5ff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  h1 {
+    color: #1a3a6b;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  .subtitle {
+    color: #4a6fa5;
+    font-size: 0.85rem;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  /* ── STEP CHEVRONS ── */
+  .steps {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    max-width: 860px;
+    gap: 0;
+  }
+
+  .step {
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    background: none;
+    padding: 0;
+  }
+
+  .chevron {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 8px 14px 20px;
+    background: #3a7bd5;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%);
+    transition: background 0.25s, transform 0.2s;
+    min-height: 80px;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step:first-child .chevron {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+    padding-left: 8px;
+  }
+
+  .step:hover .chevron,
+  .step.active .chevron {
+    background: #1a3a6b;
+    transform: translateY(-3px);
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255,255,255,0.6);
+    flex-shrink: 0;
+  }
+
+  .step.active .step-num {
+    background: #fff;
+    color: #1a3a6b;
+    border-color: #fff;
+  }
+
+  .step-label {
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── CONNECTOR DOT ── */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3a7bd5;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #3a7bd5;
+    transition: background 0.25s, box-shadow 0.25s;
+  }
+
+  .step.active .dot {
+    background: #1a3a6b;
+    box-shadow: 0 0 0 2px #1a3a6b;
+  }
+
+  .line {
+    width: 2px;
+    height: 14px;
+    background: #3a7bd5;
+    transition: background 0.25s;
+  }
+
+  .step.active .line {
+    background: #1a3a6b;
+  }
+
+  /* ── REVEAL PANEL ── */
+  .panels {
+    width: 100%;
+    max-width: 860px;
+    margin-top: 0;
+    position: relative;
+  }
+
+  .panel {
+    display: none;
+    border-radius: 12px;
+    background: #fff;
+    border: 2px solid #3a7bd5;
+    box-shadow: 0 6px 32px rgba(58,123,213,0.15);
+    padding: 28px 32px;
+    position: relative;
+    animation: slideDown 0.35s cubic-bezier(.4,0,.2,1) forwards;
+  }
+
+  .panel.visible {
+    display: block;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* caret pointing up at active chevron */
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: var(--caret-left, 50%);
+    transform: translateX(-50%);
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 12px solid #3a7bd5;
+    transition: left 0.3s;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .panel-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #e8f0fe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.5rem;
+  }
+
+  .panel-title {
+    color: #1a3a6b;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .panel-badge {
+    display: inline-block;
+    background: #3a7bd5;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 99px;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .panel-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .panel-section h3 {
+    color: #3a7bd5;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #3a7bd5;
+    padding-left: 8px;
+  }
+
+  .panel-section p,
+  .panel-section li {
+    color: #444;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .panel-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .panel-section ul li::before {
+    content: '▸ ';
+    color: #3a7bd5;
+    font-size: 0.7rem;
+  }
+
+  .focus-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1a3a6b;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 6px;
+    margin-top: 16px;
+  }
+
+  .hint {
+    text-align: center;
+    color: #7a99cc;
+    font-size: 0.78rem;
+    margin-top: 12px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Procurement Process Overview</h1>
+<p class="subtitle">Click any step to explore details</p>
+
+<div class="steps" id="steps">
+
+  <button class="step" data-step="1" aria-label="Step 1">
+    <div class="chevron">
+      <div class="step-num">1</div>
+      <div class="step-label">Procurement Strategy</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+  <button class="step" data-step="2" aria-label="Step 2">
+    <div class="chevron">
+      <div class="step-num">2</div>
+      <div class="step-label">BRP & EOI/PQQ</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+  <button class="step" data-step="3" aria-label="Step 3">
+    <div class="chevron">
+      <div class="step-num">3</div>
+      <div class="step-label">Tender RFP Issuance</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+  <button class="step" data-step="4" aria-label="Step 4">
+    <div class="chevron">
+      <div class="step-num">4</div>
+      <div class="step-label">Query & Mid-Tender</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+  <button class="step" data-step="5" aria-label="Step 5">
+    <div class="chevron">
+      <div class="step-num">5</div>
+      <div class="step-label">Evaluation & Negotiation</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+  <button class="step" data-step="6" aria-label="Step 6">
+    <div class="chevron">
+      <div class="step-num">6</div>
+      <div class="step-label">Contract Award</div>
+    </div>
+    <div class="connector"><div class="dot"></div><div class="line"></div></div>
+  </button>
+
+</div>
+
+<div class="panels" id="panels">
+  <div class="panel" id="panel-1">
+    <div class="panel-header">
+      <div class="panel-icon">📋</div>
+      <div>
+        <div class="panel-title">Procurement Strategy Document</div>
+        <div class="panel-badge">Step 1 of 6</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Define the overall approach, objectives, and scope of the procurement exercise. Aligns stakeholders on timeline, budget, and sourcing strategy before any tender activity begins.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Deliverables</h3>
+        <ul>
+          <li>Sourcing strategy and market analysis</li>
+          <li>Stakeholder approval and sign-off</li>
+          <li>Risk assessment and mitigation plan</li>
+          <li>Budget envelope confirmed</li>
+          <li>Draft project timeline</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-2">
+    <div class="panel-header">
+      <div class="panel-icon">🔍</div>
+      <div>
+        <div class="panel-title">Bid Review Program & EOI/PQQ Preparation</div>
+        <div class="panel-badge">Step 2 of 6 · Focus Area</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Qualify the supplier market through Expressions of Interest (EOI) and Pre-Qualification Questionnaires (PQQ). The Bid Review Program ensures evaluation consistency across submissions.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Activities</h3>
+        <ul>
+          <li>Issue EOI/PQQ to market</li>
+          <li>Evaluate supplier capability</li>
+          <li>Shortlist qualified bidders</li>
+          <li>Draft bid review criteria</li>
+          <li>Conduct supplier briefings</li>
+        </ul>
+      </div>
+    </div>
+    <div class="focus-tag">🎯 Focus Area — Deep evaluation rigor required</div>
+  </div>
+
+  <div class="panel" id="panel-3">
+    <div class="panel-header">
+      <div class="panel-icon">⚖️</div>
+      <div>
+        <div class="panel-title">Tender RFP Issuance</div>
+        <div class="panel-badge">Step 3 of 6</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Issue the formal Request for Proposal (RFP) to shortlisted suppliers. This document sets out all technical, commercial, and legal requirements for the engagement.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Deliverables</h3>
+        <ul>
+          <li>Complete RFP document package</li>
+          <li>Technical specifications issued</li>
+          <li>Commercial terms defined</li>
+          <li>Submission deadline communicated</li>
+          <li>NDA / confidentiality agreements</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-4">
+    <div class="panel-header">
+      <div class="panel-icon">👥</div>
+      <div>
+        <div class="panel-title">Tender Query / Clarification & Mid-Tender Meetings</div>
+        <div class="panel-badge">Step 4 of 6 · Focus Area</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Manage bidder questions, issue clarifications, and host structured mid-tender meetings to ensure all suppliers have equal access to information and can submit compliant bids.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Activities</h3>
+        <ul>
+          <li>Q&A log management</li>
+          <li>Addenda and clarification notices</li>
+          <li>Bidder presentations / site visits</li>
+          <li>Conflict-of-interest screening</li>
+          <li>Bid submission support</li>
+        </ul>
+      </div>
+    </div>
+    <div class="focus-tag">🎯 Focus Area — Fairness and transparency critical</div>
+  </div>
+
+  <div class="panel" id="panel-5">
+    <div class="panel-header">
+      <div class="panel-icon">🤝</div>
+      <div>
+        <div class="panel-title">Tender Evaluation and Negotiations</div>
+        <div class="panel-badge">Step 5 of 6</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Objectively score and rank all tender submissions against pre-agreed criteria. Conduct commercial and technical negotiations with preferred suppliers to optimize value.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Deliverables</h3>
+        <ul>
+          <li>Scored evaluation report</li>
+          <li>Preferred supplier recommendation</li>
+          <li>Negotiation strategy and outcomes</li>
+          <li>Best and final offer (BAFO)</li>
+          <li>Stakeholder approval for award</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-6">
+    <div class="panel-header">
+      <div class="panel-icon">📝</div>
+      <div>
+        <div class="panel-title">Contract Award and Execution</div>
+        <div class="panel-badge">Step 6 of 6</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <h3>Purpose</h3>
+        <p>Formally award the contract to the successful supplier and transition into the execution phase. Notify unsuccessful bidders and initiate supplier onboarding and governance.</p>
+      </div>
+      <div class="panel-section">
+        <h3>Key Deliverables</h3>
+        <ul>
+          <li>Signed contract executed</li>
+          <li>Award notifications issued</li>
+          <li>Debrief for unsuccessful bidders</li>
+          <li>Supplier onboarding initiated</li>
+          <li>Contract management plan active</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="hint" id="hint">▲ Click a step above to reveal its details</p>
+
+<script>
+  const steps = document.querySelectorAll('.step');
+  const hint  = document.getElementById('hint');
+  let active  = null;
+
+  steps.forEach(step => {
+    step.addEventListener('click', () => {
+      const n = step.dataset.step;
+      const panel = document.getElementById('panel-' + n);
+
+      // Toggle off if same step clicked again
+      if (active === n) {
+        step.classList.remove('active');
+        panel.classList.remove('visible');
+        active = null;
+        hint.style.display = '';
+        return;
+      }
+
+      // Deactivate previous
+      if (active) {
+        document.querySelector('.step.active')?.classList.remove('active');
+        document.querySelector('.panel.visible')?.classList.remove('visible');
+      }
+
+      step.classList.add('active');
+
+      // Position caret under the active chevron
+      const stepsEl = document.getElementById('steps');
+      const stepRect = step.getBoundingClientRect();
+      const panelsRect = stepsEl.getBoundingClientRect();
+      const caretLeft = stepRect.left + stepRect.width / 2 - panelsRect.left;
+      panel.style.setProperty('--caret-left', caretLeft + 'px');
+
+      panel.classList.remove('visible'); // reset animation
+      void panel.offsetWidth;           // force reflow
+      panel.classList.add('visible');
+
+      active = n;
+      hint.style.display = 'none';
+    });
+  });
+</script>
+</body>
+</html>

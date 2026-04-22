@@ -1,0 +1,22 @@
+{
+  "name": "bcg-toolkit-mcp",
+  "version": "0.1.0",
+  "description": "MCP bridge between Claude Desktop and the BCG U NovoEd Toolkit. Exposes component catalog and push-to-browser tools so LDs can draft activities in Claude chat and see them render live.",
+  "type": "module",
+  "bin": {
+    "bcg-toolkit-mcp": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "smoke": "node smoke.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
