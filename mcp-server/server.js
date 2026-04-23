@@ -32,7 +32,19 @@ import { exec } from "node:child_process";
 import { HTML_COMPS, SCORM_COMPS, SCHEMAS, EXAMPLES, BRANDS } from "./catalog.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TOOLKIT_DIR = path.resolve(__dirname, "..");
+// Path-adaptive: works in dev layout (mcp-server/ is a subfolder of the toolkit),
+// DXT-packed flat layout (server.js + index.html in the same dir), and a nested
+// DXT layout (server/ alongside toolkit/). First hit wins.
+const TOOLKIT_CANDIDATES = [
+  path.resolve(__dirname, ".."),            // dev: full-package/mcp-server/server.js → full-package/index.html
+  path.resolve(__dirname),                  // DXT flat: <ext>/server.js + <ext>/index.html
+  path.resolve(__dirname, "../toolkit"),    // DXT nested: <ext>/server/server.js + <ext>/toolkit/index.html
+  path.resolve(__dirname, "../../toolkit"), // belt-and-suspenders for alt layouts
+];
+const TOOLKIT_DIR =
+  (process.env.BCG_TOOLKIT_DIR && fs.existsSync(path.join(process.env.BCG_TOOLKIT_DIR, "index.html")))
+    ? process.env.BCG_TOOLKIT_DIR
+    : (TOOLKIT_CANDIDATES.find((d) => fs.existsSync(path.join(d, "index.html"))) || TOOLKIT_CANDIDATES[0]);
 const TOOLKIT_HTML = path.join(TOOLKIT_DIR, "index.html");
 const BCG_ICONS_JS = path.join(TOOLKIT_DIR, "bcg-icons.js");
 const HTTP_PORT = Number(process.env.BCG_TOOLKIT_PORT || 7724);

@@ -10,7 +10,7 @@
 - **Live preview** — See exactly how components look before using them
 - **Self-editing SCORM** — Press **Ctrl+Shift+E** inside a deployed SCORM activity on NovoEd to open an in-activity editor, make changes, and re-download
 - **AI Content Generator** — Describe what you need and AI creates the component ([Open AI Chat](https://claude.ai/project/019d8ffd-704f-72ca-b771-e1b61ce90680))
-- **MCP bridge for Claude Desktop** (experimental) — Draft components in a Claude Desktop chat and have them render live in the toolkit. See [`mcp-server/README.md`](mcp-server/README.md).
+- **Claude Desktop extension (`.dxt`)** — One-click install. Draft components in a normal Claude Desktop chat and have them render live in the toolkit browser tab. See [`dxt/README.md`](dxt/README.md).
 
 ## Live Link
 
@@ -28,8 +28,8 @@ To edit a deployed SCORM activity on NovoEd/Rise: open it, press **Ctrl+Shift+E*
 ### AI Generation
 Click "Open AI Chat" on the home page → Describe what you need → AI suggests components with content → Use in the toolkit.
 
-### Claude Desktop (optional, power users)
-Install the MCP bridge so LDs can draft components inside Claude Desktop without leaving the chat. See [`mcp-server/README.md`](mcp-server/README.md) for install instructions (Windows + macOS).
+### Claude Desktop (recommended)
+Install the `.dxt` extension — one drag-drop into Claude Desktop → Settings → Extensions. No Node install, no config editing. LDs can then say things like *"Draft a 3-card summary of X and open it in the toolkit"* and Claude orchestrates the whole flow. See [`dxt/README.md`](dxt/README.md) for the build command and install steps. (Dev path using the raw MCP server is still documented in [`mcp-server/README.md`](mcp-server/README.md).)
 
 ## Feedback
 

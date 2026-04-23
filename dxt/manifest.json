@@ -1,0 +1,51 @@
+{
+  "dxt_version": "0.1",
+  "name": "bcg-toolkit",
+  "display_name": "BCG U NovoEd Toolkit",
+  "version": "0.1.0",
+  "description": "Draft branded HTML embeds and interactive SCORM activities for NovoEd and Rise directly from Claude Desktop. Claude orchestrates the component catalog, fills in your data, and renders everything live in a local browser tab — no API keys, no data leaves your machine.",
+  "long_description": "The BCG U Toolkit turns Claude Desktop into an end-to-end Learning Design assistant. Ask Claude to 'draft a 3-card summary of the AI maturity phases' and the toolkit renders it live in your browser, ready to export to Rise as HTML or to NovoEd as a self-editing SCORM zip. 31 HTML components (cards, timelines, KPIs, stats, SWOT, pyramids, funnels, quizzes) and 16 interactive SCORM activities (flip cards, accordions, polls, drag-to-sort, hotspot, branching scenarios). Includes BCG and BCG U brand themes plus a Custom brand editor with full Arabic/Hebrew RTL support.",
+  "author": {
+    "name": "Jatin Patial",
+    "email": "patial.jatin@bcg.com"
+  },
+  "homepage": "https://github.com/Patial-Jatin_bcgprod/novoed-toolkit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Patial-Jatin_bcgprod/novoed-toolkit"
+  },
+  "license": "UNLICENSED",
+  "keywords": ["bcg", "novoed", "learning-design", "scorm", "html", "course-authoring"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/server.js"],
+      "env": {
+        "BCG_TOOLKIT_DIR": "${__dirname}/toolkit"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_components",
+      "description": "List every HTML + SCORM component with schema and example payloads."
+    },
+    {
+      "name": "open_in_toolkit",
+      "description": "Open a component in the toolkit browser tab, pre-filled with your data."
+    },
+    {
+      "name": "toolkit_status",
+      "description": "Check whether the local toolkit is running and how many browser tabs are connected."
+    }
+  ],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
