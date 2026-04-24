@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NovoEd Component Library</title>
+<title>BCG U Studio — Learning Design Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -36,6 +36,32 @@ input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
 .filter-tab{padding:6px 16px;border-radius:20px;border:1.5px solid #E8E8E8;background:#fff;font-size:11px;font-weight:600;color:#888;cursor:pointer;transition:all 0.2s;}
 .filter-tab:hover{border-color:#29BA74;color:#29BA74;}
 .filter-tab.active{background:#29BA74;border-color:#29BA74;color:#fff;}
+/* --- Studio landing: animated hero + interactive tiles --- */
+@keyframes studioGradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes studioFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes studioFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes studioToastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.studio-hero-bg{background-size:220% 220%;animation:studioGradientShift 22s ease-in-out infinite;}
+.studio-prompt{box-shadow:0 24px 70px rgba(0,0,0,0.22),0 0 0 1px rgba(255,255,255,0.1) inset;transition:box-shadow 0.25s,transform 0.2s;}
+.studio-prompt:focus-within{box-shadow:0 32px 90px rgba(0,0,0,0.28),0 0 0 2px rgba(255,255,255,0.4) inset;transform:translateY(-1px);}
+.studio-chip{transition:all 0.2s;cursor:pointer;}
+.studio-chip:hover{background:rgba(255,255,255,0.28)!important;transform:translateY(-1px);border-color:rgba(255,255,255,0.5)!important;}
+.quick-tile{transition:transform 0.25s cubic-bezier(0.4,0,0.2,1),box-shadow 0.25s,border-color 0.2s;cursor:pointer;}
+.quick-tile:hover{transform:translateY(-4px);box-shadow:0 18px 42px rgba(0,0,0,0.1)!important;}
+.quick-tile .qt-arrow{display:inline-block;transition:transform 0.2s;}
+.quick-tile:hover .qt-arrow{transform:translateX(4px);}
+.featured-rail{scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none;}
+.featured-rail::-webkit-scrollbar{display:none;}
+.featured-card{transition:transform 0.25s,box-shadow 0.25s;cursor:pointer;flex:0 0 auto;}
+.featured-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.1)!important;}
+.rail-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid #E8E8E8;background:#fff;color:#888;font-size:16px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+.rail-btn:hover{background:#f5f5f5;color:#333;}
+.studio-fade{animation:studioFadeUp 0.55s ease-out both;}
+.studio-fade.d1{animation-delay:0.08s;}
+.studio-fade.d2{animation-delay:0.16s;}
+.studio-fade.d3{animation-delay:0.24s;}
+.studio-fade.d4{animation-delay:0.32s;}
+#studioToast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 12px 44px rgba(0,0,0,0.32);z-index:9999;animation:studioToastIn 0.28s ease-out;max-width:420px;text-align:center;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -1347,11 +1373,11 @@ function renderPanel(){
       '<label>Body / intro</label><textarea id="__b">'+escHtml(data.body||'')+'</textarea>' +
       '<label>Theme</label><div class="brands">'+brandBtns+'</div>' +
       (items.length ? '<label>Items</label>'+itemsHtml : '') +
-      '<details class="help"><summary>How to update on NovoEd / Rise</summary><div class="body">' +
+      '<details class="help"><summary>How to update in your LMS</summary><div class="body">' +
         '<p>This activity is self-editable. Your edits stay in this browser only \u2014 to push them to learners, you must <strong>download the updated SCORM and replace the file on the platform</strong>.</p>' +
         '<h5>1. Edit here</h5>' +
         '<ol><li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> any time to open this panel.</li><li>Change title, body, item text, or theme.</li><li>Click <strong>Save &amp; Preview</strong> to see your edits live.</li><li>Click <strong>\u2193 Download SCORM</strong> when ready \u2014 a fresh .zip is saved to your computer.</li></ol>' +
-        '<h5>2. Replace on NovoEd</h5>' +
+        '<h5>2. Replace in your LMS</h5>' +
         '<ol><li>Open your course \u2192 the lesson with this activity.</li><li>Click <strong>Edit lesson</strong>.</li><li>Find this SCORM block \u2192 click the <strong>\u22ee menu</strong> \u2192 <strong>Replace file</strong>.</li><li>Upload the new .zip you just downloaded.</li><li><strong>Save</strong> the lesson. Learners now see the updated version.</li></ol>' +
         '<h5>3. Replace on Rise (Articulate)</h5>' +
         '<ol><li>Open the Rise course \u2192 the lesson containing this activity.</li><li>Click the SCORM/embed block \u2192 <strong>Edit</strong>.</li><li>Click <strong>Replace file</strong> and upload the new .zip.</li><li>Hit <strong>Preview</strong> to confirm, then <strong>Publish</strong>.</li></ol>' +
@@ -1926,6 +1952,41 @@ function importJSON() {
   try { var d=JSON.parse(raw); state.data=d; doRegen(); toast("✓ JSON imported", true); }
   catch(e) { toast("Invalid JSON", false); }
 }
+/* ── Studio landing helpers ── */
+function studioPromptFill(text){
+  var pi=document.getElementById("studioPrompt");
+  if(pi){ pi.value=text; pi.focus(); }
+}
+function studioPromptGo(){
+  var pi=document.getElementById("studioPrompt");
+  if(!pi)return;
+  var q=(pi.value||"").trim();
+  if(!q){ pi.focus(); pi.placeholder='Try: "3-card summary of AI maturity phases"'; return; }
+  try { navigator.clipboard.writeText(q); } catch(e) {}
+  studioToast("Prompt copied — paste into Claude to draft your component.");
+  setTimeout(function(){ window.open("https://claude.ai/project/019d8ffd-704f-72ca-b771-e1b61ce90680","_blank"); }, 380);
+}
+function studioOpen(id){
+  /* Open a featured component from the landing page — sets mode + selects in one step */
+  state.mode = (typeof id==="string" && id.indexOf("s_")===0) ? "scorm" : "html";
+  doSelect(id);
+}
+function studioComingSoon(name,when){
+  studioToast(name+" — shipping "+when+". We're building in public this week.");
+}
+function studioToast(msg){
+  var existing=document.getElementById("studioToast");
+  if(existing) existing.remove();
+  var t=document.createElement("div");
+  t.id="studioToast"; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){
+    t.style.transition="opacity 0.3s, transform 0.3s";
+    t.style.opacity="0"; t.style.transform="translate(-50%,10px)";
+    setTimeout(function(){ if(t.parentNode)t.remove(); }, 320);
+  }, 2800);
+}
+
 function homeSearchUpdate(val) {
   var box=document.getElementById("searchResults");
   if(!val){box.style.display="none";return;}
@@ -2000,7 +2061,7 @@ function openBrandEditor(){
     body+='<option value="'+esc(f)+'"'+(c.font===f?" selected":"")+'>'+esc(label)+'</option>';
   });
   body+='</select>';
-  body+='<div style="padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB;margin-bottom:18px;"><div style="font-size:9px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Preview</div><div style="font-family:'+c.font.replace(/"/g,"&quot;")+';font-size:15px;color:'+c.tx+';" dir="'+c.dir+'">'+(c.dir==="rtl"?"مرحبا بكم في NovoEd — النموذج":"The quick brown fox jumps over the lazy dog")+'</div></div>';
+  body+='<div style="padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB;margin-bottom:18px;"><div style="font-size:9px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Preview</div><div style="font-family:'+c.font.replace(/"/g,"&quot;")+';font-size:15px;color:'+c.tx+';" dir="'+c.dir+'">'+(c.dir==="rtl"?"مرحبا بكم في الاستوديو — النموذج":"The quick brown fox jumps over the lazy dog")+'</div></div>';
 
   body+='<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Direction</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:18px;">'
@@ -2032,92 +2093,157 @@ function resetCustomBrand(){
 function render() {
   var root=document.getElementById("root"), b=B[state.brand];
 
-  /* ─── HOME SCREEN ─── */
+  /* ─── HOME SCREEN (Studio landing v2) ─── */
   if(!state.mode){
+    var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
     var hm='<div>';
-    /* Hero */
-    hm+='<div style="background:'+b.grad+';padding:44px 0 36px;position:relative;overflow:hidden;margin-bottom:0;">';
-    hm+='<svg style="position:absolute;top:0;right:0;width:480px;height:100%;opacity:0.1;" viewBox="0 0 480 220" fill="none"><circle cx="400" cy="40" r="110" fill="#fff"/><circle cx="300" cy="190" r="70" fill="#fff"/><circle cx="460" cy="155" r="80" fill="#fff"/><rect x="200" y="10" width="50" height="50" rx="14" fill="#fff" transform="rotate(20 225 35)"/><rect x="320" y="110" width="38" height="38" rx="10" fill="#fff" transform="rotate(-12 339 129)"/></svg>';
+
+    /* ── HERO ── animated gradient + floating shapes + prompt ── */
+    hm+='<div class="studio-hero-bg" style="background-image:'+b.grad+';padding:68px 0 52px;position:relative;overflow:hidden;">';
+    hm+='<svg style="position:absolute;top:0;right:0;width:640px;height:100%;opacity:0.13;pointer-events:none;" viewBox="0 0 640 460" fill="none">'
+      +'<circle cx="520" cy="90" r="130" fill="#fff" style="animation:studioFloat 9s ease-in-out infinite;"/>'
+      +'<circle cx="400" cy="370" r="85" fill="#fff" style="animation:studioFloat 11s ease-in-out infinite 2s;"/>'
+      +'<circle cx="590" cy="270" r="70" fill="#fff" style="animation:studioFloat 13s ease-in-out infinite 1s;"/>'
+      +'<rect x="260" y="40" width="64" height="64" rx="18" fill="#fff" transform="rotate(22 292 72)" style="animation:studioFloat 10s ease-in-out infinite 0.5s;"/>'
+      +'<rect x="370" y="180" width="46" height="46" rx="12" fill="#fff" transform="rotate(-14 393 203)" style="animation:studioFloat 12s ease-in-out infinite 3s;"/>'
+      +'</svg>';
     hm+='<div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 40px;">';
-    hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.65);margin-bottom:10px;">BCG U × NovoEd</div>';
-    hm+='<div style="font-size:36px;font-weight:300;color:#fff;line-height:1.2;margin-bottom:10px;letter-spacing:-0.5px;">Component Toolkit</div>';
-    hm+='<div style="font-size:13px;color:rgba(255,255,255,0.78);line-height:1.65;max-width:520px;margin-bottom:22px;">Build professional HTML embeds and interactive SCORM activities for NovoEd — no coding required.</div>';
-    /* Stat pills */
-    hm+='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-    var iconPill=hasBCGIcons()?[['1,069','BCG Icons ✦']]:[];
-    [['21','HTML Components'],['15','SCORM Activities'],['3','Brand Themes']].concat(iconPill).forEach(function(s){
-      hm+='<div style="padding:5px 14px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:20px;border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:600;"><span style="font-size:15px;font-weight:700;margin-right:5px;">'+s[0]+'</span>'+s[1]+'</div>';
-    });
-    hm+='</div></div></div>';
-    /* Content */
-    hm+='<div style="max-width:1100px;margin:0 auto;padding:28px 40px 40px;">';
-    /* Search + Brand row */
-    hm+='<div style="display:flex;gap:12px;align-items:center;margin-bottom:24px;"><div style="flex:1;position:relative;">'
-      +'<input id="homeSearch" oninput="homeSearchUpdate(this.value)" placeholder="Search all 32 components…" style="width:100%;padding:10px 14px 10px 36px;border:1.5px solid '+b.n2+';border-radius:10px;font-size:12px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.04);"/>'
-      +'<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#bbb;">⌕</span>'
-      +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.1);z-index:50;max-height:260px;overflow:auto;"></div>'
-      +'</div>'+brandBtns("md")+'</div>';
-    /* Mode cards */
-    hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">';
-    /* HTML card */
-    hm+='<div class="mode-card" onclick="setState({mode:\'html\'})" style="background:#fff;border:2px solid '+b.n2+';border-radius:16px;padding:26px 24px;cursor:pointer;transition:all 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
-    hm+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      +'<div style="width:42px;height:42px;background:'+b.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;">📋</div>'
-      +'<div><div style="font-size:16px;font-weight:700;color:'+b.tx+';">HTML Components</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:1px;">Copy & paste into NovoEd</div></div></div>';
-    hm+='<div style="font-size:12px;color:'+b.txL+';line-height:1.7;margin-bottom:14px;">Static visual embeds — banners, cards, tables, timelines, key takeaways, FAQs, stats, and more.</div>';
-    /* Mini thumbnail strip */
-    hm+='<div style="display:flex;gap:6px;margin-bottom:14px;overflow:hidden;">';
-    ["cards","timeline","stats","keypoints","twostat"].forEach(function(id){ if(THUMBS[id]) hm+='<div style="border-radius:6px;overflow:hidden;border:1px solid '+b.n2+';flex-shrink:0;">'+THUMBS[id]+'</div>'; });
+
+    /* Kicker */
+    hm+='<div class="studio-fade" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3.5px;color:rgba(255,255,255,0.72);margin-bottom:14px;">BCG U · AI Learning Design Studio</div>';
+
+    /* Big headline prompt */
+    hm+='<div class="studio-fade d1" style="font-size:50px;font-weight:300;color:#fff;line-height:1.05;margin-bottom:14px;letter-spacing:-1.1px;">What will you design today?</div>';
+    hm+='<div class="studio-fade d2" style="font-size:15px;color:rgba(255,255,255,0.86);line-height:1.6;max-width:620px;margin-bottom:30px;">Your AI co-pilot for Learning Design. Branded components, interactive SCORM activities, and full course journeys — ready for Rise, NovoEd, Docebo, Moodle, Canvas, or any SCORM-compatible LMS.</div>';
+
+    /* Prompt input */
+    hm+='<div class="studio-fade d2 studio-prompt" style="display:flex;align-items:center;gap:8px;max-width:720px;background:rgba(255,255,255,0.97);border-radius:16px;padding:7px 7px 7px 20px;margin-bottom:16px;">';
+    hm+='<span style="font-size:16px;color:'+b.pri+';margin-right:4px;">✨</span>';
+    hm+='<input id="studioPrompt" type="text" onkeydown="if(event.key===\'Enter\')studioPromptGo()" placeholder="Describe a component, scenario, or learning goal…" style="flex:1;border:none;background:transparent;font-size:15px;color:'+b.tx+';padding:13px 0;outline:none;"/>';
+    hm+='<button onclick="studioPromptGo()" style="background:'+b.grad+';color:#fff;border:none;border-radius:12px;padding:12px 22px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,0.18);">Design <span style="font-size:16px;">→</span></button>';
     hm+='</div>';
-    hm+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
-    ["Seamless","Instant load","Native look","4 NEW"].forEach(function(tag,i){
-      var isNew=i===3;
-      hm+='<span style="font-size:9px;padding:2px 8px;background:'+(isNew?b.pri+'22':(b.pri+'12'))+';color:'+(isNew?b.priDk:b.pri)+';border-radius:10px;font-weight:700;border:1px solid '+(isNew?b.pri+'44':'transparent')+';white-space:nowrap;">'+tag+'</span>';
+
+    /* Example chips */
+    hm+='<div class="studio-fade d3" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;">';
+    var chips=[
+      '3-card summary of AI maturity phases',
+      'Timeline of a product launch',
+      'Flip cards for 5 leadership principles',
+      'SWOT for market entry',
+      'Branching scenario: difficult client'
+    ];
+    chips.forEach(function(chip){
+      var safe=chip.replace(/'/g,"\\'");
+      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:7px 14px;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.22);border-radius:20px;color:#fff;font-size:11px;font-weight:500;">'+chip+'</button>';
     });
-    hm+='</div><div style="font-size:12px;color:'+b.pri+';font-weight:700;">Browse 20 components →</div></div>';
-    /* SCORM card */
-    hm+='<div class="mode-card" onclick="setState({mode:\'scorm\'})" style="background:#fff;border:2px solid '+b.n2+';border-radius:16px;padding:26px 24px;cursor:pointer;transition:all 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
-    hm+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      +'<div style="width:42px;height:42px;background:linear-gradient(135deg,#7C3AED,#4F46E5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;">✦</div>'
-      +'<div><div style="font-size:16px;font-weight:700;color:'+b.tx+';">SCORM Interactives</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:1px;">Download .zip \u2192 upload to NovoEd \u2014 <span style="color:#7C3AED;font-weight:600;">edit on-platform with Ctrl+Shift+E</span></div></div></div>';
-    hm+='<div style="font-size:12px;color:'+b.txL+';line-height:1.7;margin-bottom:14px;">Animated activities — flip cards, accordions, quizzes, polls, drag-to-sort, cycle diagrams, and more.</div>';
-    hm+='<div style="display:flex;gap:6px;margin-bottom:14px;overflow:hidden;">';
-    ["s_flipcard","s_accordion","s_quiz","s_poll","s_cycle"].forEach(function(id){ if(THUMBS[id]) hm+='<div style="border-radius:6px;overflow:hidden;border:1px solid #E8E8E8;flex-shrink:0;">'+THUMBS[id]+'</div>'; });
     hm+='</div>';
-    hm+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
-    ["Animated","Interactive","Engaging","2 NEW"].forEach(function(tag,i){
-      var isNew=i===3;
-      hm+='<span style="font-size:9px;padding:2px 8px;background:'+(isNew?"#EDE9FE":"#F3F0FF")+';color:'+(isNew?"#5B21B6":"#7C3AED")+';border-radius:10px;font-weight:700;border:1px solid '+(isNew?"#C4B5FD22":"transparent")+';white-space:nowrap;">'+tag+'</span>';
+
+    /* Stat pills + brand switcher */
+    hm+='<div class="studio-fade d3" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
+    var iconCount=(window.BCG_ICONS?Object.keys(window.BCG_ICONS).length:0);
+    var iconPill=hasBCGIcons()?[[iconCount.toLocaleString(),'BCG Icons ✦']]:[];
+    [[''+htmlCount,'HTML'],[''+scormCount,'SCORM'],['3','Brand Themes']].concat(iconPill).forEach(function(s){
+      hm+='<div style="padding:5px 14px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:20px;border:1px solid rgba(255,255,255,0.26);color:#fff;font-size:11px;font-weight:600;"><span style="font-size:15px;font-weight:700;margin-right:5px;">'+s[0]+'</span>'+s[1]+'</div>';
     });
-    hm+='</div><div style="font-size:12px;color:#7C3AED;font-weight:700;">Browse 12 activities →</div></div>';
-    hm+='</div>'; /* end mode cards grid */
-    /* LD toolkit row: Recommend + Library + Brand Studio */
-    hm+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">';
+    hm+='<div style="flex:1;"></div>'+brandBtns("md")+'</div>';
+
+    hm+='</div></div>'; /* end hero */
+
+    /* ── CONTENT ── */
+    hm+='<div style="max-width:1100px;margin:0 auto;padding:40px 40px 44px;">';
+
+    /* Search bar (full-width, subtle) */
+    hm+='<div style="position:relative;margin-bottom:30px;">'
+      +'<input id="homeSearch" oninput="homeSearchUpdate(this.value)" placeholder="Or search all '+(htmlCount+scormCount)+' components by name…" style="width:100%;padding:12px 14px 12px 40px;border:1.5px solid '+b.n2+';border-radius:12px;font-size:13px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.04);"/>'
+      +'<span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;color:#bbb;">⌕</span>'
+      +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.12);z-index:50;max-height:280px;overflow:auto;"></div>'
+      +'</div>';
+
+    /* Quick launch — 4 tiles */
+    hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';margin-bottom:12px;">Quick launch</div>';
+    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">';
+    var tiles=[
+      {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
+      {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
+      {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"studioComingSoon('Journey Builder','Day 3')",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'SOON',cta:'Preview →'},
+      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"studioComingSoon('Content Writer','Day 4')",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'SOON',cta:'Preview →'}
+    ];
+    tiles.forEach(function(t){
+      hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid '+b.n2+';border-radius:16px;padding:22px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">';
+      if(t.badge) hm+='<div style="position:absolute;top:12px;right:12px;padding:2px 8px;background:'+b.priLt+';color:'+b.priDk+';border-radius:10px;font-size:9px;font-weight:800;letter-spacing:0.8px;border:1px solid '+b.pri+'33;">'+t.badge+'</div>';
+      hm+='<div style="width:44px;height:44px;background:'+t.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin-bottom:14px;">'+t.icon+'</div>';
+      hm+='<div style="font-size:14px;font-weight:700;color:'+b.tx+';margin-bottom:4px;">'+t.title+'</div>';
+      hm+='<div style="font-size:11px;color:'+b.txL+';line-height:1.5;margin-bottom:12px;">'+t.desc+'</div>';
+      hm+='<div style="font-size:11px;color:'+b.pri+';font-weight:700;">'+t.cta.replace('→','<span class="qt-arrow">→</span>')+'</div>';
+      hm+='</div>';
+    });
+    hm+='</div>';
+
+    /* Secondary tools row */
     var libCount=libGet().length;
-    hm+='<div class="mode-card" onclick="openRecommender()" style="padding:16px 18px;background:#fff;border:1.5px solid '+b.n2+';border-radius:14px;cursor:pointer;transition:all 0.2s;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="width:32px;height:32px;background:'+b.priLt+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">✨</div><div style="font-size:12px;font-weight:700;color:'+b.tx+';">Recommend</div></div><div style="font-size:10px;color:'+b.txL+';line-height:1.5;">Not sure what to use? Pick by teaching goal.</div></div>';
-    hm+='<div class="mode-card" onclick="openLibrary()" style="padding:16px 18px;background:#fff;border:1.5px solid '+b.n2+';border-radius:14px;cursor:pointer;transition:all 0.2s;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="width:32px;height:32px;background:'+b.priLt+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">★</div><div style="font-size:12px;font-weight:700;color:'+b.tx+';">My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span></div></div><div style="font-size:10px;color:'+b.txL+';line-height:1.5;">Reuse your saved, branded components.</div></div>';
-    hm+='<div class="mode-card" onclick="openBrandEditor()" style="padding:16px 18px;background:#fff;border:1.5px solid '+b.n2+';border-radius:14px;cursor:pointer;transition:all 0.2s;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="width:32px;height:32px;background:'+b.priLt+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">⚙</div><div style="font-size:12px;font-weight:700;color:'+b.tx+';">Brand Studio</div></div><div style="font-size:10px;color:'+b.txL+';line-height:1.5;">Custom palette, fonts, Arabic/RTL support.</div></div>';
+    hm+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:36px;">';
+    [
+      {onclick:'openRecommender()',icon:'✨',title:'Recommend',sub:'Pick by teaching goal'},
+      {onclick:'openLibrary()',icon:'★',title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
+      {onclick:'openBrandEditor()',icon:'⚙',title:'Brand Studio',sub:'Custom palette, RTL support'}
+    ].forEach(function(s){
+      hm+='<div class="quick-tile" onclick="'+s.onclick+'" style="padding:14px 18px;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;display:flex;align-items:center;gap:12px;">';
+      hm+='<div style="width:34px;height:34px;background:'+b.priLt+';border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;color:'+b.pri+';flex-shrink:0;">'+s.icon+'</div>';
+      hm+='<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:'+b.tx+';">'+s.title+'</div><div style="font-size:10px;color:'+b.txL+';margin-top:2px;">'+s.sub+'</div></div>';
+      hm+='</div>';
+    });
     hm+='</div>';
-    /* AI panel */
-    hm+='<div style="margin-bottom:20px;padding:20px 24px;background:#fff;border-radius:16px;border:1.5px solid '+b.n2+';box-shadow:0 2px 8px rgba(0,0,0,0.04);display:flex;align-items:center;gap:16px;">';
-    hm+='<div style="width:44px;height:44px;background:'+b.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⚡</div>';
-    hm+='<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:'+b.tx+';">AI Content Generator</div>'
-      +'<div style="font-size:11px;color:'+b.txL+';margin-top:2px;line-height:1.5;">Every component has an <strong>⚡ AI Prompt</strong> button — copy the prompt, paste into any AI, paste the JSON back. Works with Claude, ChatGPT, Copilot.</div></div>';
-    hm+='<a href="https://claude.ai/project/019d8ffd-704f-72ca-b771-e1b61ce90680" target="_blank" style="padding:10px 22px;border-radius:10px;background:'+b.grad+';color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 4px 14px '+b.pri+'33;">Open AI Chat →</a>';
+
+    /* Featured components rail */
+    hm+='<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;">'
+      +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';">Featured components</div><div style="font-size:13px;color:'+b.tx+';margin-top:3px;font-weight:500;">Live previews — click to customize</div></div>'
+      +'<div style="display:flex;gap:6px;"><button class="rail-btn" onclick="document.getElementById(\'featRail\').scrollBy({left:-380,behavior:\'smooth\'})">‹</button><button class="rail-btn" onclick="document.getElementById(\'featRail\').scrollBy({left:380,behavior:\'smooth\'})">›</button></div>'
+      +'</div>';
+    hm+='<div id="featRail" class="featured-rail" style="display:flex;gap:14px;overflow-x:auto;padding:4px 4px 18px;margin-bottom:32px;">';
+    var featured=[
+      {id:'cards',label:'Cards',tag:'HTML'},
+      {id:'timeline',label:'Timeline',tag:'HTML'},
+      {id:'s_flipcard',label:'Flip Cards',tag:'SCORM'},
+      {id:'stats',label:'Stats',tag:'HTML'},
+      {id:'swot',label:'SWOT',tag:'HTML'},
+      {id:'s_accordion',label:'Accordion',tag:'SCORM'},
+      {id:'pyramid',label:'Pyramid',tag:'HTML'},
+      {id:'s_quiz',label:'Quiz',tag:'SCORM'},
+      {id:'funnel',label:'Funnel',tag:'HTML'},
+      {id:'s_cycle',label:'Cycle Diagram',tag:'SCORM'}
+    ];
+    featured.forEach(function(f){
+      if(!THUMBS[f.id]) return;
+      var tagBg=f.tag==='HTML'?b.priLt:'#EDE9FE', tagFg=f.tag==='HTML'?b.pri:'#7C3AED';
+      hm+='<div class="featured-card" onclick="studioOpen(\''+f.id+'\')" style="background:#fff;border:1.5px solid '+b.n2+';border-radius:14px;padding:12px;min-width:236px;box-shadow:0 2px 6px rgba(0,0,0,0.04);">';
+      hm+='<div style="border-radius:8px;overflow:hidden;border:1px solid '+b.n2+';margin-bottom:10px;">'+THUMBS[f.id]+'</div>';
+      hm+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div style="font-size:12px;font-weight:700;color:'+b.tx+';">'+f.label+'</div>'
+        +'<span style="font-size:9px;padding:2px 7px;background:'+tagBg+';color:'+tagFg+';border-radius:8px;font-weight:700;">'+f.tag+'</span></div>';
+      hm+='</div>';
+    });
     hm+='</div>';
-    /* Whats new + feedback row */
+
+    /* Claude Desktop CTA banner (NEW) */
+    hm+='<div style="margin-bottom:22px;padding:24px 28px;background:linear-gradient(135deg,#1a1a2e,'+b.priDk+');border-radius:18px;color:#fff;display:flex;align-items:center;gap:20px;box-shadow:0 14px 40px rgba(0,0,0,0.18);position:relative;overflow:hidden;">';
+    hm+='<div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,'+b.pri+'33 0%, transparent 70%);pointer-events:none;"></div>';
+    hm+='<div style="width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;position:relative;">⌘</div>';
+    hm+='<div style="flex:1;min-width:0;position:relative;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div style="font-size:15px;font-weight:700;">Install the Claude Desktop extension</div><div style="padding:2px 8px;background:#F59E0B;color:#000;border-radius:8px;font-size:9px;font-weight:800;letter-spacing:0.5px;">NEW</div></div>'
+      +'<div style="font-size:12px;color:rgba(255,255,255,0.82);line-height:1.55;">One-click <strong>.dxt</strong> install. Draft components from any Claude Desktop chat — they render live here. No Node, no config, no IT ticket.</div></div>';
+    hm+='<a href="https://github.com/Patial-Jatin_bcgprod/novoed-toolkit/blob/main/dxt/README.md" target="_blank" style="padding:11px 22px;border-radius:12px;background:#fff;color:#1a1a2e;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;position:relative;">Get the installer →</a>';
+    hm+='</div>';
+
+    /* What's new + Feedback */
     hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
-    hm+='<div style="padding:18px 20px;background:'+b.n1+';border-radius:14px;border:1px solid '+b.n2+';">'
-      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.3</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.7;"><strong>Brand Studio ⚙:</strong> custom palette, fonts, and RTL (Arabic/Hebrew) support for client brands.<br><strong>+1 HTML:</strong> AI Prompt Block.<br><strong>+3 SCORM:</strong> Image Hotspots, Branching Scenario, Drag-to-Categorize.<br><span style="color:'+b.txL+';">10 new infographics (Matrix, SWOT, Pyramid, Funnel, KPI, Donut, Bar, Roadmap, Pros/Cons, Do\'s &amp; Don\'ts).</span></div>'
+    hm+='<div style="padding:20px 22px;background:'+b.n1+';border-radius:14px;border:1px solid '+b.n2+';">'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.4 Studio</div>'
+      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.75;"><strong>Studio landing:</strong> prompt-first hero, featured components, faster navigation.<br><strong>Claude Desktop extension:</strong> one-click .dxt install now live.<br><strong>Henderson + Trebuchet</strong> fonts added to the brand stack.<br><span style="color:'+b.txL+';">Journey Builder + Content Writer shipping later this week.</span></div>'
       +'</div>';
-    hm+='<div style="padding:18px 20px;background:'+b.priLt+';border-radius:14px;border:1px solid '+b.pri+'22;display:flex;align-items:center;gap:14px;">'
-      +'<div style="width:36px;height:36px;background:'+b.pri+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;">✉</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.6;"><strong>Feedback or ideas?</strong><br>Email <a href="mailto:jatin.patial@bcg.com" style="color:'+b.pri+';font-weight:700;">jatin.patial@bcg.com</a></div>'
+    hm+='<div style="padding:20px 22px;background:'+b.priLt+';border-radius:14px;border:1px solid '+b.pri+'22;display:flex;align-items:center;gap:14px;">'
+      +'<div style="width:38px;height:38px;background:'+b.pri+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;">✉</div>'
+      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.6;"><strong>Feedback or ideas?</strong><br>Email <a href="mailto:patial.jatin@bcg.com" style="color:'+b.pri+';font-weight:700;">patial.jatin@bcg.com</a></div>'
       +'</div>';
     hm+='</div>';
+
     hm+='</div></div>'; /* end content + outer */
     root.innerHTML=hm; return;
   }
@@ -2138,7 +2264,7 @@ function render() {
       return matchCat&&matchSq;
     });
     var lb=state.mode==="html"?"HTML Components":"SCORM Interactives";
-    var ht=state.mode==="html"?"Copy code → NovoEd → Contents → HTML block.":"Download .zip → NovoEd → Add Content → SCORM/AICC block. ✎ Self-editable: press Ctrl+Shift+E inside the activity to edit + re-download.";
+    var ht=state.mode==="html"?"Copy code → paste into any LMS's HTML block (Rise, NovoEd, Docebo, Moodle, Canvas…).":"Download .zip → upload to any SCORM-compatible LMS. ✎ Self-editable: press Ctrl+Shift+E inside the activity to edit + re-download.";
     var hb=state.mode==="html"?b.priLt:"#EDE9FE", hc=state.mode==="html"?b.pri:"#7C3AED";
     var h='<div style="max-width:1100px;margin:0 auto;padding:20px 32px;color:'+b.tx+';">';
     h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">'
@@ -2292,9 +2418,9 @@ function render() {
       +'<span style="font-size:9px;color:#aaa;">Click to interact ↓</span></div>'
       +'<iframe id="scormFrame" style="width:100%;height:560px;border:none;display:block;" sandbox="allow-scripts allow-same-origin"></iframe></div>';
     prev+='<div style="margin-top:8px;padding:10px 14px;background:#EDE9FE;font-size:10px;color:#5B21B6;border-radius:8px;line-height:1.6;">'
-      +'<div style="font-weight:700;margin-bottom:4px;color:#5B21B6;">SCORM 1.2 \u2014 Download .zip \u2192 NovoEd / Rise \u2192 Add Content \u2192 SCORM/AICC</div>'
+      +'<div style="font-weight:700;margin-bottom:4px;color:#5B21B6;">SCORM 1.2 \u2014 Download .zip \u2192 upload to any LMS (Rise, NovoEd, Docebo, Moodle\u2026) \u2192 Add SCORM/AICC</div>'
       +'<div style="font-weight:600;color:#7C3AED;">\u270e Self-editable on the platform:</div>'
-      +'<ol style="margin:3px 0 0 16px;padding:0;font-weight:500;color:#4B2680;"><li>Open the activity on NovoEd / Rise.</li><li>Press <kbd style="background:#fff;padding:1px 5px;border:1px solid #ccc;border-radius:3px;font-family:monospace;font-size:9px;">Ctrl+Shift+E</kbd> \u2014 Author Studio appears.</li><li>Edit text / theme \u2192 click \u2193 Download SCORM.</li><li>Replace the file in NovoEd / Rise (Edit lesson \u2192 Replace file).</li></ol></div>';
+      +'<ol style="margin:3px 0 0 16px;padding:0;font-weight:500;color:#4B2680;"><li>Open the activity in your LMS.</li><li>Press <kbd style="background:#fff;padding:1px 5px;border:1px solid #ccc;border-radius:3px;font-family:monospace;font-size:9px;">Ctrl+Shift+E</kbd> \u2014 Author Studio appears.</li><li>Edit text / theme \u2192 click \u2193 Download SCORM.</li><li>Replace the file in your LMS (Edit lesson \u2192 Replace file).</li></ol></div>';
   }
 
   var h='<div style="max-width:1200px;margin:0 auto;padding:20px 32px;color:'+b.tx+';">';

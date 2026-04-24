@@ -1,6 +1,6 @@
-# BCG U Toolkit — Desktop Extension (DXT)
+# BCG U Studio — Desktop Extension (DXT)
 
-Packages the MCP server + toolkit HTML into a **single `.dxt` file** that Learning Designers can install into Claude Desktop with one click — no Node install, no JSON config editing, no command line.
+Packages the MCP server + Studio HTML into a **single `.dxt` file** that Learning Designers can install into Claude Desktop with one click — no Node install, no JSON config editing, no command line. Outputs work in any LMS (Rise, NovoEd, Docebo, Moodle, Canvas — any SCORM-compatible platform).
 
 ## Build the .dxt
 
@@ -28,7 +28,7 @@ server/
   package.json         — runtime deps (@modelcontextprotocol/sdk, ws)
   node_modules/        — bundled production deps
 toolkit/
-  index.html           — the toolkit UI (snapshot of main repo)
+  index.html           — the Studio UI (snapshot of main repo)
   bcg-icons.js         — BCG icon set
   fonts/               — Henderson .woff2 + README (fonts activate when files present)
 ```

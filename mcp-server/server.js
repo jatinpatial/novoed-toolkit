@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// BCG U NovoEd Toolkit — MCP server + local bridge.
+// BCG U Studio — MCP server + local bridge.
 //
 // Runs three things at once:
 //   1) MCP stdio server  — Claude Desktop connects via the config in README.md.
@@ -41,10 +41,11 @@ const TOOLKIT_CANDIDATES = [
   path.resolve(__dirname, "../toolkit"),    // DXT nested: <ext>/server/server.js + <ext>/toolkit/index.html
   path.resolve(__dirname, "../../toolkit"), // belt-and-suspenders for alt layouts
 ];
-const TOOLKIT_DIR =
+const TOOLKIT_DIR = path.resolve(
   (process.env.BCG_TOOLKIT_DIR && fs.existsSync(path.join(process.env.BCG_TOOLKIT_DIR, "index.html")))
     ? process.env.BCG_TOOLKIT_DIR
-    : (TOOLKIT_CANDIDATES.find((d) => fs.existsSync(path.join(d, "index.html"))) || TOOLKIT_CANDIDATES[0]);
+    : (TOOLKIT_CANDIDATES.find((d) => fs.existsSync(path.join(d, "index.html"))) || TOOLKIT_CANDIDATES[0])
+);
 const TOOLKIT_HTML = path.join(TOOLKIT_DIR, "index.html");
 const BCG_ICONS_JS = path.join(TOOLKIT_DIR, "bcg-icons.js");
 const HTTP_PORT = Number(process.env.BCG_TOOLKIT_PORT || 7724);
@@ -70,10 +71,14 @@ const MIME = {
 
 function safeResolve(reqPath) {
   // Strip query, normalize, refuse anything that escapes TOOLKIT_DIR.
+  // Use path.relative (not startsWith) so Windows forward/back-slash mismatch
+  // between TOOLKIT_DIR (from env var) and abs (from path.resolve) doesn't
+  // 403 every legitimate request.
   const clean = decodeURIComponent(reqPath.split("?")[0]).replace(/^\/+/, "");
   const target = clean === "" ? "index.html" : clean;
   const abs = path.resolve(TOOLKIT_DIR, target);
-  if (!abs.startsWith(TOOLKIT_DIR)) return null;
+  const rel = path.relative(TOOLKIT_DIR, abs);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
   return abs;
 }
 
@@ -145,7 +150,7 @@ const TOOL_DEFS = [
   {
     name: "list_components",
     description:
-      "List every component available in the BCG U NovoEd Toolkit (HTML embeds and interactive SCORM activities). Returns id, name, category, data schema hint, and an example payload. Use this first when you need to know which component fits a learning objective.",
+      "List every component available in BCG U Studio (HTML embeds and interactive SCORM activities). Returns id, name, category, data schema hint, and an example payload. HTML components paste into any LMS's HTML block (Rise, NovoEd, Docebo, Moodle, Canvas); SCORM zips upload to any SCORM-compatible LMS. Use this first when you need to know which component fits a learning objective.",
     inputSchema: {
       type: "object",
       properties: {
@@ -160,9 +165,9 @@ const TOOL_DEFS = [
   {
     name: "open_in_toolkit",
     description:
-      "Open a component in the local BCG U toolkit browser tab, pre-filled with your data. If the tab is not already open, this tool opens http://localhost:" +
+      "Open a component in the local BCG U Studio browser tab, pre-filled with your data. If the tab is not already open, this tool opens http://localhost:" +
       HTTP_PORT +
-      "/ in the user's default browser. The LD can then edit, re-brand, and export to HTML or SCORM. Call list_components first if you need to know which fields `data` must contain.",
+      "/ in the user's default browser. The LD can then edit, re-brand, and export to HTML (for any LMS's HTML block) or SCORM (for any SCORM-compatible LMS). Call list_components first if you need to know which fields `data` must contain.",
     inputSchema: {
       type: "object",
       required: ["comp", "data"],
@@ -186,7 +191,7 @@ const TOOL_DEFS = [
   {
     name: "toolkit_status",
     description:
-      "Check whether the local toolkit is running and how many browser tabs are currently connected. Useful if open_in_toolkit appears to not have reached a browser.",
+      "Check whether BCG U Studio is running locally and how many browser tabs are currently connected. Useful if open_in_toolkit appears to not have reached a browser.",
     inputSchema: { type: "object", properties: {} },
   },
 ];
@@ -215,7 +220,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
       scorm: pack(scorm),
       notes: [
         "HTML components export as paste-ready <div>/<table> markup for Rise or any rich editor.",
-        "SCORM components export as zip packages that are self-editing (Ctrl+Shift+E opens the in-activity editor on NovoEd).",
+        "SCORM components export as SCORM 1.2 zip packages that are self-editing (Ctrl+Shift+E opens the in-activity editor inside any LMS's SCORM player).",
         "Fields ending in '?' are optional. Fields like items[{...}] describe repeating item objects.",
         "For icon fields, use a BCG icon name (e.g. 'DataAnalysis', 'Coach') when you want a branded icon; any other string renders as a plain label.",
       ],

@@ -1,14 +1,14 @@
-# BCG U Toolkit — MCP bridge for Claude Desktop
+# BCG U Studio — MCP bridge for Claude Desktop
 
-This is the **MVP bridge** between Claude Desktop and the BCG U NovoEd Toolkit
+This is the **MVP bridge** between Claude Desktop and BCG U Studio
 (`../index.html`). It lets a Learning Designer do this in a normal Claude chat:
 
 > _"Draft a 3-card summary of 'AI maturity phases' and open it in the toolkit."_
 
 Claude calls `list_components` to find the right component, calls
-`open_in_toolkit` with a filled-in payload, and the toolkit tab loads the
+`open_in_toolkit` with a filled-in payload, and the Studio tab loads the
 component live — ready for the LD to tweak, re-brand, and export to HTML or
-SCORM.
+SCORM for any LMS.
 
 **No API keys.** Claude Desktop uses the LD's existing subscription. The bridge
 runs entirely on the LD's own machine.
@@ -94,7 +94,8 @@ Claude will:
    loads pre-filled. A green "● MCP connected" chip shows in the bottom right.
 
 From there: edit fields in the left panel, switch brand, copy the HTML to
-Rise, or download a self-editing SCORM zip for NovoEd.
+any LMS (Rise, NovoEd, Docebo, Moodle, Canvas), or download a self-editing
+SCORM 1.2 zip for any SCORM-compatible platform.
 
 ## Smoke test (no Claude Desktop required)
 
