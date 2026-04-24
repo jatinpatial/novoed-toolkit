@@ -2085,7 +2085,7 @@ function openIconPicker(currentVal, onSelect){
 }
 
 /* ── Vanilla UI Engine ── */
-var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null, writer: null };
+var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null, writer: null, media: null };
 function setState(p) { Object.assign(state, p); render(); }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 function doSelect(id) {
@@ -2738,6 +2738,131 @@ function writerParseOutline(){
   studioToast("✓ Parsed "+sections.length+" markdown sections → Journey Builder");
 }
 
+/* ── Media Studio (Day 5) ── */
+function mediaNew(){
+  return {
+    input:"",
+    start:"00:00:00",
+    end:"00:00:30",
+    thumbTime:"00:00:02",
+    thumbWidth:1280,
+    reencode:false,
+    info:null,
+    lastAction:""
+  };
+}
+
+function enterMedia(){
+  if(!state.media){
+    try{ var saved=localStorage.getItem("studioMedia"); if(saved) state.media=JSON.parse(saved); }catch(e){}
+    if(!state.media) state.media=mediaNew();
+  }
+  state.mode="media"; state.sel=null;
+  render();
+}
+
+function mediaUpdate(k,v){
+  if(!state.media) state.media=mediaNew();
+  state.media[k]=v;
+  try{ localStorage.setItem("studioMedia", JSON.stringify(state.media)); }catch(e){}
+}
+
+function mediaCopyPrompt(which){
+  var m=state.media||mediaNew();
+  var ctx="[BCG U Studio · Media Studio]\n\n";
+  var req="";
+  if(which==="inspect"){
+    if(!m.input){ studioToast("Enter a video path first"); return; }
+    req='First call `check_ffmpeg` to verify ffmpeg is installed, then call `video_info` with:\n\n{"path":"'+m.input+'"}\n\nReport duration, resolution, fps, and file size back to me.';
+  } else if(which==="trim"){
+    if(!m.input){ studioToast("Enter a video path first"); return; }
+    req='Trim the video using `trim_video` with:\n\n{\n  "input": "'+m.input+'",\n  "start": "'+m.start+'",\n  "end": "'+m.end+'"'+(m.reencode?',\n  "reencode": true':'')+'\n}\n\nThen tell me the output path and elapsed time.';
+  } else if(which==="thumb"){
+    if(!m.input){ studioToast("Enter a video path first"); return; }
+    req='Extract a thumbnail using `extract_thumbnail` with:\n\n{\n  "input": "'+m.input+'",\n  "time": "'+m.thumbTime+'",\n  "width": '+m.thumbWidth+'\n}\n\nReturn the output path and file size.';
+  } else if(which==="all"){
+    req='I want to embed a short clip + thumbnail from this video:\n\n- Source: '+m.input+'\n- Clip: '+m.start+' → '+m.end+'\n- Thumbnail: at '+m.thumbTime+' (width '+m.thumbWidth+')\n\nRun check_ffmpeg, then video_info, then trim_video, then extract_thumbnail, and give me the final paths.';
+  } else return;
+  navigator.clipboard.writeText(ctx+req).then(function(){
+    studioToast("✓ MCP prompt copied — paste into Claude Desktop");
+    mediaUpdate("lastAction", which+" @ "+new Date().toLocaleTimeString());
+    setTimeout(function(){ window.open("https://claude.ai/new","_blank"); }, 300);
+  });
+}
+
+function mediaReset(){
+  if(!confirm("Clear Media Studio fields?")) return;
+  state.media=mediaNew();
+  try{ localStorage.removeItem("studioMedia"); }catch(e){}
+  render();
+}
+
+function renderMedia(){
+  var b=B[state.brand];
+  if(!state.media) state.media=mediaNew();
+  var m=state.media;
+  var h='<div class="cw-wrap">';
+  h+='<div class="cw-kicker" style="background:'+b.priLt+';color:'+b.priDk+';"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Media Studio · v0</div>';
+  h+='<div class="cw-title" style="color:'+b.tx+';">Trim clips, grab thumbnails</div>';
+  h+='<div class="cw-sub">Drive local <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:12px;background:#F7F8FA;padding:1px 6px;border-radius:4px;">ffmpeg</code> from Claude Desktop to cut course videos and lift hero thumbnails — no upload required, all processing stays on your machine.</div>';
+
+  /* Prerequisites */
+  h+='<div class="cw-how" style="margin-bottom:22px;"><strong>Requires:</strong> ffmpeg + ffprobe on PATH. Ask Claude: <em>"Use bcg-toolkit check_ffmpeg to verify I have it installed."</em> Install: <code>brew install ffmpeg</code> (Mac) · <code>winget install Gyan.FFmpeg</code> (Windows) · <code>sudo apt install ffmpeg</code> (Linux).</div>';
+
+  /* Step 1: source */
+  h+='<div class="cw-step"><div class="cw-step-n">1</div><div class="cw-step-title">Source video</div><span class="cw-step-sub">absolute path</span></div>';
+  h+='<div class="cw-card">';
+  h+='<label style="display:block;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Full path to .mp4 / .mov / .webm</label>';
+  h+='<input class="cw-textarea" style="min-height:42px;font-family:\'SFMono-Regular\',Menlo,monospace;font-size:12px;" value="'+esc(m.input)+'" oninput="mediaUpdate(\'input\',this.value)" placeholder="/Users/jatin/Movies/raw-recording.mov  or  C:\\Users\\Jatin\\Videos\\lecture.mp4"/>';
+  h+='<div class="cw-actions" style="margin-top:12px;">';
+  h+='<button class="cw-btn pri" onclick="mediaCopyPrompt(\'inspect\')">▶ Inspect via Claude</button>';
+  h+='<button class="cw-btn" onclick="mediaReset()">Reset</button>';
+  h+='</div>';
+  h+='</div>';
+
+  /* Step 2: trim */
+  h+='<div class="cw-step"><div class="cw-step-n">2</div><div class="cw-step-title">Trim a clip</div><span class="cw-step-sub">lift 30-60s for a module</span></div>';
+  h+='<div class="cw-card">';
+  h+='<div class="cw-form-row">';
+  h+='<label>Start<input value="'+esc(m.start)+'" oninput="mediaUpdate(\'start\',this.value)" placeholder="HH:MM:SS"/></label>';
+  h+='<label>End<input value="'+esc(m.end)+'" oninput="mediaUpdate(\'end\',this.value)" placeholder="HH:MM:SS"/></label>';
+  h+='<label>Mode<select onchange="mediaUpdate(\'reencode\',this.value===\'reencode\')"><option value="copy"'+(m.reencode?"":" selected")+'>Fast (stream copy)</option><option value="reencode"'+(m.reencode?" selected":"")+'>Accurate (re-encode)</option></select></label>';
+  h+='</div>';
+  h+='<div class="cw-actions">';
+  h+='<button class="cw-btn pri" onclick="mediaCopyPrompt(\'trim\')">✂ Trim via Claude</button>';
+  h+='</div>';
+  h+='</div>';
+
+  /* Step 3: thumbnail */
+  h+='<div class="cw-step"><div class="cw-step-n">3</div><div class="cw-step-title">Extract thumbnail</div><span class="cw-step-sub">for Rise / NovoEd hero cards</span></div>';
+  h+='<div class="cw-card">';
+  h+='<div class="cw-form-row">';
+  h+='<label>At time<input value="'+esc(m.thumbTime)+'" oninput="mediaUpdate(\'thumbTime\',this.value)" placeholder="HH:MM:SS"/></label>';
+  h+='<label>Width (px)<input type="number" min="64" max="4096" value="'+esc(m.thumbWidth)+'" oninput="mediaUpdate(\'thumbWidth\',parseInt(this.value)||1280)"/></label>';
+  h+='<label>Format<span style="font-size:12px;color:#555;padding:6px 0;">JPG · PNG · WEBP (by output filename)</span></label>';
+  h+='</div>';
+  h+='<div class="cw-actions">';
+  h+='<button class="cw-btn pri" onclick="mediaCopyPrompt(\'thumb\')">⛶ Grab thumbnail</button>';
+  h+='</div>';
+  h+='</div>';
+
+  /* Combined */
+  h+='<div class="cw-card" style="background:'+b.priLt+';border-color:'+b.pri+'44;">';
+  h+='<div style="display:flex;align-items:center;gap:12px;">';
+  h+='<div style="font-size:22px;flex-shrink:0;">⚡</div>';
+  h+='<div style="flex:1;"><div style="font-size:13px;font-weight:800;color:'+b.priDk+';margin-bottom:4px;">One-shot workflow</div>';
+  h+='<div style="font-size:12px;color:'+b.priDk+';opacity:0.9;">Run all 3 steps — inspect + trim + thumb — in a single Claude turn.</div></div>';
+  h+='<button class="cw-btn pri" onclick="mediaCopyPrompt(\'all\')">▶ Full pipeline</button>';
+  h+='</div></div>';
+
+  if(m.lastAction){
+    h+='<div style="font-size:10.5px;color:#888;text-align:center;margin-top:18px;">Last action: '+esc(m.lastAction)+'</div>';
+  }
+
+  h+='</div>';
+  return h;
+}
+
 function renderWriter(){
   var b=B[state.brand];
   if(!state.writer) state.writer=writerNew();
@@ -2831,6 +2956,8 @@ function renderSidebar(){
     +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   s+='<button class="sb-item'+(state.mode==="writer"?' active':'')+'" onclick="enterWriter()">'
     +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
+  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()">'
+    +'<span class="sb-icon">▶</span><span>Media Studio</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   /* Tools */
   s+='<div class="sb-section">Tools</div>';
   s+='<button class="sb-item" onclick="openLibrary()">'
@@ -3096,6 +3223,12 @@ function render() {
     return;
   }
 
+  /* ─── MEDIA STUDIO (Day 5 v0) ─── */
+  if(state.mode==="media"){
+    root.innerHTML=shell(renderMedia());
+    return;
+  }
+
   /* ─── HOME SCREEN (Studio landing v2) ─── */
   if(!state.mode){
     var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
@@ -3184,9 +3317,10 @@ function render() {
 
     /* Secondary tools row */
     var libCount=libGet().length;
-    hm+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:36px;">';
+    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;">';
     [
       {onclick:'openRecommender()',icon:'✨',title:'Recommend',sub:'Pick by teaching goal'},
+      {onclick:'enterMedia()',icon:'▶',title:'Media Studio',sub:'Trim + thumbnail via ffmpeg'},
       {onclick:'openLibrary()',icon:'★',title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
       {onclick:'openBrandEditor()',icon:'⚙',title:'Brand Studio',sub:'Custom palette, RTL support'}
     ].forEach(function(s){

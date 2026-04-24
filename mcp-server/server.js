@@ -28,8 +28,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
-import { exec } from "node:child_process";
+import { exec, execFile } from "node:child_process";
+import { promisify } from "node:util";
+import os from "node:os";
 import { HTML_COMPS, SCORM_COMPS, SCHEMAS, EXAMPLES, BRANDS } from "./catalog.js";
+
+const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Path-adaptive: works in dev layout (mcp-server/ is a subfolder of the toolkit),
@@ -265,7 +270,87 @@ const TOOL_DEFS = [
       },
     },
   },
+  {
+    name: "video_info",
+    description:
+      "Inspect a local video file with ffprobe. Returns duration, resolution, fps, codec, and file size. Requires ffmpeg/ffprobe on PATH (https://ffmpeg.org). Use this before trim_video / extract_thumbnail so durations and timecodes line up.",
+    inputSchema: {
+      type: "object",
+      required: ["path"],
+      properties: {
+        path: { type: "string", description: "Absolute path to the video file on disk." },
+      },
+    },
+  },
+  {
+    name: "trim_video",
+    description:
+      "Trim a video between two timecodes using ffmpeg (copy-codec, fast). Good for lifting a 30-sec clip out of a long recording to embed in a SCORM interactive or lesson. Requires ffmpeg on PATH.",
+    inputSchema: {
+      type: "object",
+      required: ["input", "start", "end"],
+      properties: {
+        input: { type: "string", description: "Absolute path to source video." },
+        start: { type: "string", description: "Start timecode (HH:MM:SS.mmm or seconds, e.g. '00:01:23.5' or '83.5')." },
+        end: { type: "string", description: "End timecode in the same format." },
+        output: { type: "string", description: "Absolute output path. Defaults to <input>-trim.<ext> in the same folder." },
+        reencode: { type: "boolean", description: "Re-encode instead of copy codec (slower, more accurate cuts). Default false." },
+      },
+    },
+  },
+  {
+    name: "extract_thumbnail",
+    description:
+      "Extract a single-frame thumbnail from a video using ffmpeg. Great for making a Rise / NovoEd module hero card. Default: grabs the frame at 2 seconds as a high-quality JPG. Requires ffmpeg on PATH.",
+    inputSchema: {
+      type: "object",
+      required: ["input"],
+      properties: {
+        input: { type: "string", description: "Absolute path to source video." },
+        time: { type: "string", description: "Timecode (HH:MM:SS or seconds). Default '00:00:02'." },
+        output: { type: "string", description: "Absolute output path. Defaults to <input>-thumb.jpg. Extension decides format (.jpg/.png/.webp)." },
+        width: { type: "number", description: "Output width in pixels. Preserves aspect ratio. Default 1280." },
+      },
+    },
+  },
+  {
+    name: "check_ffmpeg",
+    description:
+      "Check whether ffmpeg and ffprobe are installed and available on PATH. Call this once at the start of a media session to fail early with a helpful install pointer.",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
+
+// ---------------------------------------------------------------------------
+// Media tools: ffmpeg / ffprobe helpers. Absolute paths only.
+// ---------------------------------------------------------------------------
+const VIDEO_EXTS = new Set([".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi", ".mpg", ".mpeg"]);
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+
+async function which(cmd) {
+  // Try a platform-safe lookup without throwing on 1-status.
+  const probe = process.platform === "win32" ? `where ${cmd}` : `command -v ${cmd}`;
+  try {
+    const { stdout } = await execAsync(probe, { timeout: 3000 });
+    return stdout.trim().split(/\r?\n/)[0] || "";
+  } catch {
+    return "";
+  }
+}
+
+function validateAbsPath(p, { mustExist = false, purpose = "path" } = {}) {
+  if (!p || typeof p !== "string") return { err: `${purpose} is required.` };
+  if (!path.isAbsolute(p)) return { err: `${purpose} must be an absolute path (got '${p}').` };
+  const norm = path.normalize(p);
+  if (mustExist && !fs.existsSync(norm)) return { err: `${purpose} does not exist: ${norm}` };
+  return { ok: norm };
+}
+
+function formatDuration(sec) {
+  const s = Math.max(0, Number(sec) || 0);
+  const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = (s % 60).toFixed(2);
+  return (hh ? String(hh).padStart(2, "0") + ":" : "") + String(mm).padStart(2, "0") + ":" + String(ss).padStart(5, "0");
+}
 
 // ---------------------------------------------------------------------------
 // Topic → component scoring for suggest_component.
@@ -435,6 +520,148 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
       return { content: [{ type: "text", text: JSON.stringify({ topic, suggestions: fallback, note: "No keyword match — returning versatile defaults." }, null, 2) }] };
     }
     return { content: [{ type: "text", text: JSON.stringify({ topic, suggestions: scored }, null, 2) }] };
+  }
+
+  if (name === "check_ffmpeg") {
+    const [ff, fp] = await Promise.all([which("ffmpeg"), which("ffprobe")]);
+    const ok = !!(ff && fp);
+    return { content: [{ type: "text", text: JSON.stringify({
+      ok,
+      ffmpeg: ff || null,
+      ffprobe: fp || null,
+      install_hint: ok ? null : (process.platform === "darwin"
+        ? "brew install ffmpeg"
+        : (process.platform === "win32"
+          ? "winget install Gyan.FFmpeg  (or download https://ffmpeg.org/download.html and add bin/ to PATH)"
+          : "sudo apt install ffmpeg  (or see https://ffmpeg.org/download.html)")),
+    }, null, 2) }] };
+  }
+
+  if (name === "video_info") {
+    const v = validateAbsPath(args.path, { mustExist: true, purpose: "path" });
+    if (v.err) return { isError: true, content: [{ type: "text", text: v.err }] };
+    const fp = await which("ffprobe");
+    if (!fp) return { isError: true, content: [{ type: "text", text: "ffprobe not found on PATH. Call check_ffmpeg for install hints." }] };
+    try {
+      const { stdout } = await execFileAsync(fp, [
+        "-v", "error",
+        "-show_entries", "stream=codec_name,codec_type,width,height,r_frame_rate,duration:format=duration,size,format_name,bit_rate",
+        "-of", "json",
+        v.ok
+      ], { timeout: 15000, maxBuffer: 4 * 1024 * 1024 });
+      const probe = JSON.parse(stdout);
+      const streams = probe.streams || [];
+      const video = streams.find((s) => s.codec_type === "video") || {};
+      const audio = streams.find((s) => s.codec_type === "audio") || null;
+      const dur = Number((probe.format && probe.format.duration) || video.duration || 0);
+      const fpsParts = (video.r_frame_rate || "0/1").split("/");
+      const fps = fpsParts.length === 2 ? Number(fpsParts[0]) / Number(fpsParts[1]) : 0;
+      const stat = fs.statSync(v.ok);
+      return { content: [{ type: "text", text: JSON.stringify({
+        path: v.ok,
+        ext: path.extname(v.ok).toLowerCase(),
+        size_bytes: stat.size,
+        size_mb: Number((stat.size / 1048576).toFixed(2)),
+        format: (probe.format && probe.format.format_name) || null,
+        duration_sec: Number(dur.toFixed(3)),
+        duration_hms: formatDuration(dur),
+        video: video.codec_name ? {
+          codec: video.codec_name,
+          width: video.width || null,
+          height: video.height || null,
+          fps: Number((fps || 0).toFixed(3)),
+          resolution: video.width && video.height ? `${video.width}x${video.height}` : null,
+        } : null,
+        has_audio: !!audio,
+        audio_codec: audio ? audio.codec_name : null,
+      }, null, 2) }] };
+    } catch (e) {
+      return { isError: true, content: [{ type: "text", text: "ffprobe failed: " + (e.stderr || e.message) }] };
+    }
+  }
+
+  if (name === "trim_video") {
+    const inV = validateAbsPath(args.input, { mustExist: true, purpose: "input" });
+    if (inV.err) return { isError: true, content: [{ type: "text", text: inV.err }] };
+    const ext = path.extname(inV.ok).toLowerCase();
+    if (!VIDEO_EXTS.has(ext)) return { isError: true, content: [{ type: "text", text: `Unsupported video ext: ${ext}. Expected one of ${Array.from(VIDEO_EXTS).join(", ")}` }] };
+    const start = String(args.start || "").trim();
+    const end = String(args.end || "").trim();
+    if (!start || !end) return { isError: true, content: [{ type: "text", text: "start and end are required." }] };
+    const out = args.output
+      ? validateAbsPath(args.output, { purpose: "output" })
+      : { ok: path.join(path.dirname(inV.ok), path.basename(inV.ok, ext) + "-trim" + ext) };
+    if (out.err) return { isError: true, content: [{ type: "text", text: out.err }] };
+    if (!fs.existsSync(path.dirname(out.ok))) return { isError: true, content: [{ type: "text", text: "output directory does not exist: " + path.dirname(out.ok) }] };
+    const ff = await which("ffmpeg");
+    if (!ff) return { isError: true, content: [{ type: "text", text: "ffmpeg not found on PATH. Call check_ffmpeg for install hints." }] };
+    const reencode = !!args.reencode;
+    const ffArgs = [
+      "-y", "-hide_banner", "-loglevel", "error",
+      "-ss", start,
+      "-to", end,
+      "-i", inV.ok,
+    ];
+    if (reencode) {
+      ffArgs.push("-c:v", "libx264", "-crf", "20", "-preset", "veryfast", "-c:a", "aac", "-b:a", "160k");
+    } else {
+      ffArgs.push("-c", "copy", "-avoid_negative_ts", "1");
+    }
+    ffArgs.push(out.ok);
+    try {
+      const t0 = Date.now();
+      await execFileAsync(ff, ffArgs, { timeout: 5 * 60 * 1000, maxBuffer: 4 * 1024 * 1024 });
+      const stat = fs.statSync(out.ok);
+      return { content: [{ type: "text", text: JSON.stringify({
+        ok: true,
+        output: out.ok,
+        size_mb: Number((stat.size / 1048576).toFixed(2)),
+        elapsed_ms: Date.now() - t0,
+        mode: reencode ? "reencode" : "stream-copy",
+        start, end,
+      }, null, 2) }] };
+    } catch (e) {
+      return { isError: true, content: [{ type: "text", text: "ffmpeg trim failed: " + (e.stderr || e.message) }] };
+    }
+  }
+
+  if (name === "extract_thumbnail") {
+    const inV = validateAbsPath(args.input, { mustExist: true, purpose: "input" });
+    if (inV.err) return { isError: true, content: [{ type: "text", text: inV.err }] };
+    const time = String(args.time || "00:00:02");
+    const width = Math.max(64, Math.min(4096, Number(args.width) || 1280));
+    const defOut = path.join(path.dirname(inV.ok), path.basename(inV.ok, path.extname(inV.ok)) + "-thumb.jpg");
+    const out = args.output ? validateAbsPath(args.output, { purpose: "output" }) : { ok: defOut };
+    if (out.err) return { isError: true, content: [{ type: "text", text: out.err }] };
+    const outExt = path.extname(out.ok).toLowerCase();
+    if (!IMAGE_EXTS.has(outExt)) return { isError: true, content: [{ type: "text", text: `Unsupported output ext: ${outExt}. Use .jpg / .png / .webp.` }] };
+    if (!fs.existsSync(path.dirname(out.ok))) return { isError: true, content: [{ type: "text", text: "output directory does not exist: " + path.dirname(out.ok) }] };
+    const ff = await which("ffmpeg");
+    if (!ff) return { isError: true, content: [{ type: "text", text: "ffmpeg not found on PATH. Call check_ffmpeg for install hints." }] };
+    const ffArgs = [
+      "-y", "-hide_banner", "-loglevel", "error",
+      "-ss", time,
+      "-i", inV.ok,
+      "-frames:v", "1",
+      "-vf", `scale=${width}:-2`,
+      "-q:v", "2",
+      out.ok,
+    ];
+    try {
+      const t0 = Date.now();
+      await execFileAsync(ff, ffArgs, { timeout: 60 * 1000, maxBuffer: 4 * 1024 * 1024 });
+      const stat = fs.statSync(out.ok);
+      return { content: [{ type: "text", text: JSON.stringify({
+        ok: true,
+        output: out.ok,
+        width,
+        time,
+        size_kb: Number((stat.size / 1024).toFixed(1)),
+        elapsed_ms: Date.now() - t0,
+      }, null, 2) }] };
+    } catch (e) {
+      return { isError: true, content: [{ type: "text", text: "ffmpeg thumbnail failed: " + (e.stderr || e.message) }] };
+    }
   }
 
   if (name === "push_journey") {

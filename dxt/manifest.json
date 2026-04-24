@@ -47,6 +47,22 @@
     {
       "name": "push_journey",
       "description": "Push a full learning-journey structure (title + audience + ordered modules) into the BCG U Studio Journey Builder canvas."
+    },
+    {
+      "name": "check_ffmpeg",
+      "description": "Check whether ffmpeg + ffprobe are installed and on PATH, with an install hint if missing."
+    },
+    {
+      "name": "video_info",
+      "description": "Inspect a local video file — returns duration, resolution, fps, codec, size via ffprobe."
+    },
+    {
+      "name": "trim_video",
+      "description": "Trim a local video between two timecodes using ffmpeg (fast stream-copy or accurate re-encode)."
+    },
+    {
+      "name": "extract_thumbnail",
+      "description": "Extract a single-frame thumbnail from a local video (.jpg / .png / .webp) via ffmpeg."
     }
   ],
   "compatibility": {
