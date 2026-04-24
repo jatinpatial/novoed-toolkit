@@ -157,6 +157,77 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 .pal-empty-icon{font-size:28px;opacity:0.4;margin-bottom:8px;}
 .pal-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;border-top:1px solid #F0F0F0;font-size:10px;color:#aaa;flex-shrink:0;background:#FAFBFC;}
 .pal-foot kbd{font-family:'SFMono-Regular',Menlo,monospace;font-size:9.5px;border:1px solid #E4E4E4;padding:1.5px 6px;border-radius:4px;background:#fff;color:#666;margin:0 3px;}
+/* --- Journey builder v0 --- */
+.jb-wrap{display:grid;grid-template-columns:1fr 320px;gap:0;min-height:calc(100vh - 0px);}
+@media(max-width:1100px){.jb-wrap{grid-template-columns:1fr;}}
+.jb-main{padding:22px 30px 60px;max-width:820px;margin:0 auto;width:100%;box-sizing:border-box;}
+.jb-hero{margin-bottom:20px;}
+.jb-title-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.jb-title-input{flex:1;border:1.5px solid transparent;background:transparent;font-size:26px;font-weight:800;letter-spacing:-0.5px;color:#1a1a2e;padding:6px 10px;border-radius:8px;font-family:inherit;min-width:0;}
+.jb-title-input:hover{border-color:#EEE;}
+.jb-title-input:focus{border-color:var(--sb-active-fg,#29BA74);background:#fff;outline:none;}
+.jb-meta{display:flex;gap:16px;align-items:center;margin-bottom:4px;padding-left:2px;flex-wrap:wrap;font-size:11px;color:#888;}
+.jb-meta strong{color:#555;font-weight:700;}
+.jb-meta input{font-size:11px;border:none;background:transparent;font-family:inherit;color:#555;padding:2px 4px;border-radius:4px;width:auto;}
+.jb-meta input:hover{background:#F5F5F5;}
+.jb-meta input:focus{outline:1px solid var(--sb-active-fg,#29BA74);background:#fff;}
+.jb-toolbar{display:flex;gap:8px;align-items:center;padding:10px 0 20px;border-bottom:1px solid #EEE;margin-bottom:24px;flex-wrap:wrap;}
+.jb-btn{padding:7px 14px;border:1.5px solid #E8E8E8;background:#fff;border-radius:8px;font-size:11px;font-weight:600;color:#555;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.jb-btn:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#29BA74);}
+.jb-btn.pri{background:var(--sb-active-fg,#1B7A4F);color:#fff;border-color:var(--sb-active-fg,#1B7A4F);}
+.jb-btn.pri:hover{filter:brightness(0.92);color:#fff;}
+.jb-canvas{position:relative;padding:0 0 60px;}
+.jb-mod{position:relative;background:#fff;border:1.5px solid #E8E8E8;border-radius:14px;padding:16px 18px;margin-bottom:14px;transition:border-color 0.15s,box-shadow 0.15s;}
+.jb-mod:hover{border-color:#DCDCDC;box-shadow:0 4px 16px rgba(0,0,0,0.04);}
+.jb-mod.expanded{border-color:var(--sb-active-fg,#29BA74);box-shadow:0 8px 28px rgba(0,0,0,0.06);}
+.jb-mod-connector{position:absolute;left:32px;top:-14px;width:2px;height:14px;background:#DDD;}
+.jb-mod-connector::after{content:"";position:absolute;left:-4px;bottom:-5px;width:10px;height:10px;border-radius:50%;background:#DDD;border:2px solid #fff;}
+.jb-mod-head{display:flex;align-items:center;gap:10px;}
+.jb-mod-num{width:28px;height:28px;border-radius:8px;background:var(--sb-active-bg,#E6F7EF);color:var(--sb-active-fg,#1B7A4F);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+.jb-mod-title{flex:1;font-size:15px;font-weight:700;color:#222;border:1.5px solid transparent;background:transparent;padding:4px 8px;border-radius:6px;font-family:inherit;min-width:0;}
+.jb-mod-title:hover{border-color:#EEE;background:#FAFAFA;}
+.jb-mod-title:focus{border-color:var(--sb-active-fg,#29BA74);background:#fff;outline:none;}
+.jb-mod-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;}
+.jb-mod-chip.intro{background:#F0F9FF;color:#0369A1;}
+.jb-mod-chip.core{background:#E6F7EF;color:#1B7A4F;}
+.jb-mod-chip.scorm{background:#EDE9FE;color:#6B21A8;}
+.jb-mod-chip.assess{background:#FEE2E2;color:#B91C1C;}
+.jb-mod-chip.reflect{background:#FEF3C7;color:#92400E;}
+.jb-mod-dur{font-size:10.5px;font-weight:600;color:#888;padding:4px 8px;background:#F7F8FA;border-radius:6px;flex-shrink:0;white-space:nowrap;}
+.jb-mod-acts{display:flex;gap:2px;flex-shrink:0;}
+.jb-mod-act{width:26px;height:26px;border:none;background:transparent;color:#bbb;cursor:pointer;border-radius:6px;font-size:13px;transition:all 0.12s;}
+.jb-mod-act:hover{background:#F0F2F5;color:#555;}
+.jb-mod-act.del:hover{color:#ef4444;background:#FEF2F2;}
+.jb-mod-body{margin-top:12px;padding-top:12px;border-top:1px dashed #F0F0F0;}
+.jb-mod-comps{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.jb-comp-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px 5px 7px;background:#F7F8FA;border:1px solid #EEE;border-radius:20px;font-size:11px;color:#444;}
+.jb-comp-chip-thumb{width:24px;height:16px;border-radius:3px;overflow:hidden;border:1px solid #E8E8E8;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
+.jb-comp-chip-thumb svg{width:24px!important;height:16px!important;}
+.jb-comp-chip-x{background:none;border:none;color:#bbb;cursor:pointer;padding:0 0 0 2px;font-size:13px;line-height:1;}
+.jb-comp-chip-x:hover{color:#ef4444;}
+.jb-mod-addcomp{padding:6px 10px;border:1.5px dashed #DDD;background:transparent;border-radius:20px;font-size:11px;color:#888;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.jb-mod-addcomp:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#1B7A4F);background:var(--sb-active-bg,#E6F7EF);}
+.jb-mod-notes{width:100%;min-height:52px;padding:8px 10px;border:1px solid #EEE;background:#FAFBFC;border-radius:8px;font-size:12px;color:#555;resize:vertical;font-family:inherit;}
+.jb-mod-notes:focus{outline:none;border-color:var(--sb-active-fg,#29BA74);background:#fff;}
+.jb-add{display:block;width:100%;padding:16px;border:1.5px dashed #DDD;background:#FAFBFC;border-radius:14px;font-size:13px;font-weight:600;color:#888;cursor:pointer;font-family:inherit;transition:all 0.15s;margin-top:6px;}
+.jb-add:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#1B7A4F);background:var(--sb-active-bg,#E6F7EF);}
+.jb-empty{padding:60px 30px;text-align:center;background:#FAFBFC;border-radius:14px;border:1.5px dashed #E8E8E8;}
+.jb-empty-icon{font-size:34px;opacity:0.4;margin-bottom:12px;}
+/* Right: AI assistant panel */
+.jb-ai{background:linear-gradient(180deg,#FAFBFC 0%,#fff 100%);border-left:1px solid #EEE;padding:22px 22px 30px;display:flex;flex-direction:column;gap:16px;min-height:100vh;}
+.jb-ai-head{display:flex;align-items:center;gap:10px;}
+.jb-ai-head-dot{width:10px;height:10px;border-radius:50%;background:var(--sb-active-fg,#29BA74);box-shadow:0 0 0 3px var(--sb-active-bg,#E6F7EF);}
+.jb-ai-title{font-size:13px;font-weight:800;letter-spacing:-0.2px;color:#1a1a2e;}
+.jb-ai-sub{font-size:11px;color:#888;line-height:1.5;}
+.jb-ai-prompt{width:100%;padding:12px 14px;border:1.5px solid #E8E8E8;border-radius:10px;font-size:12.5px;background:#fff;font-family:inherit;resize:vertical;min-height:72px;}
+.jb-ai-prompt:focus{outline:none;border-color:var(--sb-active-fg,#29BA74);box-shadow:0 0 0 3px var(--sb-active-bg,#E6F7EF);}
+.jb-ai-send{padding:9px 14px;background:var(--sb-active-fg,#1B7A4F);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:filter 0.15s;}
+.jb-ai-send:hover{filter:brightness(0.92);}
+.jb-ai-chip{display:block;width:100%;padding:8px 10px;border:1px solid #E8E8E8;background:#fff;border-radius:8px;font-size:11.5px;color:#555;cursor:pointer;margin-bottom:6px;text-align:left;font-family:inherit;transition:all 0.15s;line-height:1.4;}
+.jb-ai-chip:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#1B7A4F);background:var(--sb-active-bg,#E6F7EF);}
+.jb-ai-section{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:#aaa;margin-top:6px;}
+.jb-ai-howto{font-size:10.5px;color:#888;line-height:1.6;padding:10px 12px;background:#F7F8FA;border-radius:8px;border:1px solid #EEE;}
+.jb-ai-howto code{font-family:'SFMono-Regular',Menlo,monospace;font-size:10px;background:#fff;padding:1px 4px;border-radius:3px;border:1px solid #EEE;color:#333;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -1984,7 +2055,7 @@ function openIconPicker(currentVal, onSelect){
 }
 
 /* ── Vanilla UI Engine ── */
-var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all" };
+var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null };
 function setState(p) { Object.assign(state, p); render(); }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 function doSelect(id) {
@@ -2238,6 +2309,248 @@ function palKey(ev){
   });
 })();
 
+/* ── Journey Builder v0 ── */
+var JOURNEY_TYPES={
+  intro:{label:"Intro",icon:"▶",desc:"Welcome + learning objectives"},
+  core:{label:"Core",icon:"◆",desc:"Main content — HTML components"},
+  scorm:{label:"Interactive",icon:"✦",desc:"SCORM activity — flip cards, quiz, drag-sort"},
+  assess:{label:"Assessment",icon:"✓",desc:"Quiz, scenario, or reflection"},
+  reflect:{label:"Reflection",icon:"◎",desc:"Take-aways + applied insights"}
+};
+var JOURNEY_STARTERS=[
+  {title:"Introduction & Goals",type:"intro",duration:5,components:[],notes:"Welcome message, 3 learning objectives."},
+  {title:"Core Concept — Part 1",type:"core",duration:10,components:["highlight","callout"],notes:""},
+  {title:"Practice Activity",type:"scorm",duration:8,components:["s_flip"],notes:""},
+  {title:"Knowledge Check",type:"assess",duration:5,components:["s_quiz"],notes:""},
+  {title:"Wrap-up & Reflection",type:"reflect",duration:3,components:[],notes:"Key takeaways + one action step."}
+];
+
+function journeyNew(preset){
+  var j={
+    id:"j_"+Date.now(),
+    title:"Untitled Journey",
+    audience:"Learners",
+    totalDuration:0,
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    modules:[]
+  };
+  if(preset==="starter"){
+    j.title="Sample 5-Module Journey";
+    j.audience="New Learning Designers";
+    j.modules=JOURNEY_STARTERS.map(function(m,i){return Object.assign({id:"m_"+Date.now()+"_"+i},m);});
+  }
+  return j;
+}
+
+function enterJourney(){
+  if(!state.journey){
+    var saved=journeyLoadLast();
+    state.journey=saved||journeyNew("starter");
+  }
+  state.mode="journey"; state.sel=null; state.journeyExpanded=null;
+  render();
+}
+
+function journeyLoadLast(){
+  try{
+    var raw=localStorage.getItem("studioJourneyCurrent");
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+
+function journeySave(){
+  if(!state.journey) return;
+  state.journey.updatedAt=new Date().toISOString();
+  try{ localStorage.setItem("studioJourneyCurrent", JSON.stringify(state.journey)); studioToast("✓ Journey saved"); }catch(e){ studioToast("Save failed"); }
+}
+
+function journeyTotalMins(){
+  if(!state.journey||!state.journey.modules) return 0;
+  return state.journey.modules.reduce(function(s,m){return s+(parseInt(m.duration)||0);},0);
+}
+
+function journeyAddModule(type){
+  if(!state.journey) return;
+  var newMod={
+    id:"m_"+Date.now()+"_"+Math.floor(Math.random()*1000),
+    title:"New " + (JOURNEY_TYPES[type]?JOURNEY_TYPES[type].label:"Module"),
+    type:type||"core",
+    duration:5,
+    components:[],
+    notes:""
+  };
+  state.journey.modules.push(newMod);
+  state.journeyExpanded=newMod.id;
+  render();
+}
+
+function journeyUpdateModule(id, field, value){
+  if(!state.journey) return;
+  var m=state.journey.modules.find(function(x){return x.id===id;});
+  if(!m) return;
+  if(field==="duration") value=Math.max(0, parseInt(value)||0);
+  m[field]=value;
+}
+
+function journeyMoveModule(id, dir){
+  if(!state.journey) return;
+  var mods=state.journey.modules;
+  var i=mods.findIndex(function(x){return x.id===id;});
+  if(i<0) return;
+  var j=i+dir;
+  if(j<0||j>=mods.length) return;
+  var t=mods[i]; mods[i]=mods[j]; mods[j]=t;
+  render();
+}
+
+function journeyDeleteModule(id){
+  if(!state.journey) return;
+  var m=state.journey.modules.find(function(x){return x.id===id;});
+  if(!m) return;
+  if(!confirm("Delete module '"+m.title+"'?")) return;
+  state.journey.modules=state.journey.modules.filter(function(x){return x.id!==id;});
+  if(state.journeyExpanded===id) state.journeyExpanded=null;
+  render();
+}
+
+function journeyToggleExpand(id){
+  state.journeyExpanded = (state.journeyExpanded===id?null:id);
+  render();
+}
+
+function journeyAddComponent(id){
+  if(!state.journey) return;
+  /* Open a simple chooser via palette-style picker */
+  paletteState={open:true,q:"",active:0,results:palComputeResults(""),_journeyTarget:id};
+  palRender();
+  setTimeout(function(){var i=document.querySelector(".pal-input"); if(i){i.focus();}},20);
+}
+
+function journeyRemoveComponent(id, compId){
+  if(!state.journey) return;
+  var m=state.journey.modules.find(function(x){return x.id===id;});
+  if(!m) return;
+  m.components=m.components.filter(function(c){return c!==compId;});
+  render();
+}
+
+function journeyExportJSON(){
+  if(!state.journey) return;
+  var blob=new Blob([JSON.stringify(state.journey,null,2)], {type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=(state.journey.title||"journey").replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".journey.json";
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+  studioToast("✓ Exported " + a.download);
+}
+
+function journeyExportOutline(){
+  if(!state.journey) return;
+  var j=state.journey;
+  var md="# "+j.title+"\n\n";
+  md+="**Audience:** "+(j.audience||"—")+"  \n";
+  md+="**Total duration:** "+journeyTotalMins()+" min  \n";
+  md+="**Modules:** "+j.modules.length+"\n\n---\n\n";
+  j.modules.forEach(function(m,i){
+    var t=JOURNEY_TYPES[m.type]||{label:m.type,icon:"•"};
+    md+="## "+(i+1)+". "+m.title+"\n\n";
+    md+="- **Type:** "+t.icon+" "+t.label+"\n";
+    md+="- **Duration:** "+m.duration+" min\n";
+    if(m.components&&m.components.length){
+      md+="- **Components:** "+m.components.join(", ")+"\n";
+    }
+    if(m.notes) md+="\n"+m.notes+"\n";
+    md+="\n";
+  });
+  navigator.clipboard.writeText(md).then(function(){ studioToast("✓ Outline copied as Markdown"); });
+}
+
+function journeyNewBlank(){
+  if(state.journey && state.journey.modules.length>0){
+    if(!confirm("Start a new journey? Your current journey will be saved to local storage.")) return;
+    journeySave();
+  }
+  state.journey=journeyNew();
+  state.journeyExpanded=null;
+  render();
+}
+
+function journeyPrompt(preset){
+  var prompts={
+    add:"Add a 5-module journey on change management — intro, 2 core concepts with cards, a flip-card activity, and a reflection.",
+    shorten:"Shrink the journey to 20 minutes — drop any non-essential modules.",
+    assess:"Insert a knowledge-check module after every core concept.",
+    reorder:"Reorder the modules so practice comes before assessment.",
+    intro:"Draft a 30-second intro narration for Module 1 with a hook and 3 objectives."
+  };
+  var ta=document.getElementById("jbAIPrompt");
+  if(ta){ ta.value=prompts[preset]||""; ta.focus(); }
+}
+
+function journeyAISend(){
+  var ta=document.getElementById("jbAIPrompt");
+  if(!ta||!ta.value.trim()) return;
+  var txt=ta.value.trim();
+  /* v0: copy prompt to clipboard + open Claude Desktop (or paste flow) */
+  var ctx="[BCG U Studio · Journey Builder]\n\nCurrent journey: "+(state.journey?state.journey.title:"(empty)")+"\nModules: "+(state.journey?state.journey.modules.length:0)+"\nTotal: "+journeyTotalMins()+" min\n\nRequest:\n"+txt+"\n\n(Reply with JSON: {modules:[{title,type,duration,components:[],notes}]} — I'll paste it back into the journey canvas.)";
+  navigator.clipboard.writeText(ctx).then(function(){
+    studioToast("✓ Prompt copied — paste into Claude Desktop");
+    setTimeout(function(){ window.open("https://claude.ai/new","_blank"); }, 350);
+  });
+}
+
+function journeyImportFromClipboard(){
+  if(!navigator.clipboard||!navigator.clipboard.readText){ studioToast("Clipboard read not available"); return; }
+  navigator.clipboard.readText().then(function(txt){
+    try{
+      var clean=txt.replace(/^```(?:json)?\s*/i,"").replace(/\s*```\s*$/,"").trim();
+      var first=clean.indexOf("{"), last=clean.lastIndexOf("}");
+      if(first>=0&&last>first) clean=clean.slice(first,last+1);
+      var data=JSON.parse(clean);
+      if(data.modules && Array.isArray(data.modules)){
+        data.modules.forEach(function(m,i){
+          state.journey.modules.push({
+            id:"m_"+Date.now()+"_"+i+"_"+Math.floor(Math.random()*1000),
+            title:m.title||"Module",
+            type:m.type||"core",
+            duration:parseInt(m.duration)||5,
+            components:Array.isArray(m.components)?m.components:[],
+            notes:m.notes||""
+          });
+        });
+        studioToast("✓ Imported "+data.modules.length+" modules from clipboard");
+        render();
+      } else {
+        studioToast("Clipboard doesn't contain a modules[] JSON");
+      }
+    } catch(e){
+      studioToast("Couldn't parse JSON from clipboard");
+    }
+  });
+}
+
+/* Sidebar "Add to journey" helper when picking from palette with a journey target */
+(function(){
+  var origPick=window.palPick;
+  window.palPick=function(i){
+    var r=paletteState.results[(typeof i==="number"?i:paletteState.active)];
+    if(!r) return;
+    if(paletteState._journeyTarget){
+      var mod=state.journey.modules.find(function(x){return x.id===paletteState._journeyTarget;});
+      if(mod && mod.components.indexOf(r.id)<0){ mod.components.push(r.id); }
+      delete paletteState._journeyTarget;
+      closePalette();
+      render();
+      return;
+    }
+    if(typeof origPick==="function") origPick(i);
+    else { closePalette(); studioOpen(r.id); }
+  };
+})();
+
 /* ── App shell: sidebar IA + main content wrapper ── */
 function applyBrandVars(){
   var b=B[state.brand];
@@ -2266,8 +2579,8 @@ function renderSidebar(){
     +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
   s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\'})">'
     +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
-  s+='<button class="sb-item" onclick="studioComingSoon(\'Journey Builder\',\'Day 3\')">'
-    +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge">SOON</span></button>';
+  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()">'
+    +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   s+='<button class="sb-item" onclick="studioComingSoon(\'Content Writer\',\'Day 4\')">'
     +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge">SOON</span></button>';
   /* Tools */
@@ -2402,9 +2715,132 @@ function resetCustomBrand(){
   saveCustomBrand(); openBrandEditor(); openBrandEditor();
   if(state.brand==="custom"&&state.sel)doRegen(); else render();
 }
+
+function renderJourney(){
+  var b=B[state.brand];
+  var j=state.journey;
+  if(!j){ state.journey=journeyNew("starter"); j=state.journey; }
+  var total=journeyTotalMins();
+  var h='<div class="jb-wrap">';
+  /* LEFT: canvas */
+  h+='<div class="jb-main">';
+  /* Hero */
+  h+='<div class="jb-hero">';
+  h+='<div style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;background:'+b.priLt+';color:'+b.priDk+';border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Journey Builder · v0</div>';
+  h+='<div class="jb-title-row">';
+  h+='<input class="jb-title-input" value="'+esc(j.title)+'" oninput="state.journey.title=this.value"/>';
+  h+='</div>';
+  h+='<div class="jb-meta">'
+    +'<span><strong>Audience:</strong> <input value="'+esc(j.audience||"")+'" oninput="state.journey.audience=this.value" placeholder="Who is this for?" style="width:180px;"/></span>'
+    +'<span style="color:#BBB;">·</span>'
+    +'<span><strong>Modules:</strong> '+j.modules.length+'</span>'
+    +'<span style="color:#BBB;">·</span>'
+    +'<span><strong>Total:</strong> '+total+' min</span>'
+  +'</div>';
+  h+='</div>';
+  /* Toolbar */
+  h+='<div class="jb-toolbar">'
+    +'<button class="jb-btn pri" onclick="journeySave()">⎯ Save</button>'
+    +'<button class="jb-btn" onclick="journeyNewBlank()">＋ New</button>'
+    +'<button class="jb-btn" onclick="journeyExportJSON()">⬇ Export JSON</button>'
+    +'<button class="jb-btn" onclick="journeyExportOutline()">✎ Copy Outline (MD)</button>'
+    +'<button class="jb-btn" onclick="journeyImportFromClipboard()">⎗ Import from Clipboard</button>'
+  +'</div>';
+  /* Canvas */
+  h+='<div class="jb-canvas">';
+  if(!j.modules||j.modules.length===0){
+    h+='<div class="jb-empty">'
+      +'<div class="jb-empty-icon">◈</div>'
+      +'<div style="font-size:14px;font-weight:700;color:#555;margin-bottom:6px;">Your journey is empty</div>'
+      +'<div style="font-size:12px;color:#999;max-width:380px;margin:0 auto 16px;line-height:1.6;">Add modules below, or ask Claude Desktop on the right to draft a full journey from your topic.</div>'
+      +'<button class="jb-btn pri" onclick="journeyAddModule(\'intro\')">＋ Add first module</button>'
+    +'</div>';
+  } else {
+    j.modules.forEach(function(m,i){
+      var t=JOURNEY_TYPES[m.type]||{label:m.type,icon:"•"};
+      var expanded=(state.journeyExpanded===m.id);
+      h+='<div class="jb-mod'+(expanded?' expanded':'')+'">';
+      if(i>0) h+='<div class="jb-mod-connector"></div>';
+      h+='<div class="jb-mod-head">';
+      h+='<div class="jb-mod-num">'+(i+1)+'</div>';
+      h+='<input class="jb-mod-title" value="'+esc(m.title)+'" oninput="journeyUpdateModule(\''+m.id+'\',\'title\',this.value)"/>';
+      h+='<select class="jb-mod-chip '+m.type+'" onchange="journeyUpdateModule(\''+m.id+'\',\'type\',this.value);render();" style="border:none;font-family:inherit;">';
+      Object.keys(JOURNEY_TYPES).forEach(function(k){
+        h+='<option value="'+k+'"'+(k===m.type?' selected':'')+'>'+JOURNEY_TYPES[k].icon+' '+JOURNEY_TYPES[k].label+'</option>';
+      });
+      h+='</select>';
+      h+='<span class="jb-mod-dur">'
+        +'<input type="number" min="0" value="'+m.duration+'" oninput="journeyUpdateModule(\''+m.id+'\',\'duration\',this.value)" style="width:36px;border:none;background:transparent;font-family:inherit;font-size:10.5px;font-weight:600;color:inherit;text-align:right;"/> min'
+      +'</span>';
+      h+='<div class="jb-mod-acts">'
+        +'<button class="jb-mod-act" onclick="journeyMoveModule(\''+m.id+'\',-1)" title="Move up">▲</button>'
+        +'<button class="jb-mod-act" onclick="journeyMoveModule(\''+m.id+'\',1)" title="Move down">▼</button>'
+        +'<button class="jb-mod-act" onclick="journeyToggleExpand(\''+m.id+'\')" title="'+(expanded?"Collapse":"Expand")+'">'+(expanded?"▲":"✎")+'</button>'
+        +'<button class="jb-mod-act del" onclick="journeyDeleteModule(\''+m.id+'\')" title="Delete">✕</button>'
+      +'</div>';
+      h+='</div>'; /* end head */
+      if(expanded || (m.components && m.components.length>0)){
+        h+='<div class="jb-mod-body">';
+        h+='<div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;">Components</div>';
+        h+='<div class="jb-mod-comps">';
+        (m.components||[]).forEach(function(cId){
+          var comp=HTML_COMPS.find(function(x){return x.id===cId;})||SCORM_COMPS.find(function(x){return x.id===cId;});
+          var name=comp?comp.n:cId;
+          var thumb=THUMBS[cId]||'<svg viewBox="0 0 80 48"><rect width="80" height="48" fill="#EEE"/></svg>';
+          h+='<span class="jb-comp-chip">'
+            +'<span class="jb-comp-chip-thumb">'+thumb+'</span>'
+            +esc(name)
+            +'<button class="jb-comp-chip-x" onclick="journeyRemoveComponent(\''+m.id+'\',\''+cId+'\')" title="Remove">✕</button>'
+          +'</span>';
+        });
+        h+='<button class="jb-mod-addcomp" onclick="journeyAddComponent(\''+m.id+'\')">＋ Add component</button>';
+        h+='</div>';
+        if(expanded){
+          h+='<div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1.2px;margin:12px 0 6px;">Notes / Script</div>';
+          h+='<textarea class="jb-mod-notes" oninput="journeyUpdateModule(\''+m.id+'\',\'notes\',this.value)" placeholder="Talking points, narration, or design notes…">'+esc(m.notes||"")+'</textarea>';
+        }
+        h+='</div>'; /* end body */
+      }
+      h+='</div>'; /* end mod */
+    });
+    /* Add-module bar */
+    h+='<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">';
+    Object.keys(JOURNEY_TYPES).forEach(function(k){
+      var t=JOURNEY_TYPES[k];
+      h+='<button class="jb-btn" onclick="journeyAddModule(\''+k+'\')" title="'+t.desc+'">＋ '+t.icon+' '+t.label+'</button>';
+    });
+    h+='</div>';
+  }
+  h+='</div>'; /* end canvas */
+  h+='</div>'; /* end main */
+  /* RIGHT: AI assistant */
+  h+='<aside class="jb-ai">';
+  h+='<div class="jb-ai-head"><span class="jb-ai-head-dot"></span><div><div class="jb-ai-title">Claude Assistant</div><div class="jb-ai-sub" style="margin-top:1px;">Draft, reshape, or extend your journey.</div></div></div>';
+  h+='<textarea id="jbAIPrompt" class="jb-ai-prompt" placeholder="e.g. Draft a 30-min journey on change management with 3 core concepts + an activity + a reflection."></textarea>';
+  h+='<button class="jb-ai-send" onclick="journeyAISend()">▶ Send to Claude Desktop</button>';
+  h+='<div class="jb-ai-howto"><strong style="color:#555;">How this works:</strong> Click Send → prompt copies to clipboard + Claude opens. Claude returns a JSON module block. Paste it → click <code>Import from Clipboard</code> above.</div>';
+  h+='<div class="jb-ai-section">Quick prompts</div>';
+  h+='<button class="jb-ai-chip" onclick="journeyPrompt(\'add\')">＋ Draft a full 5-module journey</button>';
+  h+='<button class="jb-ai-chip" onclick="journeyPrompt(\'assess\')">✓ Add a check after every core concept</button>';
+  h+='<button class="jb-ai-chip" onclick="journeyPrompt(\'shorten\')">⏱ Shrink journey to 20 minutes</button>';
+  h+='<button class="jb-ai-chip" onclick="journeyPrompt(\'reorder\')">↕ Reorder practice before assessment</button>';
+  h+='<button class="jb-ai-chip" onclick="journeyPrompt(\'intro\')">▶ Draft 30-sec intro narration for Module 1</button>';
+  h+='<div class="jb-ai-section">Dev shortcut</div>';
+  h+='<div class="jb-ai-howto">Without Claude Desktop, paste any JSON like <code>{"modules":[{"title":"…","type":"core","duration":5,"components":[]}]}</code> into your clipboard, then click Import.</div>';
+  h+='</aside>';
+  h+='</div>'; /* end jb-wrap */
+  return h;
+}
+
 function render() {
   var root=document.getElementById("root"), b=B[state.brand];
   applyBrandVars();
+
+  /* ─── JOURNEY BUILDER (Day 3 v0) ─── */
+  if(state.mode==="journey"){
+    root.innerHTML=shell(renderJourney());
+    return;
+  }
 
   /* ─── HOME SCREEN (Studio landing v2) ─── */
   if(!state.mode){
@@ -2478,7 +2914,7 @@ function render() {
     var tiles=[
       {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
       {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
-      {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"studioComingSoon('Journey Builder','Day 3')",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'SOON',cta:'Preview →'},
+      {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'NEW',cta:'Open canvas →'},
       {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"studioComingSoon('Content Writer','Day 4')",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'SOON',cta:'Preview →'}
     ];
     tiles.forEach(function(t){
