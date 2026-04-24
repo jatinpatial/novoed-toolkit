@@ -258,6 +258,22 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 .cw-preview h3{font-size:13px;font-weight:800;color:#222;margin:10px 0 4px;font-family:inherit;}
 .cw-how{background:#FFF9ED;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.6;}
 .cw-how strong{color:#78350F;}
+/* --- Pro Tip banner (Day 6 polish) --- */
+.pt-banner{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%);border:1px solid #334155;border-radius:14px;margin-bottom:22px;color:#E2E8F0;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(15,23,42,0.18);}
+.pt-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,158,11,0.18) 0%,transparent 70%);pointer-events:none;}
+.pt-banner-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#F59E0B,#EA580C);display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;flex-shrink:0;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,0.4);}
+.pt-banner-body{flex:1;min-width:0;position:relative;}
+.pt-banner-kicker{font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#FBBF24;margin-bottom:3px;}
+.pt-banner-title{font-size:13.5px;font-weight:700;color:#F8FAFC;margin-bottom:3px;line-height:1.35;}
+.pt-banner-text{font-size:12px;color:#CBD5E1;line-height:1.55;}
+.pt-banner-text code{font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:11px;background:rgba(251,191,36,0.18);color:#FCD34D;padding:1px 6px;border-radius:4px;border:1px solid rgba(251,191,36,0.25);}
+.pt-banner-cta{padding:9px 14px;background:#fff;color:#0F172A;border-radius:9px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;align-self:center;border:none;cursor:pointer;font-family:inherit;transition:transform 0.15s,box-shadow 0.15s;position:relative;}
+.pt-banner-cta:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(255,255,255,0.18);}
+.pt-banner-dismiss{position:absolute;top:8px;right:10px;background:none;border:none;color:#64748B;font-size:14px;cursor:pointer;padding:4px;line-height:1;border-radius:6px;font-family:inherit;}
+.pt-banner-dismiss:hover{color:#F8FAFC;background:rgba(255,255,255,0.06);}
+/* Inline kbd hint chips */
+.kbd-chip{display:inline-flex;align-items:center;gap:4px;font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:10px;font-weight:700;background:rgba(255,255,255,0.08);color:inherit;padding:2px 7px;border-radius:5px;border:1px solid rgba(255,255,255,0.18);}
+.kbd-inline{display:inline-block;font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:10.5px;font-weight:700;background:#F1F5F9;color:#1E293B;padding:1px 6px;border-radius:4px;border:1px solid #CBD5E1;line-height:1.3;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -2087,6 +2103,47 @@ function openIconPicker(currentVal, onSelect){
 /* ── Vanilla UI Engine ── */
 var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null, writer: null, media: null };
 function setState(p) { Object.assign(state, p); render(); }
+
+/* ── Pro Tip banners (Day 6 polish) ── */
+var DXT_README_URL="https://github.com/Patial-Jatin_bcgprod/novoed-toolkit/blob/main/dxt/README.md";
+function ptDismissed(id){
+  try{ var arr=JSON.parse(localStorage.getItem("studioProTipDismissed")||"[]"); return arr.indexOf(id)>=0; }catch(e){ return false; }
+}
+function ptDismiss(id){
+  try{
+    var arr=JSON.parse(localStorage.getItem("studioProTipDismissed")||"[]");
+    if(arr.indexOf(id)<0){ arr.push(id); localStorage.setItem("studioProTipDismissed", JSON.stringify(arr)); }
+  }catch(e){}
+  var el=document.getElementById("pt-"+id);
+  if(el){ el.style.transition="opacity 0.18s,transform 0.18s,margin-bottom 0.2s,padding 0.2s,height 0.2s"; el.style.opacity="0"; el.style.transform="translateY(-4px)";
+    setTimeout(function(){ el.remove(); },200);
+  }
+}
+function ptResetAll(){ try{ localStorage.removeItem("studioProTipDismissed"); }catch(e){} render(); }
+/* opts: {id, kicker, title, body, ctaLabel, ctaHref|ctaOnClick, icon} */
+function protipBanner(opts){
+  if(!opts||!opts.id) return "";
+  if(ptDismissed(opts.id)) return "";
+  var icon=opts.icon||"⌘";
+  var kicker=opts.kicker||"Pro tip";
+  var cta="";
+  if(opts.ctaHref){
+    cta='<a class="pt-banner-cta" href="'+opts.ctaHref+'" target="_blank" rel="noopener">'+(opts.ctaLabel||"Learn more")+' →</a>';
+  } else if(opts.ctaOnClick){
+    cta='<button class="pt-banner-cta" onclick="'+opts.ctaOnClick+'">'+(opts.ctaLabel||"Open")+' →</button>';
+  }
+  return '<div class="pt-banner" id="pt-'+esc(opts.id)+'">'
+    +'<div class="pt-banner-icon">'+icon+'</div>'
+    +'<div class="pt-banner-body">'
+      +'<div class="pt-banner-kicker">'+esc(kicker)+'</div>'
+      +'<div class="pt-banner-title">'+opts.title+'</div>'
+      +'<div class="pt-banner-text">'+opts.body+'</div>'
+    +'</div>'
+    +cta
+    +'<button class="pt-banner-dismiss" onclick="ptDismiss(\''+esc(opts.id)+'\')" title="Dismiss this tip">✕</button>'
+  +'</div>';
+}
+
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 function doSelect(id) {
   var d = deepClone(DEFAULTS[id] || {});
@@ -2802,6 +2859,15 @@ function renderMedia(){
   if(!state.media) state.media=mediaNew();
   var m=state.media;
   var h='<div class="cw-wrap">';
+  h+=protipBanner({
+    id:"media-claude",
+    kicker:"Pro tip · ffmpeg without the command line",
+    title:"Stay in Claude — drag a video into the chat and ask",
+    body:'With the <code>.dxt</code> extension, ask Claude: <em>"Trim 0:30–1:15 from this lecture and grab a thumbnail at 0:45."</em> Claude calls <code>video_info</code>, <code>trim_video</code>, and <code>extract_thumbnail</code> for you — no terminal, no copy-paste.',
+    ctaLabel:"Install the extension",
+    ctaHref:DXT_README_URL,
+    icon:"▶"
+  });
   h+='<div class="cw-kicker" style="background:'+b.priLt+';color:'+b.priDk+';"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Media Studio · v0</div>';
   h+='<div class="cw-title" style="color:'+b.tx+';">Trim clips, grab thumbnails</div>';
   h+='<div class="cw-sub">Drive local <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:12px;background:#F7F8FA;padding:1px 6px;border-radius:4px;">ffmpeg</code> from Claude Desktop to cut course videos and lift hero thumbnails — no upload required, all processing stays on your machine.</div>';
@@ -2868,6 +2934,15 @@ function renderWriter(){
   if(!state.writer) state.writer=writerNew();
   var w=state.writer;
   var h='<div class="cw-wrap">';
+  h+=protipBanner({
+    id:"writer-claude",
+    kicker:"Pro tip · the prompt is just a fallback",
+    title:"In Claude Desktop, just say what you want — no form-filling",
+    body:'With the <code>.dxt</code> extension installed, type <em>"Draft a 25-min change-management journey for senior managers"</em> in any Claude chat. The Studio receives the modules directly. This form is here for browsers without the extension.',
+    ctaLabel:"Install the extension",
+    ctaHref:DXT_README_URL,
+    icon:"✎"
+  });
   h+='<div class="cw-kicker" style="background:'+b.priLt+';color:'+b.priDk+';"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Content Writer · v0</div>';
   h+='<div class="cw-title" style="color:'+b.tx+';">Draft a journey with Claude</div>';
   h+='<div class="cw-sub">Tell the Studio what you want learners to walk away with. We build a tight prompt, hand off to Claude Desktop, and pipe the response back into your Journey canvas.</div>';
@@ -2946,27 +3021,27 @@ function renderSidebar(){
     +'</div>';
   /* Workspace */
   s+='<div class="sb-section">Workspace</div>';
-  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\'})">'
+  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\'})" title="Studio landing — quick launch + featured components">'
     +'<span class="sb-icon">⌂</span><span>Home</span></button>';
-  s+='<button class="sb-item" onclick="openPalette()" title="Ctrl+K / Cmd+K">'
+  s+='<button class="sb-item" onclick="openPalette()" title="Open command palette — search every component (Ctrl+K / Cmd+K)">'
     +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
-  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\'})">'
+  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\'})" title="Browse all '+totalComps+' HTML embeds + SCORM activities">'
     +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
-  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()">'
+  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Design the full course flow — modules, durations, components per module">'
     +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="writer"?' active':'')+'" onclick="enterWriter()">'
+  s+='<button class="sb-item'+(state.mode==="writer"?' active':'')+'" onclick="enterWriter()" title="AI-drafted course outlines — Claude writes, you approve">'
     +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()">'
+  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos + grab thumbnails via local ffmpeg (no upload)">'
     +'<span class="sb-icon">▶</span><span>Media Studio</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   /* Tools */
   s+='<div class="sb-section">Tools</div>';
-  s+='<button class="sb-item" onclick="openLibrary()">'
+  s+='<button class="sb-item" onclick="openLibrary()" title="Reuse components you\'ve saved across projects">'
     +'<span class="sb-icon">★</span><span>My Library</span>'
     +(libCount>0?'<span class="sb-count" style="color:'+b.pri+';font-weight:700;">'+libCount+'</span>':'')
     +'</button>';
-  s+='<button class="sb-item" onclick="openRecommender()">'
+  s+='<button class="sb-item" onclick="openRecommender()" title="Pick the right component by teaching goal — comparison, sequence, decision, etc.">'
     +'<span class="sb-icon">✨</span><span>Recommend</span></button>';
-  s+='<button class="sb-item" onclick="openBrandEditor()">'
+  s+='<button class="sb-item" onclick="openBrandEditor()" title="Custom palette + font + RTL support — for non-BCG brands">'
     +'<span class="sb-icon">⚙</span><span>Brand Studio</span></button>';
   /* Footer: brand picker + install CTA + feedback */
   s+='<div class="sb-footer">';
@@ -2977,7 +3052,7 @@ function renderSidebar(){
     s+='<button class="sb-brand-dot'+(state.brand===k?' active':'')+'" onclick="switchBrand(\''+k+'\')" title="'+v.n+'">'+v.n+'</button>';
   });
   s+='</div>';
-  s+='<a class="sb-cta" href="https://github.com/Patial-Jatin_bcgprod/novoed-toolkit/blob/main/dxt/README.md" target="_blank">⌘ Install Claude Desktop</a>';
+  s+='<a class="sb-cta" href="'+DXT_README_URL+'" target="_blank" title="One-click .dxt install — draft components hands-free in any Claude chat">⌘ Install Claude Desktop</a>';
   s+='<div class="sb-feedback">Feedback · <a href="mailto:patial.jatin@bcg.com">patial.jatin@bcg.com</a></div>';
   s+='</div>';
   s+='</aside>';
@@ -3099,6 +3174,16 @@ function renderJourney(){
   var h='<div class="jb-wrap">';
   /* LEFT: canvas */
   h+='<div class="jb-main">';
+  /* Pro Tip — Claude Desktop hand-off */
+  h+=protipBanner({
+    id:"journey-claude",
+    kicker:"Pro tip · hands-free authoring",
+    title:"Skip the typing — let Claude Desktop draft this whole journey",
+    body:'Install the <code>.dxt</code> extension once, then ask Claude in any chat: <em>"Use bcg-toolkit push_journey to draft a 30-min onboarding flow on data ethics for new analysts"</em>. The modules land here, ready to refine.',
+    ctaLabel:"Get the installer",
+    ctaHref:DXT_README_URL,
+    icon:"⌘"
+  });
   /* Hero */
   h+='<div class="jb-hero">';
   h+='<div style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;background:'+b.priLt+';color:'+b.priDk+';border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Journey Builder · v0</div>';
@@ -3372,14 +3457,23 @@ function render() {
     /* What's new + Feedback */
     hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
     hm+='<div style="padding:20px 22px;background:'+b.n1+';border-radius:14px;border:1px solid '+b.n2+';">'
-      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.4 Studio</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.75;"><strong>Studio landing:</strong> prompt-first hero, featured components, faster navigation.<br><strong>Claude Desktop extension:</strong> one-click .dxt install now live.<br><strong>Henderson + Trebuchet</strong> fonts added to the brand stack.<br><span style="color:'+b.txL+';">Journey Builder + Content Writer shipping later this week.</span></div>'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.7 Studio</div>'
+      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.75;"><strong>Media Studio:</strong> ffmpeg-powered trim + thumbnail tools, driven by Claude.<br><strong>Journey Builder + Content Writer:</strong> design full course flows; AI drafts the outline.<br><strong>Command palette (⌘K):</strong> jump to any of '+(htmlCount+scormCount)+' components in two keystrokes.<br><strong>Claude Desktop extension:</strong> 9 MCP tools, one-click <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:11px;background:'+b.priLt+';padding:1px 5px;border-radius:3px;">.dxt</code> install.</div>'
       +'</div>';
     hm+='<div style="padding:20px 22px;background:'+b.priLt+';border-radius:14px;border:1px solid '+b.pri+'22;display:flex;align-items:center;gap:14px;">'
       +'<div style="width:38px;height:38px;background:'+b.pri+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;">✉</div>'
       +'<div style="font-size:12px;color:'+b.tx+';line-height:1.6;"><strong>Feedback or ideas?</strong><br>Email <a href="mailto:patial.jatin@bcg.com" style="color:'+b.pri+';font-weight:700;">patial.jatin@bcg.com</a></div>'
       +'</div>';
     hm+='</div>';
+
+    /* Keyboard shortcuts footer (Day 6 polish) */
+    hm+='<div style="margin-top:24px;padding:16px 22px;background:#0F172A;border-radius:14px;color:#94A3B8;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:11.5px;">'
+      +'<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#FBBF24;">Keyboard</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">⌘</span><span class="kbd-chip" style="color:#F8FAFC;">K</span> open command palette</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">/</span> focus list search</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">⌃</span><span class="kbd-chip" style="color:#F8FAFC;">⇧</span><span class="kbd-chip" style="color:#F8FAFC;">E</span> edit a deployed SCORM activity</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">↑</span><span class="kbd-chip" style="color:#F8FAFC;">↓</span> navigate · <span class="kbd-chip" style="color:#F8FAFC;">⏎</span> open</span>'
+    +'</div>';
 
     hm+='</div></div>'; /* end content + outer */
     root.innerHTML=shell(hm); return;
