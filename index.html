@@ -228,6 +228,36 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 .jb-ai-section{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:#aaa;margin-top:6px;}
 .jb-ai-howto{font-size:10.5px;color:#888;line-height:1.6;padding:10px 12px;background:#F7F8FA;border-radius:8px;border:1px solid #EEE;}
 .jb-ai-howto code{font-family:'SFMono-Regular',Menlo,monospace;font-size:10px;background:#fff;padding:1px 4px;border-radius:3px;border:1px solid #EEE;color:#333;}
+/* --- Content Writer (Day 4) --- */
+.cw-wrap{max-width:900px;margin:0 auto;padding:26px 30px 60px;color:#222;}
+.cw-kicker{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:14px;}
+.cw-title{font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+.cw-sub{font-size:13.5px;line-height:1.55;color:#666;margin-bottom:26px;max-width:640px;}
+.cw-step{display:flex;align-items:center;gap:12px;margin:26px 0 14px;}
+.cw-step-n{width:28px;height:28px;border-radius:50%;background:var(--sb-active-fg,#1B7A4F);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+.cw-step-title{font-size:15px;font-weight:800;color:#222;letter-spacing:-0.2px;}
+.cw-step-sub{font-size:12px;color:#888;font-weight:500;margin-left:6px;}
+.cw-card{background:#fff;border:1.5px solid #E8E8E8;border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+.cw-textarea{width:100%;padding:12px 14px;border:1.5px solid #E8E8E8;border-radius:10px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;background:#fff;color:#222;}
+.cw-textarea:focus{outline:none;border-color:var(--sb-active-fg,#29BA74);box-shadow:0 0 0 3px var(--sb-active-bg,#E6F7EF);}
+.cw-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.cw-chip{padding:6px 10px;border:1px solid #E8E8E8;background:#FAFBFC;border-radius:20px;font-size:11px;color:#555;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.cw-chip:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#1B7A4F);background:var(--sb-active-bg,#E6F7EF);}
+.cw-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.cw-btn{padding:9px 16px;border:1.5px solid #E8E8E8;background:#fff;border-radius:9px;font-size:12px;font-weight:700;color:#555;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.cw-btn:hover{border-color:var(--sb-active-fg,#29BA74);color:var(--sb-active-fg,#29BA74);}
+.cw-btn.pri{background:var(--sb-active-fg,#1B7A4F);color:#fff;border-color:var(--sb-active-fg,#1B7A4F);}
+.cw-btn.pri:hover{filter:brightness(0.92);color:#fff;}
+.cw-form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+@media(max-width:760px){.cw-form-row{grid-template-columns:1fr;}}
+.cw-form-row label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;}
+.cw-form-row input,.cw-form-row select{padding:8px 10px;border:1.5px solid #E8E8E8;border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:#222;font-weight:500;text-transform:none;letter-spacing:normal;}
+.cw-form-row input:focus,.cw-form-row select:focus{outline:none;border-color:var(--sb-active-fg,#29BA74);}
+.cw-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;background:#F7F8FA;color:#666;border-radius:4px;letter-spacing:0.5px;margin-left:8px;}
+.cw-preview{background:#FAFBFC;border:1px solid #EEE;border-radius:10px;padding:14px 16px;font-size:12.5px;line-height:1.7;color:#555;max-height:380px;overflow-y:auto;white-space:pre-wrap;font-family:'SFMono-Regular',Menlo,monospace;}
+.cw-preview h3{font-size:13px;font-weight:800;color:#222;margin:10px 0 4px;font-family:inherit;}
+.cw-how{background:#FFF9ED;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.6;}
+.cw-how strong{color:#78350F;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -2055,7 +2085,7 @@ function openIconPicker(currentVal, onSelect){
 }
 
 /* ── Vanilla UI Engine ── */
-var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null };
+var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null, writer: null };
 function setState(p) { Object.assign(state, p); render(); }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 function doSelect(id) {
@@ -2551,6 +2581,224 @@ function journeyImportFromClipboard(){
   };
 })();
 
+/* ── Content Writer (Day 4 v0) ── */
+function writerNew(){
+  return {
+    topic:"",
+    audience:"New Learning Designers",
+    duration:"30",
+    format:"journey",
+    tone:"Conversational, confident, BCG-style",
+    outline:"",
+    updatedAt:new Date().toISOString()
+  };
+}
+
+function enterWriter(){
+  if(!state.writer){
+    try{ var saved=localStorage.getItem("studioWriter"); if(saved) state.writer=JSON.parse(saved); }catch(e){}
+    if(!state.writer) state.writer=writerNew();
+  }
+  state.mode="writer"; state.sel=null;
+  render();
+}
+
+function writerSave(){
+  if(!state.writer) return;
+  state.writer.updatedAt=new Date().toISOString();
+  try{ localStorage.setItem("studioWriter", JSON.stringify(state.writer)); studioToast("✓ Draft saved"); }catch(e){}
+}
+
+function writerUpdate(k,v){
+  if(!state.writer) state.writer=writerNew();
+  state.writer[k]=v;
+}
+
+function writerExample(which){
+  if(!state.writer) state.writer=writerNew();
+  var ex={
+    change:{topic:"Navigating organisational change in a matrix structure",audience:"Mid-level managers at a Fortune 500 retailer",duration:"25"},
+    ai:{topic:"What AI agents mean for consulting work — capabilities, limits, practical plays",audience:"Senior consultants in strategy practice",duration:"40"},
+    onboard:{topic:"New-joiner onboarding — BCG U principles, Slack conventions, first-week rituals",audience:"Brand-new BCG employees (Day 1)",duration:"15"},
+    feedback:{topic:"How to give and receive feedback in a project setting",audience:"Project leads and senior associates",duration:"20"}
+  };
+  var e=ex[which]; if(!e) return;
+  Object.assign(state.writer, e);
+  render();
+}
+
+function writerComposePrompt(){
+  if(!state.writer||!state.writer.topic.trim()){
+    studioToast("Add a topic first"); return "";
+  }
+  var w=state.writer;
+  var compIds = HTML_COMPS.map(function(c){return c.id;}).concat(SCORM_COMPS.map(function(c){return c.id;}));
+  var sample=compIds.slice(0,16).join(", ");
+  var prompt="You are a BCG U Learning Designer. Draft a "+w.duration+"-min learning journey.\n\n";
+  prompt+="**Topic:** "+w.topic+"\n";
+  prompt+="**Audience:** "+(w.audience||"Learning Designers")+"\n";
+  prompt+="**Tone:** "+(w.tone||"Conversational, BCG-style")+"\n";
+  prompt+="**Target duration:** "+w.duration+" min\n\n";
+  if(w.format==="journey"){
+    prompt+="Return ONLY valid JSON matching this shape — I will paste it into BCG U Studio's Journey Builder:\n\n";
+    prompt+='{\n  "title": "…",\n  "audience": "…",\n  "modules": [\n    { "title": "…", "type": "intro|core|scorm|assess|reflect", "duration": <min>, "components": ["<comp-id>", …], "notes": "talking points" }\n  ]\n}\n\n';
+    prompt+="Valid component ids (pick 0-3 per module, only when they fit):\n"+sample+"…\n(31 HTML + 16 SCORM total; avoid inventing new ids.)\n\n";
+    prompt+="Rules:\n- 3-6 modules total.\n- One 'intro', one 'reflect'. Mix 'core' (HTML) and 'scorm' (interactive) modules in the middle.\n- Durations must sum to ≈ "+w.duration+" min.\n- Keep 'notes' to 2-3 sentences — talking points, not full script.\n- No prose outside the JSON object.";
+  } else {
+    prompt+="Return a Markdown outline with H2 sections per module, each with: a one-line description, 3 bullet key points, and 2 talking-point lines. I will convert it into BCG U Studio components by hand.";
+  }
+  return prompt;
+}
+
+function writerCopyPrompt(){
+  var p=writerComposePrompt(); if(!p) return;
+  navigator.clipboard.writeText(p).then(function(){
+    studioToast("✓ Prompt copied — paste into Claude Desktop");
+    writerSave();
+  });
+}
+
+function writerOpenClaude(){
+  var p=writerComposePrompt(); if(!p) return;
+  navigator.clipboard.writeText(p).then(function(){
+    studioToast("✓ Prompt copied + opening Claude Desktop…");
+    writerSave();
+    setTimeout(function(){ window.open("https://claude.ai/new","_blank"); }, 300);
+  });
+}
+
+function writerParseOutline(){
+  var w=state.writer; if(!w||!w.outline.trim()){ studioToast("Paste Claude's response first"); return; }
+  var txt=w.outline.trim();
+  /* Try JSON first */
+  var clean=txt.replace(/^```(?:json)?\s*/i,"").replace(/\s*```\s*$/,"").trim();
+  var first=clean.indexOf("{"), last=clean.lastIndexOf("}");
+  if(first>=0&&last>first) clean=clean.slice(first,last+1);
+  try {
+    var data=JSON.parse(clean);
+    if(data.modules && Array.isArray(data.modules)){
+      state.journey={
+        id:"j_"+Date.now(),
+        title:data.title||w.topic||"Untitled Journey",
+        audience:data.audience||w.audience||"",
+        totalDuration:0,
+        createdAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString(),
+        modules:data.modules.map(function(m,i){
+          return {
+            id:"m_"+Date.now()+"_"+i,
+            title:m.title||("Module "+(i+1)),
+            type:m.type||"core",
+            duration:parseInt(m.duration)||5,
+            components:Array.isArray(m.components)?m.components:[],
+            notes:m.notes||""
+          };
+        })
+      };
+      state.mode="journey"; state.sel=null; state.journeyExpanded=null;
+      try{ localStorage.setItem("studioJourneyCurrent", JSON.stringify(state.journey)); }catch(e){}
+      render();
+      studioToast("✓ Parsed "+data.modules.length+" modules → opening Journey Builder");
+      return;
+    }
+  } catch(e){ /* not JSON, try markdown */ }
+  /* Markdown fallback: split by ## headings */
+  var sections=txt.split(/^##\s+/m).slice(1);
+  if(sections.length<2){ studioToast("Couldn't detect JSON or markdown modules"); return; }
+  state.journey={
+    id:"j_"+Date.now(),
+    title:w.topic||"Untitled Journey",
+    audience:w.audience||"",
+    totalDuration:0,
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    modules:sections.map(function(sec,i){
+      var lines=sec.split(/\r?\n/);
+      var title=(lines[0]||"").replace(/^\d+\.\s*/,"").trim()||"Module "+(i+1);
+      var rest=lines.slice(1).join("\n").trim();
+      var typeHint=title.toLowerCase();
+      var type="core";
+      if(i===0||typeHint.indexOf("intro")>=0||typeHint.indexOf("welcome")>=0) type="intro";
+      else if(i===sections.length-1||typeHint.indexOf("reflect")>=0||typeHint.indexOf("wrap")>=0) type="reflect";
+      else if(typeHint.indexOf("quiz")>=0||typeHint.indexOf("assess")>=0||typeHint.indexOf("check")>=0) type="assess";
+      else if(typeHint.indexOf("activity")>=0||typeHint.indexOf("practice")>=0) type="scorm";
+      return {
+        id:"m_"+Date.now()+"_"+i,
+        title:title,
+        type:type,
+        duration:5,
+        components:[],
+        notes:rest
+      };
+    })
+  };
+  state.mode="journey"; state.sel=null; state.journeyExpanded=null;
+  try{ localStorage.setItem("studioJourneyCurrent", JSON.stringify(state.journey)); }catch(e){}
+  render();
+  studioToast("✓ Parsed "+sections.length+" markdown sections → Journey Builder");
+}
+
+function renderWriter(){
+  var b=B[state.brand];
+  if(!state.writer) state.writer=writerNew();
+  var w=state.writer;
+  var h='<div class="cw-wrap">';
+  h+='<div class="cw-kicker" style="background:'+b.priLt+';color:'+b.priDk+';"><span style="width:7px;height:7px;border-radius:50%;background:'+b.pri+';"></span>Content Writer · v0</div>';
+  h+='<div class="cw-title" style="color:'+b.tx+';">Draft a journey with Claude</div>';
+  h+='<div class="cw-sub">Tell the Studio what you want learners to walk away with. We build a tight prompt, hand off to Claude Desktop, and pipe the response back into your Journey canvas.</div>';
+
+  /* Step 1: topic + meta */
+  h+='<div class="cw-step"><div class="cw-step-n">1</div><div class="cw-step-title">Topic & context</div><span class="cw-step-sub">~ 30 seconds</span></div>';
+  h+='<div class="cw-card">';
+  h+='<label style="display:block;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Topic / learning goal</label>';
+  h+='<textarea class="cw-textarea" placeholder="e.g. Navigating organisational change in a matrix structure" oninput="writerUpdate(\'topic\',this.value)">'+esc(w.topic)+'</textarea>';
+  h+='<div class="cw-chips"><span style="font-size:10px;color:#888;font-weight:600;padding:6px 0;">Examples:</span>';
+  h+='<button class="cw-chip" onclick="writerExample(\'change\')">Change mgmt</button>';
+  h+='<button class="cw-chip" onclick="writerExample(\'ai\')">AI for consultants</button>';
+  h+='<button class="cw-chip" onclick="writerExample(\'onboard\')">New-joiner onboarding</button>';
+  h+='<button class="cw-chip" onclick="writerExample(\'feedback\')">Giving feedback</button>';
+  h+='</div>';
+  h+='<div class="cw-form-row" style="margin-top:14px;">';
+  h+='<label>Audience<input value="'+esc(w.audience)+'" oninput="writerUpdate(\'audience\',this.value)"/></label>';
+  h+='<label>Duration (min)<input type="number" min="5" value="'+esc(w.duration)+'" oninput="writerUpdate(\'duration\',this.value)"/></label>';
+  h+='<label>Output<select onchange="writerUpdate(\'format\',this.value)"><option value="journey"'+(w.format==="journey"?" selected":"")+'>Journey JSON → Canvas</option><option value="markdown"'+(w.format==="markdown"?" selected":"")+'>Markdown outline</option></select></label>';
+  h+='</div>';
+  h+='<label style="display:block;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin:6px 0;">Tone</label>';
+  h+='<input style="width:100%;padding:8px 10px;border:1.5px solid #E8E8E8;border-radius:8px;font-size:12.5px;font-family:inherit;" value="'+esc(w.tone)+'" oninput="writerUpdate(\'tone\',this.value)" placeholder="Conversational, confident, BCG-style"/>';
+  h+='</div>';
+
+  /* Step 2: prompt handoff */
+  h+='<div class="cw-step"><div class="cw-step-n">2</div><div class="cw-step-title">Hand off to Claude</div><span class="cw-step-sub">1 click</span></div>';
+  h+='<div class="cw-card">';
+  h+='<div class="cw-how"><strong>How it works:</strong> We build a production-ready prompt (topic + audience + valid component ids + JSON schema) and copy it to your clipboard. Paste into Claude Desktop. Claude returns JSON. Paste it into step 3.</div>';
+  h+='<div class="cw-actions" style="margin-top:14px;">';
+  h+='<button class="cw-btn pri" onclick="writerOpenClaude()">▶ Copy prompt + open Claude</button>';
+  h+='<button class="cw-btn" onclick="writerCopyPrompt()">Copy prompt only</button>';
+  h+='<button class="cw-btn" onclick="writerSave()">⎯ Save draft</button>';
+  h+='</div>';
+  h+='<details style="margin-top:14px;"><summary style="font-size:11px;color:#888;cursor:pointer;font-weight:600;">Preview the prompt we will send</summary>';
+  h+='<div class="cw-preview" style="margin-top:10px;">'+esc(writerComposePrompt()||"(fill in topic first)")+'</div>';
+  h+='</details>';
+  h+='</div>';
+
+  /* Step 3: paste response */
+  h+='<div class="cw-step"><div class="cw-step-n">3</div><div class="cw-step-title">Paste Claude\'s response</div><span class="cw-step-sub">→ Journey canvas</span></div>';
+  h+='<div class="cw-card">';
+  h+='<textarea class="cw-textarea" style="min-height:180px;font-family:\'SFMono-Regular\',Menlo,monospace;font-size:12px;" placeholder=\'{"title": "…", "audience": "…", "modules": [...] }&#10;&#10;Or paste a Markdown outline with ## headings per module.\' oninput="writerUpdate(\'outline\',this.value)">'+esc(w.outline||"")+'</textarea>';
+  h+='<div class="cw-actions">';
+  h+='<button class="cw-btn pri" onclick="writerParseOutline()">▦ Parse → open Journey Builder</button>';
+  h+='<button class="cw-btn" onclick="state.writer.outline=\'\';render();">Clear</button>';
+  h+='</div>';
+  h+='</div>';
+
+  /* MCP bridge note */
+  h+='<div style="margin-top:24px;padding:14px 18px;background:'+b.priLt+';border-radius:12px;border:1px solid '+b.pri+'30;">';
+  h+='<div style="font-size:11px;color:'+b.priDk+';line-height:1.6;"><strong>Pro tip:</strong> With the BCG U Studio DXT installed in Claude Desktop, skip steps 2–3. Just say <em>"Use bcg-toolkit to draft a 25-min journey on change management and push it to my canvas"</em>. Claude calls <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:10px;background:#fff;padding:1px 5px;border-radius:3px;">push_journey</code> and the canvas fills automatically.</div></div>';
+
+  h+='</div>';
+  return h;
+}
+
 /* ── App shell: sidebar IA + main content wrapper ── */
 function applyBrandVars(){
   var b=B[state.brand];
@@ -2581,8 +2829,8 @@ function renderSidebar(){
     +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
   s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()">'
     +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item" onclick="studioComingSoon(\'Content Writer\',\'Day 4\')">'
-    +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge">SOON</span></button>';
+  s+='<button class="sb-item'+(state.mode==="writer"?' active':'')+'" onclick="enterWriter()">'
+    +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   /* Tools */
   s+='<div class="sb-section">Tools</div>';
   s+='<button class="sb-item" onclick="openLibrary()">'
@@ -2842,6 +3090,12 @@ function render() {
     return;
   }
 
+  /* ─── CONTENT WRITER (Day 4 v0) ─── */
+  if(state.mode==="writer"){
+    root.innerHTML=shell(renderWriter());
+    return;
+  }
+
   /* ─── HOME SCREEN (Studio landing v2) ─── */
   if(!state.mode){
     var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
@@ -2915,7 +3169,7 @@ function render() {
       {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
       {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
       {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'NEW',cta:'Open canvas →'},
-      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"studioComingSoon('Content Writer','Day 4')",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'SOON',cta:'Preview →'}
+      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"enterWriter()",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'NEW',cta:'Open writer →'}
     ];
     tiles.forEach(function(t){
       hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid '+b.n2+';border-radius:16px;padding:22px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">';
@@ -3291,22 +3545,61 @@ window.addEventListener("hashchange",function(){loadFromHash();});
     ws.addEventListener("error", function(){ /* swallow — toolkit still works standalone */ });
     ws.addEventListener("message", function(ev){
       var msg; try { msg = JSON.parse(ev.data); } catch(e){ return; }
-      if (!msg || msg.type !== "open") return;
-      var comp = msg.comp, data = msg.data || {}, brand = msg.brand || state.brand || "bcg";
-      if (!comp) return;
-      var isSC = comp.indexOf("s_") === 0;
-      var merged = Object.assign({}, DEFAULTS[comp] || {}, data);
-      setState({
-        mode: isSC ? "scorm" : "html",
-        sel: comp,
-        data: merged,
-        brand: brand,
-        output: isSC ? "" : genHTML(comp, brand, merged),
-        scormPreview: isSC ? genSCORMhtml(comp, merged, brand) : "",
-        cat: "all",
-        search: ""
-      });
-      if (typeof toast === "function") toast("← Received '" + comp + "' from Claude", true);
+      if (!msg) return;
+
+      /* Open component (existing flow) */
+      if (msg.type === "open") {
+        var comp = msg.comp, data = msg.data || {}, brand = msg.brand || state.brand || "bcg";
+        if (!comp) return;
+        var isSC = comp.indexOf("s_") === 0;
+        var merged = Object.assign({}, DEFAULTS[comp] || {}, data);
+        setState({
+          mode: isSC ? "scorm" : "html",
+          sel: comp,
+          data: merged,
+          brand: brand,
+          output: isSC ? "" : genHTML(comp, brand, merged),
+          scormPreview: isSC ? genSCORMhtml(comp, merged, brand) : "",
+          cat: "all",
+          search: ""
+        });
+        if (typeof toast === "function") toast("← Received '" + comp + "' from Claude", true);
+        return;
+      }
+
+      /* Journey push — Claude Desktop sent a full journey structure */
+      if (msg.type === "journey_push" && msg.journey) {
+        var incoming = msg.journey;
+        var mode = msg.mode === "append" ? "append" : "replace";
+        if (!state.journey || mode === "replace") {
+          state.journey = {
+            id: "j_" + Date.now(),
+            title: incoming.title || "Untitled Journey",
+            audience: incoming.audience || "",
+            totalDuration: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            modules: []
+          };
+        } else {
+          // append: keep existing title/audience
+        }
+        (incoming.modules || []).forEach(function(m, i){
+          state.journey.modules.push({
+            id: "m_" + Date.now() + "_" + i + "_" + Math.floor(Math.random()*1000),
+            title: m.title || ("Module " + (i + 1)),
+            type: m.type || "core",
+            duration: parseInt(m.duration) || 5,
+            components: Array.isArray(m.components) ? m.components : [],
+            notes: m.notes || ""
+          });
+        });
+        state.mode = "journey"; state.sel = null; state.journeyExpanded = null;
+        try { localStorage.setItem("studioJourneyCurrent", JSON.stringify(state.journey)); } catch(e){}
+        render();
+        if (typeof studioToast === "function") studioToast("← Journey '" + incoming.title + "' pushed from Claude (" + (incoming.modules||[]).length + " modules)");
+        return;
+      }
     });
   } catch(e) { /* WebSocket unavailable, give up silently */ }
 })();

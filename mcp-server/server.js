@@ -194,7 +194,132 @@ const TOOL_DEFS = [
       "Check whether BCG U Studio is running locally and how many browser tabs are currently connected. Useful if open_in_toolkit appears to not have reached a browser.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "suggest_component",
+    description:
+      "Suggest the best BCG U Studio components for a given learning-design topic or goal. Returns the top matches (with id, name, rationale, and starter data) from the 31 HTML + 16 SCORM catalog. Use this before open_in_toolkit when the LD asks for something like 'show me 3 key stats' or 'I want learners to practice ordering steps'.",
+    inputSchema: {
+      type: "object",
+      required: ["topic"],
+      properties: {
+        topic: {
+          type: "string",
+          description: "Short description of the learning goal or content chunk (e.g. 'compare 3 consulting frameworks', 'drag-sort 6 steps of the BCG growth-share matrix').",
+        },
+        filter: {
+          type: "string",
+          enum: ["all", "html", "scorm"],
+          description: "Limit recommendations to HTML-only or SCORM-only. Default: all.",
+        },
+        limit: {
+          type: "number",
+          description: "How many suggestions to return. Default 3, max 6.",
+        },
+      },
+    },
+  },
+  {
+    name: "push_journey",
+    description:
+      "Push a full learning-journey structure into BCG U Studio's Journey Builder canvas. Opens the tab to the journey view if it isn't already, and replaces or appends modules. Each module is { title, type, duration (min), components (array of component ids), notes }. Use after list_components so you know which component ids are valid.",
+    inputSchema: {
+      type: "object",
+      required: ["journey"],
+      properties: {
+        journey: {
+          type: "object",
+          required: ["title", "modules"],
+          properties: {
+            title: { type: "string", description: "Journey title" },
+            audience: { type: "string", description: "Who this is for" },
+            modules: {
+              type: "array",
+              description: "Ordered list of modules",
+              items: {
+                type: "object",
+                required: ["title", "type"],
+                properties: {
+                  title: { type: "string" },
+                  type: {
+                    type: "string",
+                    enum: ["intro", "core", "scorm", "assess", "reflect"],
+                    description: "Module type — drives the color chip in the canvas.",
+                  },
+                  duration: { type: "number", description: "Duration in minutes." },
+                  components: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Array of component ids (see list_components).",
+                  },
+                  notes: { type: "string", description: "Script / talking points / design notes." },
+                },
+              },
+            },
+          },
+        },
+        mode: {
+          type: "string",
+          enum: ["replace", "append"],
+          description: "replace the current canvas or append to it. Default: replace.",
+        },
+      },
+    },
+  },
 ];
+
+// ---------------------------------------------------------------------------
+// Topic → component scoring for suggest_component.
+// ---------------------------------------------------------------------------
+const TOPIC_HINTS = {
+  // Component id → keyword bag that hints at topical fit.
+  highlight:   ["banner", "hero", "callout", "key message", "announcement"],
+  callout:     ["note", "tip", "warning", "aside", "callout", "info box"],
+  quote:       ["quote", "testimonial", "pullquote", "voice", "expert"],
+  table:       ["table", "matrix", "comparison table", "rows and columns"],
+  compare:     ["compare", "versus", "vs", "before after", "old new", "side by side"],
+  cards:       ["cards", "tiles", "grid", "summary", "overview", "features"],
+  timeline:    ["timeline", "history", "milestones", "steps in time", "phases"],
+  stats:       ["stat", "statistic", "kpi", "metric", "number"],
+  "stat-row":  ["stat row", "metrics", "kpis", "headline numbers"],
+  swot:        ["swot", "strengths weaknesses opportunities threats"],
+  "2x2":       ["2x2", "two by two", "quadrant", "matrix", "prioritization"],
+  pyramid:     ["pyramid", "hierarchy", "levels", "maslow", "minto"],
+  funnel:      ["funnel", "conversion", "stages", "narrowing"],
+  roadmap:     ["roadmap", "phases", "timeline strategy", "horizon"],
+  kpi:         ["kpi", "dashboard", "metric tile"],
+  "bar-chart": ["bar chart", "ranking", "compare values"],
+  donut:       ["donut", "pie", "share", "percentage breakdown"],
+  s_flip:      ["flip card", "reveal", "memorize", "term definition"],
+  s_accordion: ["accordion", "faq", "collapse", "expand"],
+  s_tabs:      ["tabs", "segmented view", "categories"],
+  s_cycle:     ["cycle", "loop", "continuous improvement", "process"],
+  s_promptflow:["prompt flow", "guided scenario", "dialog"],
+  s_branching: ["branching", "scenario", "choose your path", "decision tree"],
+  s_hotspot:   ["hotspot", "click to reveal", "anatomy", "diagram annotation"],
+  s_drag_sort: ["drag sort", "order", "sequence", "arrange", "rank"],
+  s_quiz:      ["quiz", "mcq", "knowledge check", "assessment"],
+  s_poll:      ["poll", "survey", "sentiment"],
+  s_stacked:   ["stacked cards", "layered", "reveal sequence"],
+};
+
+function scoreForTopic(c, topicLower) {
+  const hayParts = [c.n, c.d, c.cat, (TOPIC_HINTS[c.id] || []).join(" ")];
+  const hay = hayParts.join(" ").toLowerCase();
+  if (!topicLower) return 0;
+  // split topic into words, score each word's presence
+  const words = topicLower.split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+  let score = 0;
+  for (const w of words) {
+    if (c.id.toLowerCase().includes(w)) score += 8;
+    if (c.n.toLowerCase().includes(w)) score += 6;
+    if (hay.includes(w)) score += 2;
+  }
+  // exact phrase hits in hint list
+  for (const hint of TOPIC_HINTS[c.id] || []) {
+    if (topicLower.includes(hint)) score += 10;
+  }
+  return score;
+}
 
 mcp.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_DEFS }));
 
@@ -266,6 +391,95 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         connected_browser_tabs: clients.size,
         queued_push: queuedPush ? { comp: queuedPush.comp, brand: queuedPush.brand } : null,
       }, null, 2) }],
+    };
+  }
+
+  if (name === "suggest_component") {
+    const topic = String(args.topic || "").trim();
+    const filter = args.filter || "all";
+    const limit = Math.max(1, Math.min(6, Number(args.limit) || 3));
+    if (!topic) {
+      return { isError: true, content: [{ type: "text", text: "topic is required." }] };
+    }
+    const pool = []
+      .concat(filter === "scorm" ? [] : HTML_COMPS.map((c) => ({ ...c, type: "html" })))
+      .concat(filter === "html" ? [] : SCORM_COMPS.map((c) => ({ ...c, type: "scorm" })));
+    const tl = topic.toLowerCase();
+    const scored = pool
+      .map((c) => ({ c, s: scoreForTopic(c, tl) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, limit)
+      .map(({ c, s }) => ({
+        id: c.id,
+        name: c.n,
+        type: c.type,
+        category: c.cat,
+        match_score: s,
+        description: c.d,
+        schema: SCHEMAS[c.id] || [],
+        example: EXAMPLES[c.id] || null,
+        rationale: `Matches '${topic}' via name/description/intent keywords (score ${s}).`,
+      }));
+    if (scored.length === 0) {
+      // Fall back: return 3 most versatile components
+      const fallback = ["cards", "callout", "stat-row"].map((id) => {
+        const c = HTML_COMPS.find((x) => x.id === id);
+        return c && {
+          id: c.id, name: c.n, type: "html", category: c.cat,
+          match_score: 0, description: c.d,
+          schema: SCHEMAS[c.id] || [], example: EXAMPLES[c.id] || null,
+          rationale: "No direct keyword match. This is a safe default for most topics.",
+        };
+      }).filter(Boolean);
+      return { content: [{ type: "text", text: JSON.stringify({ topic, suggestions: fallback, note: "No keyword match — returning versatile defaults." }, null, 2) }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify({ topic, suggestions: scored }, null, 2) }] };
+  }
+
+  if (name === "push_journey") {
+    const j = args.journey;
+    const mode = args.mode === "append" ? "append" : "replace";
+    if (!j || !j.title || !Array.isArray(j.modules)) {
+      return { isError: true, content: [{ type: "text", text: "journey must include title and modules[]." }] };
+    }
+    // Normalize modules
+    const VALID_TYPES = new Set(["intro", "core", "scorm", "assess", "reflect"]);
+    const allIds = new Set(HTML_COMPS.concat(SCORM_COMPS).map((c) => c.id));
+    const modules = j.modules.map((m, i) => {
+      const comps = Array.isArray(m.components) ? m.components.filter((x) => allIds.has(x)) : [];
+      return {
+        id: "m_srv_" + Date.now() + "_" + i,
+        title: String(m.title || `Module ${i + 1}`),
+        type: VALID_TYPES.has(m.type) ? m.type : "core",
+        duration: Math.max(0, parseInt(m.duration) || 5),
+        components: comps,
+        notes: String(m.notes || ""),
+      };
+    });
+    const payload = {
+      type: "journey_push",
+      mode,
+      journey: {
+        title: String(j.title),
+        audience: String(j.audience || ""),
+        modules,
+      },
+      ts: Date.now(),
+    };
+    const delivered = broadcast(payload);
+    if (delivered === 0) {
+      queueForNextClient(payload);
+      openBrowser(`http://localhost:${HTTP_PORT}/#journey`);
+      return {
+        content: [{
+          type: "text",
+          text: `No toolkit tab was open. Opened http://localhost:${HTTP_PORT}/ and queued the journey '${j.title}' (${modules.length} modules) for delivery on connect.`,
+        }],
+      };
+    }
+    return {
+      content: [{ type: "text", text: `Pushed journey '${j.title}' (${modules.length} modules, ${mode}) to ${delivered} toolkit tab(s).` }],
     };
   }
 

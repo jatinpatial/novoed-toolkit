@@ -39,6 +39,14 @@
     {
       "name": "toolkit_status",
       "description": "Check whether BCG U Studio is running locally and how many browser tabs are connected."
+    },
+    {
+      "name": "suggest_component",
+      "description": "Recommend the best-fit components for a learning-design topic. Returns top matches with schema + starter data."
+    },
+    {
+      "name": "push_journey",
+      "description": "Push a full learning-journey structure (title + audience + ordered modules) into the BCG U Studio Journey Builder canvas."
     }
   ],
   "compatibility": {
