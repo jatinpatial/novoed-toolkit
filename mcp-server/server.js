@@ -716,14 +716,31 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 // ---------------------------------------------------------------------------
 // Boot.
 // ---------------------------------------------------------------------------
+// Graceful port-collision handling: if 7724 is already taken (e.g. another
+// bcg-toolkit instance is running, or the user has both the .dxt and a
+// dev-path mcpServers entry), we DON'T crash. The MCP stdio side stays
+// alive and tool calls keep working — open_in_toolkit just hits the
+// already-running server on the same port. This stops Claude Desktop from
+// showing "Server disconnected" toasts on every login.
+let httpBound = false;
+httpServer.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    process.stderr.write(
+      `[bcg-toolkit-mcp] port ${HTTP_PORT} already in use — assuming another bcg-toolkit instance owns it; staying alive in stdio-only mode.\n`
+    );
+    return; // swallow; do NOT exit
+  }
+  process.stderr.write(`[bcg-toolkit-mcp] http server error: ${err && err.message}\n`);
+});
 httpServer.listen(HTTP_PORT, "127.0.0.1", () => {
+  httpBound = true;
   // NOTE: do not write to stdout — MCP uses stdio for framing. Log to stderr.
   process.stderr.write(`[bcg-toolkit-mcp] http+ws listening on http://127.0.0.1:${HTTP_PORT}\n`);
 });
 
 const transport = new StdioServerTransport();
 mcp.connect(transport).then(() => {
-  process.stderr.write("[bcg-toolkit-mcp] MCP stdio ready\n");
+  process.stderr.write("[bcg-toolkit-mcp] MCP stdio ready" + (httpBound ? "" : " (stdio-only — port busy)") + "\n");
 }).catch((err) => {
   process.stderr.write("[bcg-toolkit-mcp] MCP connect failed: " + err.message + "\n");
   process.exit(1);
