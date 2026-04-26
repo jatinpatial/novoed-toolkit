@@ -3399,29 +3399,33 @@ function renderSidebar(){
     +'<div style="min-width:0;"><div style="font-size:13px;font-weight:700;color:'+b.tx+';line-height:1.15;">BCG U Studio</div>'
     +'<div style="font-size:9.5px;color:'+b.txL+';margin-top:2px;letter-spacing:0.2px;">Learning Design Agent</div></div>'
     +'</div>';
-  /* Workspace */
+  /* Workspace — global navigation */
   s+='<div class="sb-section">Workspace</div>';
-  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Studio landing — quick launch + featured components">'
+  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Studio landing — three ways to start a course">'
     +'<span class="sb-icon">⌂</span><span>Home</span></button>';
-  s+='<button class="sb-item" onclick="openPalette()" title="Open command palette — search every component (Ctrl+K / Cmd+K)">'
+  s+='<button class="sb-item" onclick="openPalette()" title="Search every component, journey template, and tool (Ctrl+K / Cmd+K)">'
     +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
-  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Browse all '+totalComps+' HTML embeds + SCORM activities">'
-    +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
-  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Visual canvas — drag modules, set durations, see the flow at a glance">'
-    +'<span class="sb-icon">◈</span><span>Journey Canvas</span></button>';
-  s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Brief in chat → full course Word file. Drop a PPTX/PDF/DOCX as factual seed.">'
+  /* Start a course — entry points for a brand-new project */
+  s+='<div class="sb-section">Start a course</div>';
+  s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Drop a deck (PPTX/PDF/DOCX) or describe the course in chat — Studio drafts a full course Word file">'
     +'<span class="sb-icon">📖</span><span>Storyline</span><span class="sb-badge" style="background:#FF7A00;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos + grab thumbnails via local ffmpeg (no upload)">'
+  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Visual canvas — plan modules and lessons, drag to reorder, set durations">'
+    +'<span class="sb-icon">◈</span><span>Journey Canvas</span></button>';
+  /* Build pieces — assemble individual components for an existing module */
+  s+='<div class="sb-section">Build pieces</div>';
+  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Browse '+totalComps+' pre-built HTML embeds + SCORM activities — pick one, fill it with your data, paste into Rise/NovoEd">'
+    +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
+  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos and grab thumbnails via local ffmpeg — nothing leaves your machine">'
     +'<span class="sb-icon">▶</span><span>Media Studio</span></button>';
-  /* Tools */
-  s+='<div class="sb-section">Tools</div>';
+  /* Saved — re-use across projects */
+  s+='<div class="sb-section">Saved</div>';
   s+='<button class="sb-item" onclick="openLibrary()" title="Reuse components you\'ve saved across projects">'
     +'<span class="sb-icon">★</span><span>My Library</span>'
     +(libCount>0?'<span class="sb-count" style="color:'+b.pri+';font-weight:700;">'+libCount+'</span>':'')
     +'</button>';
-  /* "Recommend" is now native to the Components page — left-rail Teaching Goal filter. */
-  s+='<button class="sb-item" onclick="openBrandEditor()" title="Custom palette + font + RTL support — for non-BCG brands">'
-    +'<span class="sb-icon">⚙</span><span>Brand Studio</span></button>';
+  /* Brand Studio moved into the Settings drawer — keeps sidebar focused on
+     primary workflow (start → build → save). "Recommend" is native to the
+     Components page (left-rail Teaching Goal filter). */
   /* Footer: settings + install CTA + feedback. Brand picker moved into the
      Settings drawer (Phase 2) — keeps the sidebar focused on navigation. */
   s+='<div class="sb-footer">';
