@@ -16,6 +16,11 @@ export interface BlockData {
   body?: string;
   type?: string;
   items?: BlockItem[];
+  // Synthesia script for video blocks. Plain text with inline cues:
+  // [PAUSE], [ON-SCREEN: …], [B-ROLL: …]. Authored by the Scriptwriter
+  // agent and edited by the LD in the block drawer; never rendered in
+  // the published lesson.
+  script?: string;
 }
 
 export interface Block {
