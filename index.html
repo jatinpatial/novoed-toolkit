@@ -14,14 +14,76 @@
 @font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Bold.woff2') format('woff2');    font-weight:700; font-style:normal; font-display:swap; }
 /* --- BCG Henderson Serif --- */
 @font-face { font-family:'BCG Henderson Serif'; src:url('./fonts/BCGHendersonSerif-Regular.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
-/* --- Brand font stack tokens ---
-   Default everywhere: Trebuchet MS (BCG house font, 100% available on user systems).
-   BCG U brand active → switches to Henderson Sans (with Trebuchet fallback when
-   the licensed .woff2 isn't loaded). See applyBrandVars() in JS for the runtime swap. --- */
+/* --- Design tokens (Phase 2 — modernization) ---
+   Type scale, spacing, radii, motion + a navy structural primary that lets
+   the BCG/BCG U green sit as an accent layer. Every new component should pull
+   from these tokens; legacy code keeps working until it's migrated. --- */
 :root {
+  /* Brand fonts — Trebuchet leads everywhere; BCG U brand swaps to Henderson at runtime. */
   --bcgu-font: 'Trebuchet MS', 'Lucida Sans', 'Inter', system-ui, sans-serif;
   --bcgu-font-bcgu: 'BCG Henderson Sans', 'Trebuchet MS', 'Lucida Sans', 'Inter', system-ui, sans-serif;
   --bcgu-font-serif: 'BCG Henderson Serif', Georgia, serif;
+  --bcgu-font-mono: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  /* Type scale */
+  --t-xs:  12px;
+  --t-sm:  14px;
+  --t-md:  16px;
+  --t-lg:  20px;
+  --t-xl:  28px;
+  --t-2xl: 40px;
+  --t-3xl: 56px;
+  /* Line heights */
+  --lh-tight:   1.2;
+  --lh-snug:    1.35;
+  --lh-normal:  1.55;
+  --lh-relaxed: 1.7;
+  /* Spacing scale */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  /* Radii */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+  --r-pill: 999px;
+  /* Motion */
+  --ease:        cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --m-fast:  120ms;
+  --m-med:   220ms;
+  --m-slow:  380ms;
+  /* Navy primary (new structural color — green stays as accent) */
+  --c-navy:      #0E1E3F;
+  --c-navy-700:  #18305E;
+  --c-navy-500:  #2A4A8A;
+  --c-navy-300:  #6B82B5;
+  --c-navy-100:  #E6EAF3;
+  /* Neutral scale */
+  --c-ink:       #0B0F1A;
+  --c-ink-2:     #1F2436;
+  --c-ink-3:     #4A4F62;
+  --c-ink-4:     #767C90;
+  --c-ink-5:     #A6ABBC;
+  --c-line:      #E5E7EE;
+  --c-line-2:    #EEF0F4;
+  --c-bg:        #F7F8FA;
+  --c-bg-2:      #FFFFFF;
+  /* Elevation (shadows) */
+  --shadow-sm:  0 1px 2px rgba(14, 30, 63, 0.06);
+  --shadow-md:  0 6px 18px rgba(14, 30, 63, 0.08);
+  --shadow-lg:  0 18px 42px rgba(14, 30, 63, 0.10);
+  --shadow-xl:  0 28px 70px rgba(14, 30, 63, 0.18);
+  /* Sidebar / tokens consumed by JS via applyBrandVars() */
+  --sb-active-bg: #E6F7EF;
+  --sb-active-fg: #1B7A4F;
+  --sb-active-pri: #29BA74;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:var(--bcgu-font);background:#F7F8FA;color:#1a1a2e;}
@@ -89,6 +151,36 @@ input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
 .sb-cta:hover{opacity:0.9;}
 .sb-feedback{font-size:10px;color:#888;padding:0 12px 4px;line-height:1.5;text-align:center;}
 .sb-feedback a{color:var(--sb-active-fg,#29BA74);font-weight:600;text-decoration:none;}
+.sb-settings{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;border-radius:9px;font-size:13px;font-weight:500;color:#555;cursor:pointer;background:none;border:1.5px solid #EEF0F4;text-align:left;font-family:inherit;margin-bottom:10px;transition:background var(--m-fast,150ms),color var(--m-fast,150ms),border-color var(--m-fast,150ms);}
+.sb-settings:hover{background:#F7F8FA;color:#1a1a2e;border-color:var(--c-line,#E5E7EE);}
+.sb-settings .sb-settings-icon{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--c-navy-100,#E6EAF3);color:var(--c-navy,#0E1E3F);font-weight:700;}
+.sb-settings .sb-settings-meta{font-size:9.5px;color:#a6abbc;margin-left:auto;text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+/* --- Settings drawer (slides from right) --- */
+@keyframes settingsDrawerIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
+@keyframes settingsScrim{from{opacity:0;}to{opacity:1;}}
+.sd-scrim{position:fixed;inset:0;background:rgba(11,15,26,0.42);backdrop-filter:blur(3px);z-index:9997;animation:settingsScrim var(--m-med,220ms) var(--ease,ease);}
+.sd-drawer{position:fixed;top:0;right:0;height:100vh;width:420px;max-width:92vw;background:#fff;box-shadow:var(--shadow-xl,-32px 0 80px rgba(14,30,63,0.18));z-index:9998;display:flex;flex-direction:column;animation:settingsDrawerIn var(--m-med,220ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1));}
+.sd-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid var(--c-line-2,#EEF0F4);}
+.sd-head-title{font-size:var(--t-lg,20px);font-weight:800;letter-spacing:-0.3px;color:var(--c-ink,#0B0F1A);}
+.sd-head-sub{font-size:var(--t-xs,12px);color:var(--c-ink-4,#767C90);margin-top:2px;}
+.sd-close{background:none;border:none;width:34px;height:34px;border-radius:10px;color:var(--c-ink-4,#767C90);font-size:20px;cursor:pointer;transition:background var(--m-fast,120ms),color var(--m-fast,120ms);}
+.sd-close:hover{background:#F7F8FA;color:var(--c-ink,#0B0F1A);}
+.sd-body{flex:1;overflow-y:auto;padding:18px 26px 32px;}
+.sd-section{margin-bottom:26px;}
+.sd-section-title{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.6px;color:var(--c-ink-4,#767C90);margin-bottom:10px;}
+.sd-brands{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.sd-brand{padding:14px 10px;border:1.5px solid var(--c-line,#E5E7EE);border-radius:var(--r-md,10px);background:#fff;cursor:pointer;text-align:center;transition:all var(--m-fast,150ms) var(--ease,ease);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.sd-brand:hover{border-color:var(--c-navy,#0E1E3F);transform:translateY(-1px);box-shadow:var(--shadow-sm,0 1px 2px rgba(14,30,63,0.06));}
+.sd-brand.active{border-color:var(--c-navy,#0E1E3F);background:var(--c-navy-100,#E6EAF3);}
+.sd-brand-swatch{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;letter-spacing:-0.5px;}
+.sd-brand-name{font-size:12px;font-weight:700;color:var(--c-ink-2,#1F2436);}
+.sd-brand-meta{font-size:9.5px;color:var(--c-ink-4,#767C90);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+.sd-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--c-line-2,#EEF0F4);gap:14px;}
+.sd-row:last-child{border-bottom:none;}
+.sd-row-label{font-size:13px;font-weight:600;color:var(--c-ink-2,#1F2436);}
+.sd-row-sub{font-size:11px;color:var(--c-ink-4,#767C90);margin-top:2px;line-height:1.5;}
+.sd-row-action{padding:7px 13px;border:1.5px solid var(--c-line,#E5E7EE);background:#fff;border-radius:var(--r-md,10px);font-size:11.5px;font-weight:700;color:var(--c-ink-2,#1F2436);cursor:pointer;font-family:inherit;transition:all var(--m-fast,120ms) var(--ease,ease);white-space:nowrap;}
+.sd-row-action:hover{border-color:var(--c-navy,#0E1E3F);color:var(--c-navy,#0E1E3F);}
 /* --- Library refresh: hero + category sections + richer cards --- */
 .lib-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid #EEE;flex-wrap:wrap;}
 .lib-hero-left{flex:1;min-width:260px;}
@@ -131,6 +223,31 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 .lib-empty-btn{margin-top:14px;padding:8px 18px;border-radius:8px;border:1.5px solid var(--sb-active-fg,#29BA74);background:#fff;color:var(--sb-active-fg,#29BA74);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
 .filter-tab .filter-count{opacity:0.6;margin-left:6px;font-weight:500;font-size:10px;}
 .filter-tab.active .filter-count{opacity:0.85;}
+/* --- Components landing left-rail layout (Phase 2) --- */
+.lib-layout{display:grid;grid-template-columns:248px 1fr;gap:28px;align-items:flex-start;}
+@media (max-width:880px){.lib-layout{grid-template-columns:1fr;}.lib-rail{position:static!important;}}
+.lib-rail{position:sticky;top:18px;background:#fff;border:1px solid var(--c-line,#E5E7EE);border-radius:var(--r-lg,14px);padding:6px 4px 12px;box-shadow:var(--shadow-sm,0 1px 2px rgba(14,30,63,0.06));max-height:calc(100vh - 36px);overflow-y:auto;}
+.lib-rail-section{padding:10px 14px 4px;}
+.lib-rail-title{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.6px;color:var(--c-ink-4,#767C90);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.lib-rail-title-ic{width:18px;height:18px;border-radius:5px;background:var(--c-navy-100,#E6EAF3);color:var(--c-navy,#0E1E3F);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;}
+.lib-rail-list{display:flex;flex-direction:column;gap:2px;}
+.lib-rail-btn{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:none;background:none;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--c-ink-3,#4A4F62);cursor:pointer;text-align:left;font-family:inherit;transition:background var(--m-fast,120ms),color var(--m-fast,120ms);}
+.lib-rail-btn:hover{background:#F7F8FA;color:var(--c-ink,#0B0F1A);}
+.lib-rail-btn.active{background:var(--c-navy-100,#E6EAF3);color:var(--c-navy,#0E1E3F);font-weight:700;}
+.lib-rail-btn .lr-ic{width:18px;font-size:13px;text-align:center;flex-shrink:0;}
+.lib-rail-btn .lr-cnt{margin-left:auto;font-size:10px;color:var(--c-ink-5,#A6ABBC);font-weight:600;}
+.lib-rail-btn.active .lr-cnt{color:var(--c-navy,#0E1E3F);}
+.lib-rail-format{display:flex;gap:4px;padding:4px;background:#F7F8FA;border-radius:10px;border:1px solid var(--c-line-2,#EEF0F4);}
+.lib-rail-format button{flex:1;padding:7px 0;border:none;background:none;border-radius:7px;font-size:11px;font-weight:700;color:var(--c-ink-4,#767C90);cursor:pointer;font-family:inherit;transition:background var(--m-fast,120ms),color var(--m-fast,120ms);}
+.lib-rail-format button:hover{color:var(--c-ink,#0B0F1A);}
+.lib-rail-format button.active{background:#fff;color:var(--c-navy,#0E1E3F);box-shadow:var(--shadow-sm,0 1px 2px rgba(14,30,63,0.06));}
+.lib-rail-divider{height:1px;background:var(--c-line-2,#EEF0F4);margin:8px 14px;}
+.lib-rail-reset{width:calc(100% - 28px);margin:6px 14px 0;padding:7px;border:1px dashed var(--c-line,#E5E7EE);background:#fff;border-radius:8px;font-size:10.5px;font-weight:700;color:var(--c-ink-4,#767C90);cursor:pointer;font-family:inherit;transition:all var(--m-fast,120ms);}
+.lib-rail-reset:hover{border-color:var(--c-navy,#0E1E3F);color:var(--c-navy,#0E1E3F);}
+.lib-active-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;}
+.lib-active-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 12px;background:var(--c-navy-100,#E6EAF3);color:var(--c-navy,#0E1E3F);border-radius:var(--r-pill,999px);font-size:11px;font-weight:700;border:1px solid transparent;}
+.lib-active-pill button{background:none;border:none;color:var(--c-navy,#0E1E3F);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px;font-family:inherit;}
+.lib-active-pill button:hover{color:#000;}
 /* --- Command palette (unified search) --- */
 @keyframes palFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes palSlideIn{from{opacity:0;transform:translateY(-14px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -286,11 +403,16 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 <div id="root"></div>
 <script>
 
-/* ── Brand Tokens ── */
+/* ── Brand Tokens ──
+   `pri/priDk/priLt` = brand accent (the green or custom color).
+   `nav/navLt`       = navy structural primary (added Phase 2). Used for hero
+                       gradients, primary actions and rails so the brand greens
+                       work as accents instead of structural color.
+   `grad`            = navy → brand-accent mesh used on the landing hero. */
 const B = {
-  bcg: { n:"BCG", pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", tx:"#333333", txL:"#666666", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #29BA74, #1B7A4F)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
-  bcgu: { n:"BCG U", pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", tx:"#323232", txL:"#666666", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #197A56, #0D3B2C)", font:"'BCG Henderson Sans','Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
-  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", tx:"#1F2937", txL:"#6B7280", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #6366F1, #4338CA)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcg:    { n:"BCG",    pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #18305E 45%, #29BA74 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcgu:   { n:"BCG U",  pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #18305E 45%, #197A56 100%)", font:"'BCG Henderson Sans','Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #2A4A8A 45%, #6366F1 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
 };
 
 /* ── Language / Font presets ── */
@@ -2018,28 +2140,31 @@ const RECOMMENDER = [
   { goal:"Use AI in workflow",          ic:"⚡",  comps:["aiprompt","s_promptflow","s_stepper","callout","process"] },
   { goal:"Engage / break monotony",     ic:"✨", comps:["s_flipcard","s_hotspot","s_cycle","s_stacked","iconrow","highlight"] }
 ];
+/* Phase 2: Recommend is no longer a modal — the teaching-goal filter lives
+   in the Components page left rail. This shim keeps any legacy callers (palette,
+   other shortcuts) working: open Components with format=all and the goal filter
+   pre-cleared so the user can pick from the rail. */
 function openRecommender(){
-  closeModal("recModal");
-  var b=B[state.brand];
-  var body='<div style="padding:22px 26px 12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">'
-    +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.pri+';">Not sure what to use?</div>'
-    +'<div style="font-size:18px;font-weight:700;color:#111;margin-top:2px;">What is your teaching goal?</div></div>'
-    +'<button onclick="closeModal(\'recModal\')" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;">×</button></div>'
-    +'<div style="padding:18px 26px 26px;max-height:68vh;overflow:auto;">';
-  RECOMMENDER.forEach(function(row,ri){
-    body+='<div style="margin-bottom:14px;padding:14px 16px;border:1.5px solid '+b.n2+';border-radius:12px;background:#fff;">'
-      +'<div style="font-size:14px;font-weight:700;color:'+b.tx+';margin-bottom:10px;"><span style="margin-right:8px;">'+row.ic+'</span>'+esc(row.goal)+'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:6px;">';
-    row.comps.forEach(function(cid){
-      var c=[].concat(HTML_COMPS,SCORM_COMPS).find(function(x){return x.id===cid;});
-      if(!c) return;
-      var mode=cid.indexOf("s_")===0?"scorm":"html";
-      body+='<button onclick="closeModal(\'recModal\');setState({mode:\''+mode+'\'});doSelect(\''+cid+'\');" style="padding:6px 12px;border:1.5px solid '+b.n2+';background:'+b.n1+';color:'+b.tx+';border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">'+esc(c.n)+'</button>';
-    });
-    body+='</div></div>';
-  });
-  body+='</div>';
-  openModal("recModal", body);
+  closeModal("recModal"); /* in case an old modal is still on screen */
+  setState({mode:"html", sel:null, search:"", cat:"all", goal:"all", format:"all"});
+  /* Smooth-scroll the Teaching Goal section into view after render */
+  setTimeout(function(){
+    var rail=document.querySelector(".lib-rail");
+    if(!rail) return;
+    var titles=rail.querySelectorAll(".lib-rail-title");
+    for(var i=0;i<titles.length;i++){
+      if(titles[i].textContent.toLowerCase().indexOf("teaching")>=0){
+        titles[i].scrollIntoView({behavior:"smooth",block:"center"});
+        try{
+          titles[i].animate(
+            [{boxShadow:"0 0 0 6px rgba(14,30,63,0.15)"},{boxShadow:"0 0 0 0 rgba(14,30,63,0)"}],
+            {duration:900,easing:"ease-out"}
+          );
+        }catch(e){}
+        break;
+      }
+    }
+  },80);
 }
 
 /* Shared modal helpers */
@@ -2105,7 +2230,7 @@ function openIconPicker(currentVal, onSelect){
 }
 
 /* ── Vanilla UI Engine ── */
-var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", journey: null, journeyExpanded: null, writer: null, media: null };
+var state = { brand: "bcg", mode: null, sel: null, data: null, output: "", scormPreview: "", search: "", cat: "all", goal: "all", format: "all", journey: null, journeyExpanded: null, writer: null, media: null };
 function setState(p) { Object.assign(state, p); render(); }
 
 /* ── Pro Tip banners (Day 6 polish) ── */
@@ -3193,9 +3318,17 @@ function renderWriter(){
 /* ── App shell: sidebar IA + main content wrapper ── */
 function applyBrandVars(){
   var b=B[state.brand];
+  /* Sidebar / legacy active-state tokens */
   document.body.style.setProperty("--sb-active-bg", b.priLt);
   document.body.style.setProperty("--sb-active-fg", b.priDk);
   document.body.style.setProperty("--sb-active-pri", b.pri);
+  /* Brand accent tokens (Phase 2 — used by new components alongside the navy primary) */
+  document.body.style.setProperty("--c-accent",      b.pri);
+  document.body.style.setProperty("--c-accent-dk",   b.priDk);
+  document.body.style.setProperty("--c-accent-lt",   b.priLt);
+  document.body.style.setProperty("--c-brand-grad",  b.grad);
+  document.body.style.setProperty("--c-brand-tx",    b.tx);
+  document.body.style.setProperty("--c-brand-tx-l",  b.txL);
   /* Page font follows brand: Henderson Sans for BCG U (with Trebuchet fallback),
      Trebuchet for everything else. The Henderson .woff2 files only ship inside
      the DXT bundle / hosted /fonts dir, so Trebuchet always picks up the slack. */
@@ -3219,11 +3352,11 @@ function renderSidebar(){
     +'</div>';
   /* Workspace */
   s+='<div class="sb-section">Workspace</div>';
-  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\'})" title="Studio landing — quick launch + featured components">'
+  s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Studio landing — quick launch + featured components">'
     +'<span class="sb-icon">⌂</span><span>Home</span></button>';
   s+='<button class="sb-item" onclick="openPalette()" title="Open command palette — search every component (Ctrl+K / Cmd+K)">'
     +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
-  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\'})" title="Browse all '+totalComps+' HTML embeds + SCORM activities">'
+  s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Browse all '+totalComps+' HTML embeds + SCORM activities">'
     +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
   s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Visual canvas — drag modules, set durations, see the flow at a glance">'
     +'<span class="sb-icon">◈</span><span>Journey Canvas</span></button>';
@@ -3237,24 +3370,99 @@ function renderSidebar(){
     +'<span class="sb-icon">★</span><span>My Library</span>'
     +(libCount>0?'<span class="sb-count" style="color:'+b.pri+';font-weight:700;">'+libCount+'</span>':'')
     +'</button>';
-  s+='<button class="sb-item" onclick="openRecommender()" title="Pick the right component by teaching goal — comparison, sequence, decision, etc.">'
-    +'<span class="sb-icon">✨</span><span>Recommend</span></button>';
+  /* "Recommend" is now native to the Components page — left-rail Teaching Goal filter. */
   s+='<button class="sb-item" onclick="openBrandEditor()" title="Custom palette + font + RTL support — for non-BCG brands">'
     +'<span class="sb-icon">⚙</span><span>Brand Studio</span></button>';
-  /* Footer: brand picker + install CTA + feedback */
+  /* Footer: settings + install CTA + feedback. Brand picker moved into the
+     Settings drawer (Phase 2) — keeps the sidebar focused on navigation. */
   s+='<div class="sb-footer">';
-  s+='<div class="sb-section" style="padding-top:2px;">Theme</div>';
-  s+='<div class="sb-brand-picker">';
-  Object.keys(B).forEach(function(k){
-    var v=B[k];
-    s+='<button class="sb-brand-dot'+(state.brand===k?' active':'')+'" onclick="switchBrand(\''+k+'\')" title="'+v.n+'">'+v.n+'</button>';
-  });
-  s+='</div>';
+  s+='<button class="sb-settings" onclick="openSettings()" title="Brand theme · custom colors · install · about">'
+    +'<span class="sb-settings-icon">⚙</span>'
+    +'<span>Settings</span>'
+    +'<span class="sb-settings-meta">'+esc(b.n)+'</span>'
+    +'</button>';
   s+='<a class="sb-cta" href="'+DXT_README_URL+'" target="_blank" title="One-click .dxt install — draft components hands-free in any Claude chat">⌘ Install Claude Desktop</a>';
   s+='<div class="sb-feedback">Feedback · <a href="mailto:patial.jatin@bcg.com">patial.jatin@bcg.com</a></div>';
   s+='</div>';
   s+='</aside>';
   return s;
+}
+
+/* ── Settings drawer ─────────────────────────────────────────────────────────
+   Replaces the old sidebar brand picker. Right-side slide-out with brand
+   theme switcher, customization shortcut, install CTA, and an About section.
+   Closes on scrim click or Esc. */
+function openSettings(){
+  closeSettings();
+  var b=B[state.brand];
+  var scrim=document.createElement("div");
+  scrim.id="settingsScrim"; scrim.className="sd-scrim";
+  scrim.onclick=function(e){ if(e.target===scrim) closeSettings(); };
+
+  var brands="";
+  Object.keys(B).forEach(function(k){
+    var v=B[k];
+    var initial=(v.n||"?").charAt(0).toUpperCase();
+    var meta=(k==="bcgu")?"Henderson":(k==="bcg")?"Trebuchet":"Custom font";
+    brands+='<button class="sd-brand'+(state.brand===k?' active':'')+'" onclick="switchBrand(\''+k+'\');renderSettingsBody();" title="Switch to '+v.n+' theme">'
+      +'<span class="sd-brand-swatch" style="background:'+v.grad+';">'+initial+'</span>'
+      +'<span class="sd-brand-name">'+esc(v.n)+'</span>'
+      +'<span class="sd-brand-meta">'+meta+'</span>'
+      +'</button>';
+  });
+
+  var bodyHTML=''
+    +'<div class="sd-section">'
+    +'<div class="sd-section-title">Brand theme</div>'
+    +'<div class="sd-brands">'+brands+'</div>'
+    +'<div class="sd-row" style="margin-top:14px;border-top:1px solid var(--c-line-2,#EEF0F4);padding-top:14px;">'
+    +'<div><div class="sd-row-label">Customize palette &amp; font</div><div class="sd-row-sub">For non-BCG brands — colors, font stack and RTL.</div></div>'
+    +'<button class="sd-row-action" onclick="closeSettings();openBrandEditor();">Open Brand Studio</button>'
+    +'</div>'
+    +'</div>'
+    +'<div class="sd-section">'
+    +'<div class="sd-section-title">Claude Desktop</div>'
+    +'<div class="sd-row">'
+    +'<div><div class="sd-row-label">Install the BCG U Studio extension</div><div class="sd-row-sub">One-click <code style="font-family:var(--bcgu-font-mono,monospace);font-size:11px;background:#F7F8FA;padding:1px 5px;border-radius:4px;">.dxt</code> install — draft components hands-free in any Claude chat.</div></div>'
+    +'<a class="sd-row-action" href="'+DXT_README_URL+'" target="_blank" style="background:var(--c-navy,#0E1E3F);color:#fff;border-color:var(--c-navy,#0E1E3F);">Install</a>'
+    +'</div>'
+    +'</div>'
+    +'<div class="sd-section">'
+    +'<div class="sd-section-title">About</div>'
+    +'<div class="sd-row"><div><div class="sd-row-label">BCG U Studio</div><div class="sd-row-sub">Learning Design Agent · v0.2 · 31 HTML + 16 SCORM components.</div></div></div>'
+    +'<div class="sd-row"><div><div class="sd-row-label">Feedback</div><div class="sd-row-sub"><a href="mailto:patial.jatin@bcg.com" style="color:var(--c-navy,#0E1E3F);font-weight:700;text-decoration:none;">patial.jatin@bcg.com</a></div></div></div>'
+    +'</div>';
+
+  var drawer=document.createElement("aside");
+  drawer.id="settingsDrawer"; drawer.className="sd-drawer";
+  drawer.innerHTML=
+    '<div class="sd-head">'
+    +'<div><div class="sd-head-title">Settings</div><div class="sd-head-sub">Theme · brand · install</div></div>'
+    +'<button class="sd-close" onclick="closeSettings()" aria-label="Close settings">×</button>'
+    +'</div>'
+    +'<div id="settingsBody" class="sd-body">'+bodyHTML+'</div>';
+
+  document.body.appendChild(scrim);
+  document.body.appendChild(drawer);
+
+  if(!window._settingsEsc){
+    window._settingsEsc=function(ev){ if(ev.key==="Escape") closeSettings(); };
+    document.addEventListener("keydown", window._settingsEsc);
+  }
+}
+function renderSettingsBody(){
+  /* re-render only the inner body so the drawer stays mounted (no flicker) */
+  var body=document.getElementById("settingsBody");
+  if(!body) return;
+  /* Easiest: close & reopen — animation only fires on the drawer element which
+     we leave alone, the inner body just gets a fresh HTML string. */
+  closeSettings();
+  openSettings();
+}
+function closeSettings(){
+  var s=document.getElementById("settingsScrim"); if(s) s.remove();
+  var d=document.getElementById("settingsDrawer"); if(d) d.remove();
+  if(window._settingsEsc){ document.removeEventListener("keydown", window._settingsEsc); window._settingsEsc=null; }
 }
 function shell(content){
   return '<div class="app-shell">'+renderSidebar()+'<div class="app-main">'+content+'</div></div>';
@@ -3588,8 +3796,8 @@ function render() {
     hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';margin-bottom:12px;">Quick launch</div>';
     hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">';
     var tiles=[
-      {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
-      {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
+      {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html',sel:null,search:'',cat:'all',goal:'all',format:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
+      {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm',sel:null,search:'',cat:'all',goal:'all',format:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
       {icon:'◈',title:'Journey Canvas',desc:'Visual flow editor — drag modules',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:null,cta:'Open canvas →'},
       {icon:'📖',title:'Storyline',desc:'Brief in chat → full course in Word',onclick:"enterStoryline()",grad:'linear-gradient(135deg,#FF7A00,#E0367C)',badge:'NEW',cta:'Generate doc →'}
     ];
@@ -3608,7 +3816,7 @@ function render() {
     var libCount=libGet().length;
     hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;">';
     [
-      {onclick:'openRecommender()',icon:'✨',title:'Recommend',sub:'Pick by teaching goal'},
+      {onclick:'openRecommender()',icon:'✨',title:'Pick by teaching goal',sub:'Filter the catalog by what you want learners to do'},
       {onclick:'enterMedia()',icon:'▶',title:'Media Studio',sub:'Trim + thumbnail via ffmpeg'},
       {onclick:'openLibrary()',icon:'★',title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
       {onclick:'openBrandEditor()',icon:'⚙',title:'Brand Studio',sub:'Custom palette, RTL support'}
@@ -3685,8 +3893,17 @@ function render() {
 
   /* ─── LIST SCREEN ─── */
   if(!state.sel){
-    var allCs=state.mode==="html"?HTML_COMPS:SCORM_COMPS;
     var sq=state.search?state.search.toLowerCase():"";
+    /* Format filter — defaults to whichever entry tile was used; "all" mixes HTML+SCORM. */
+    if(!state.format) state.format="all";
+    var fmt=state.format==="all"?(state.mode==="scorm"?"scorm":(state.mode==="html"?"html":"all")):state.format;
+    /* Build the working set based on format. */
+    var htmlAll=HTML_COMPS.map(function(c){return Object.assign({},c,{_t:"html"});});
+    var scormAll=SCORM_COMPS.map(function(c){return Object.assign({},c,{_t:"scorm"});});
+    var allCs;
+    if(fmt==="html") allCs=htmlAll;
+    else if(fmt==="scorm") allCs=scormAll;
+    else allCs=htmlAll.concat(scormAll);
     /* Category meta */
     var catLabels={all:"All",text:"Text & Narrative",layout:"Layout & Structure",data:"Data Visualization",framework:"Strategy Frameworks",content:"Text & Narrative",interactive:"Interactive Activities",assessment:"Assessment & Quiz"};
     var catIcons={text:"✎",layout:"▦",data:"◔",framework:"◈",content:"✎",interactive:"✦",assessment:"✓",all:"◆"};
@@ -3694,77 +3911,148 @@ function render() {
     var catCounts={};
     allCs.forEach(function(c){catCounts[c.cat]=(catCounts[c.cat]||0)+1;});
     catCounts.all=allCs.length;
-    var cats=state.mode==="html"?["all","text","layout","data","framework"]:["all","interactive","assessment"];
+    /* Category list reflects what's available in the chosen format. */
+    var allCats=["text","layout","data","framework","interactive","assessment"];
+    var visibleCats=allCats.filter(function(c){return (catCounts[c]||0)>0;});
+    /* Goal lookup — selected goal restricts the working set to its component IDs. */
+    var goalIdSet=null;
+    if(state.goal && state.goal!=="all"){
+      var row=RECOMMENDER.find(function(r){return r.goal===state.goal;});
+      if(row) goalIdSet=row.comps.reduce(function(o,id){o[id]=true;return o;},{});
+    }
     var filtered=allCs.filter(function(c){
       var matchCat=(state.cat==="all"||c.cat===state.cat);
       var matchSq=!sq||(c.n.toLowerCase().indexOf(sq)>=0||c.d.toLowerCase().indexOf(sq)>=0);
-      return matchCat&&matchSq;
+      var matchGoal=!goalIdSet||goalIdSet[c.id];
+      return matchCat&&matchSq&&matchGoal;
     });
-    var isHtml=state.mode==="html";
-    var lb=isHtml?"HTML Components":"SCORM Interactives";
-    var subLb=isHtml?"Copy the code → paste into any LMS's HTML block (Rise, NovoEd, Docebo, Moodle, Canvas). Every block is brand-themed live.":"Download the .zip → upload as SCORM/AICC to any SCORM-compatible LMS. Press Ctrl+Shift+E inside a deployed activity to edit in place.";
-    var kickerBg=isHtml?b.priLt:"#EDE9FE", kickerFg=isHtml?b.priDk:"#7C3AED", kickerDot=isHtml?b.pri:"#7C3AED";
-    var h='<div style="max-width:1160px;margin:0 auto;padding:22px 30px 60px;color:'+b.tx+';">';
+    /* Header copy reflects whichever format is active. */
+    var headerLb, headerSubLb, headerKickerLb;
+    if(fmt==="html"){
+      headerLb="HTML Components";
+      headerKickerLb="HTML Embed Components";
+      headerSubLb="Copy the code → paste into any LMS's HTML block (Rise, NovoEd, Docebo, Moodle, Canvas). Every block is brand-themed live.";
+    } else if(fmt==="scorm"){
+      headerLb="SCORM Interactives";
+      headerKickerLb="Interactive SCORM Activities";
+      headerSubLb="Download the .zip → upload as SCORM/AICC to any SCORM-compatible LMS. Press Ctrl+Shift+E inside a deployed activity to edit in place.";
+    } else {
+      headerLb="Components";
+      headerKickerLb="Component Library";
+      headerSubLb="Every HTML embed and SCORM activity in one place. Pick by teaching goal on the left, or search across the catalog.";
+    }
+    var kickerBg=fmt==="scorm"?"#EDE9FE":b.priLt, kickerFg=fmt==="scorm"?"#7C3AED":b.priDk, kickerDot=fmt==="scorm"?"#7C3AED":b.pri;
+    var h='<div style="max-width:1280px;margin:0 auto;padding:22px 30px 60px;color:'+b.tx+';">';
     /* Back link */
-    h+='<button class="btn-back" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\'})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#999;font-weight:600;margin-bottom:12px;">← Back to Home</button>';
-    /* Hero header */
+    h+='<button class="btn-back" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#999;font-weight:600;margin-bottom:12px;">← Back to Home</button>';
+    /* Hero header (no Recommend button — goals now in the rail) */
     h+='<div class="lib-hero">'
       +'<div class="lib-hero-left">'
-        +'<span class="lib-hero-kicker" style="background:'+kickerBg+';color:'+kickerFg+';"><span class="lib-hero-kicker-dot" style="background:'+kickerDot+';"></span>'+(isHtml?"HTML Embed Components":"Interactive SCORM Activities")+'</span>'
-        +'<div class="lib-hero-title" style="color:'+b.tx+';">'+lb+'</div>'
-        +'<div class="lib-hero-sub" style="color:'+b.txL+';">'+subLb+'</div>'
+        +'<span class="lib-hero-kicker" style="background:'+kickerBg+';color:'+kickerFg+';"><span class="lib-hero-kicker-dot" style="background:'+kickerDot+';"></span>'+headerKickerLb+'</span>'
+        +'<div class="lib-hero-title" style="color:'+b.tx+';">'+headerLb+'</div>'
+        +'<div class="lib-hero-sub" style="color:'+b.txL+';">'+headerSubLb+'</div>'
       +'</div>'
       +'<div class="lib-hero-actions">'
-        +'<div class="lib-hero-stat"><span class="lib-hero-stat-n" style="color:'+b.pri+';">'+allCs.length+'</span><span class="lib-hero-stat-l">Total</span></div>'
-        +'<button onclick="openRecommender()" style="padding:9px 16px;border:1.5px solid '+b.pri+';background:'+b.priLt+';color:'+b.priDk+';border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✨ Recommend</button>'
-        +'<button onclick="openLibrary()" style="padding:9px 16px;border:1.5px solid '+b.n2+';background:#fff;color:'+b.txL+';border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">★ My Library</button>'
-        +brandBtns("sm")
+        +'<div class="lib-hero-stat"><span class="lib-hero-stat-n" style="color:var(--c-navy,#0E1E3F);">'+allCs.length+'</span><span class="lib-hero-stat-l">In view</span></div>'
+        +'<button onclick="openLibrary()" style="padding:9px 16px;border:1.5px solid '+b.n2+';background:#fff;color:'+b.txL+';border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;" title="Components you have saved with your data">★ My Library</button>'
       +'</div>'
     +'</div>';
     /* Search */
+    var searchPlaceholder="Search "+allCs.length+" "+(fmt==="all"?"components":fmt==="scorm"?"activities":"components")+" in this view (press / ) — or ⌘K to search all";
     h+='<div class="lib-search">'
       +'<span class="lib-search-icon">⌕</span>'
-      +'<input class="lib-search-input" value="'+esc(state.search)+'" oninput="state.search=this.value;render();" placeholder="Search '+allCs.length+' '+(isHtml?"components":"activities")+' in this view (press / ) — or ⌘K to search all" autofocus/>'
-      +(state.search?'<button onclick="state.search=\'\';render();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;padding:4px;">✕</button>':'<button onclick="openPalette()" class="lib-search-kbd" style="cursor:pointer;border:1px solid #E8E8E8;background:#FAFAFA;font-family:\'SFMono-Regular\',Menlo,monospace;" title="Open global search (Ctrl+K)">⌘K</button>')
+      +'<input class="lib-search-input" value="'+esc(state.search)+'" oninput="state.search=this.value;render();" placeholder="'+esc(searchPlaceholder)+'" autofocus/>'
+      +(state.search?'<button onclick="state.search=\'\';render();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;padding:4px;">✕</button>':'<button onclick="openPalette()" class="lib-search-kbd" style="cursor:pointer;border:1px solid #E8E8E8;background:#FAFAFA;font-family:var(--bcgu-font-mono,monospace);" title="Open global search (Ctrl+K)">⌘K</button>')
     +'</div>';
-    /* Category pills */
-    h+='<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;">';
-    cats.forEach(function(cat){
-      var lbl=(cat==="all"?"All":(catLabels[cat]||(cat.charAt(0).toUpperCase()+cat.slice(1))));
+    /* ── Layout: left rail (filters) + right (active filters + grid) ── */
+    h+='<div class="lib-layout">';
+    /* Left rail */
+    h+='<aside class="lib-rail">';
+    /* Format toggle */
+    h+='<div class="lib-rail-section">'
+      +'<div class="lib-rail-title"><span class="lib-rail-title-ic">⊞</span>Format</div>'
+      +'<div class="lib-rail-format">'
+        +'<button class="'+(fmt==="all"?"active":"")+'" onclick="state.format=\'all\';state.mode=\'html\';render();">All <span style="opacity:0.6;font-weight:600;">'+(htmlAll.length+scormAll.length)+'</span></button>'
+        +'<button class="'+(fmt==="html"?"active":"")+'" onclick="state.format=\'html\';state.mode=\'html\';render();">HTML <span style="opacity:0.6;font-weight:600;">'+htmlAll.length+'</span></button>'
+        +'<button class="'+(fmt==="scorm"?"active":"")+'" onclick="state.format=\'scorm\';state.mode=\'scorm\';render();">SCORM <span style="opacity:0.6;font-weight:600;">'+scormAll.length+'</span></button>'
+      +'</div>'
+    +'</div>';
+    /* Categories */
+    h+='<div class="lib-rail-divider"></div>';
+    h+='<div class="lib-rail-section">'
+      +'<div class="lib-rail-title"><span class="lib-rail-title-ic">▦</span>Category</div>'
+      +'<div class="lib-rail-list">';
+    h+='<button class="lib-rail-btn'+(state.cat==="all"?" active":"")+'" onclick="state.cat=\'all\';render();">'
+      +'<span class="lr-ic">◆</span><span>All categories</span><span class="lr-cnt">'+allCs.length+'</span></button>';
+    visibleCats.forEach(function(cat){
+      var lbl=catLabels[cat]||(cat.charAt(0).toUpperCase()+cat.slice(1));
       var cnt=catCounts[cat]||0;
-      h+='<button class="filter-tab'+(state.cat===cat?" active":"")+'" onclick="state.cat=\''+cat+'\';render();">'+(catIcons[cat]||"")+'&nbsp;&nbsp;'+lbl+'<span class="filter-count">'+cnt+'</span></button>';
+      h+='<button class="lib-rail-btn'+(state.cat===cat?" active":"")+'" onclick="state.cat=\''+cat+'\';render();">'
+        +'<span class="lr-ic">'+(catIcons[cat]||"◆")+'</span><span>'+esc(lbl)+'</span><span class="lr-cnt">'+cnt+'</span></button>';
     });
-    h+='</div>';
+    h+='</div></div>';
+    /* Teaching goals (formerly the Recommend modal) */
+    h+='<div class="lib-rail-divider"></div>';
+    h+='<div class="lib-rail-section">'
+      +'<div class="lib-rail-title"><span class="lib-rail-title-ic">✨</span>Teaching goal</div>'
+      +'<div class="lib-rail-list">';
+    h+='<button class="lib-rail-btn'+((!state.goal||state.goal==="all")?" active":"")+'" onclick="state.goal=\'all\';render();">'
+      +'<span class="lr-ic">◯</span><span>Any goal</span></button>';
+    RECOMMENDER.forEach(function(row){
+      var active=(state.goal===row.goal);
+      h+='<button class="lib-rail-btn'+(active?" active":"")+'" onclick="state.goal=\''+row.goal.replace(/'/g,"\\'")+'\';render();" title="Show components that fit: '+esc(row.goal)+'">'
+        +'<span class="lr-ic">'+row.ic+'</span><span>'+esc(row.goal)+'</span></button>';
+    });
+    h+='</div></div>';
+    /* Reset */
+    var anyActive=(state.cat!=="all" || (state.goal && state.goal!=="all") || state.search || state.format !== (state.mode==="scorm"?"scorm":"all"));
+    if(anyActive){
+      h+='<button class="lib-rail-reset" onclick="state.cat=\'all\';state.goal=\'all\';state.search=\'\';state.format=\'all\';render();">Reset filters</button>';
+    }
+    h+='</aside>';
+    /* Right side */
+    h+='<div>';
+    /* Active filter pills */
+    var pills="";
+    if(state.cat!=="all") pills+='<span class="lib-active-pill">'+(catIcons[state.cat]||"◆")+' '+esc(catLabels[state.cat]||state.cat)+' <button onclick="state.cat=\'all\';render();" title="Clear category">×</button></span>';
+    if(state.goal && state.goal!=="all") pills+='<span class="lib-active-pill">✨ '+esc(state.goal)+' <button onclick="state.goal=\'all\';render();" title="Clear teaching goal">×</button></span>';
+    if(state.search) pills+='<span class="lib-active-pill">⌕ "'+esc(state.search)+'" <button onclick="state.search=\'\';render();" title="Clear search">×</button></span>';
+    if(pills){
+      h+='<div class="lib-active-pills"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:'+b.txL+';margin-right:4px;">Filtering:</span>'+pills+'<span style="font-size:11px;color:'+b.txL+';margin-left:4px;">'+filtered.length+' result'+(filtered.length===1?"":"s")+'</span></div>';
+    }
     /* Empty state */
     if(filtered.length===0){
       h+='<div class="lib-empty">'
         +'<div class="lib-empty-icon">⊘</div>'
-        +'<div class="lib-empty-title">No '+(isHtml?"components":"activities")+' match</div>'
-        +'<div class="lib-empty-sub">'+(sq?'Try a different search term — or <a onclick="state.search=\'\';render();" style="color:'+b.pri+';cursor:pointer;font-weight:700;">clear search</a>.':'This category is empty right now.')+'</div>'
-        +(state.cat!=="all"?'<button class="lib-empty-btn" onclick="state.cat=\'all\';render();">Show all categories</button>':"")
-      +'</div></div>';
+        +'<div class="lib-empty-title">No components match</div>'
+        +'<div class="lib-empty-sub">Try clearing a filter on the left, or <a onclick="state.cat=\'all\';state.goal=\'all\';state.search=\'\';render();" style="color:var(--c-navy,#0E1E3F);cursor:pointer;font-weight:700;">reset all filters</a>.</div>'
+      +'</div>';
+      h+='</div></div></div>'; /* close right + layout + container */
       root.innerHTML=shell(h); return;
     }
-    /* Sectioned grid (when cat=all AND no search) OR flat grid */
+    /* Card renderer (now also shows format chip when in mixed mode) */
     var renderCard=function(c){
       var thumb=THUMBS[c.id]||'<svg viewBox="0 0 80 48" style="display:block;"><rect width="80" height="48" rx="4" fill="'+b.n1+'"/><rect x="20" y="16" width="40" height="4" rx="2" fill="'+b.pri+'" opacity="0.4"/><rect x="20" y="26" width="30" height="3" rx="1.5" fill="'+b.pri+'" opacity="0.25"/></svg>';
       var chipLbl=(catLabels[c.cat]||c.cat).split(" ")[0];
-      var chipBg=catTints[c.cat]||b.n1, chipFg=isHtml?b.priDk:"#6B21A8";
+      var isCardScorm=(c._t==="scorm")||c.id.indexOf("s_")===0;
+      var chipBg=catTints[c.cat]||b.n1, chipFg=isCardScorm?"#6B21A8":b.priDk;
+      var fmtTag=fmt==="all"?'<span class="lib-card-chip" style="background:'+(isCardScorm?"#EDE9FE":b.priLt)+';color:'+(isCardScorm?"#7C3AED":b.priDk)+';margin-right:5px;">'+(isCardScorm?"SCORM":"HTML")+'</span>':"";
       return '<button class="lib-card" onclick="doSelect(\''+c.id+'\')">'
         +'<div class="lib-card-thumb">'+thumb+'</div>'
         +'<div class="lib-card-body">'
           +'<div class="lib-card-name" style="color:'+b.tx+';">'+c.n+'</div>'
           +'<div class="lib-card-desc">'+c.d+'</div>'
           +'<div class="lib-card-foot">'
-            +'<span class="lib-card-chip" style="background:'+chipBg+';color:'+chipFg+';">'+chipLbl+'</span>'
+            +'<span>'+fmtTag+'<span class="lib-card-chip" style="background:'+chipBg+';color:'+chipFg+';">'+chipLbl+'</span></span>'
             +'<span class="lib-card-arrow">→</span>'
           +'</div>'
         +'</div>'
       +'</button>';
     };
-    if(state.cat==="all" && !sq){
-      /* Group by category when showing all */
-      var groupOrder=isHtml?["text","layout","data","framework"]:["interactive","assessment"];
+    /* Sectioned grid (when no specific cat AND no search AND no goal) OR flat grid */
+    var sectioned=(state.cat==="all" && !sq && (!state.goal||state.goal==="all"));
+    if(sectioned){
+      var groupOrder=["text","layout","data","framework","interactive","assessment"];
       groupOrder.forEach(function(cat){
         var group=filtered.filter(function(c){return c.cat===cat;});
         if(group.length===0) return;
@@ -3780,12 +4068,13 @@ function render() {
         h+='</div></div>';
       });
     } else {
-      /* Flat grid when a specific category or search is active */
       h+='<div class="lib-grid">';
       filtered.forEach(function(c){h+=renderCard(c);});
       h+='</div>';
     }
-    h+='</div>';
+    h+='</div>'; /* close right column */
+    h+='</div>'; /* close layout */
+    h+='</div>'; /* close container */
     root.innerHTML=shell(h);
     /* '/' focuses search */
     if(!window._libSlashBound){
