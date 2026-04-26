@@ -2652,6 +2652,22 @@ function palMove(dir){
   palRender(true);
 }
 
+/* Phase 2 Day 3F: lightweight active-row update.
+   Re-running palRender() on every mouseenter (the previous behavior)
+   rebuilt the entire results list. The freshly-rebuilt DOM landed under
+   the cursor → fired mouseenter again → re-render → flicker loop. We
+   now just toggle the `.active` class on existing rows, which is what
+   we actually wanted to do all along. */
+function palSetActive(i){
+  if(i===paletteState.active) return;
+  paletteState.active=i;
+  var rows=document.querySelectorAll("#palRoot .pal-item");
+  for(var k=0;k<rows.length;k++){
+    if(k===i) rows[k].classList.add("active");
+    else      rows[k].classList.remove("active");
+  }
+}
+
 function palPick(i){
   var r=paletteState.results[(typeof i==="number"?i:paletteState.active)];
   if(!r) return;
@@ -2682,7 +2698,7 @@ function palRender(resultsOnly){
     html+='<div class="pal-group-head">'+(q?"Matches":"Popular")+' · '+res.length+'</div>';
     res.forEach(function(c,i){
       var thumb=THUMBS[c.id]||'<svg viewBox="0 0 80 48"><rect width="80" height="48" rx="4" fill="#F2F4F7"/></svg>';
-      html+='<div class="pal-item'+(i===paletteState.active?' active':'')+'" onclick="palPick('+i+')" onmouseenter="paletteState.active='+i+';palRender(true);">'
+      html+='<div class="pal-item'+(i===paletteState.active?' active':'')+'" onclick="palPick('+i+')" onmouseenter="palSetActive('+i+')">'
         +'<div class="pal-item-thumb">'+thumb+'</div>'
         +'<div class="pal-item-body"><div class="pal-item-name">'+palHighlight(c.n,q)+'</div><div class="pal-item-desc">'+palHighlight(c.d,q)+'</div></div>'
         +'<div class="pal-item-meta">'
