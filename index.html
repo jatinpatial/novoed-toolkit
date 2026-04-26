@@ -114,18 +114,45 @@ input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
 @keyframes routeFadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .studio-hero-bg{background-size:220% 220%;animation:studioGradientShift 22s ease-in-out infinite;}
 /* Mesh hero — solid navy base + 3 floating colored blobs blurred + screen-blended */
-.hero-mesh{position:relative;overflow:hidden;background:var(--c-navy,#0E1E3F);isolation:isolate;}
-.hero-mesh::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 55%);pointer-events:none;z-index:1;}
-.hero-mesh::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(to bottom, transparent, rgba(0,0,0,0.18));pointer-events:none;z-index:1;}
-.hero-blob{position:absolute;border-radius:50%;filter:blur(70px);mix-blend-mode:screen;opacity:0.62;pointer-events:none;will-change:transform;}
-.hero-blob.a{width:520px;height:520px;left:-120px;top:-160px;background:radial-gradient(circle, var(--c-accent,#29BA74) 0%, transparent 70%);animation:meshBlobA 22s var(--ease,ease-in-out) infinite;}
-.hero-blob.b{width:460px;height:460px;right:-100px;top:60px;background:radial-gradient(circle, var(--c-navy-500,#2A4A8A) 0%, transparent 65%);animation:meshBlobB 26s var(--ease,ease-in-out) infinite;}
-.hero-blob.c{width:380px;height:380px;left:35%;bottom:-160px;background:radial-gradient(circle, var(--c-accent-dk,#1B7A4F) 0%, transparent 70%);animation:meshBlobC 19s var(--ease,ease-in-out) infinite;}
+.hero-mesh{position:relative;overflow:hidden;background:var(--c-accent-dk,#0D3B2C);isolation:isolate;}
+.hero-mesh::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.10) 0%, transparent 55%);pointer-events:none;z-index:1;}
+.hero-mesh::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(to bottom, transparent, rgba(0,20,12,0.22));pointer-events:none;z-index:1;}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(72px);mix-blend-mode:screen;opacity:0.66;pointer-events:none;will-change:transform;}
+.hero-blob.a{width:560px;height:560px;left:-140px;top:-180px;background:radial-gradient(circle, var(--c-accent,#29BA74) 0%, transparent 70%);animation:meshBlobA 22s var(--ease,ease-in-out) infinite;}
+.hero-blob.b{width:480px;height:480px;right:-120px;top:40px;background:radial-gradient(circle, #4FD295 0%, transparent 65%);animation:meshBlobB 26s var(--ease,ease-in-out) infinite;}
+.hero-blob.c{width:420px;height:420px;left:32%;bottom:-180px;background:radial-gradient(circle, var(--c-accent-dk,#1B7A4F) 0%, transparent 70%);animation:meshBlobC 19s var(--ease,ease-in-out) infinite;}
+.hero-blob.d{width:300px;height:300px;right:18%;bottom:-100px;background:radial-gradient(circle, rgba(42,74,138,0.55) 0%, transparent 70%);animation:meshBlobC 24s var(--ease,ease-in-out) infinite;opacity:0.42;}
 .studio-prompt{box-shadow:0 24px 70px rgba(0,0,0,0.22),0 0 0 1px rgba(255,255,255,0.1) inset;transition:box-shadow var(--m-med,250ms) var(--ease,ease),transform var(--m-fast,200ms) var(--ease,ease);}
 .studio-prompt:focus-within{box-shadow:0 32px 90px rgba(0,0,0,0.32),0 0 0 2px rgba(255,255,255,0.45) inset;transform:translateY(-2px);}
 .studio-chip{transition:all var(--m-fast,200ms) var(--ease,ease);cursor:pointer;}
 .studio-chip:hover{background:rgba(255,255,255,0.28)!important;transform:translateY(-1px);border-color:rgba(255,255,255,0.5)!important;}
 .studio-chip:active{transform:translateY(0) scale(0.97);}
+/* Phase 2 Day 3: Hero lanes — three concrete entry points (Drop deck / Brief in chat / Browse parts) */
+.hero-lanes{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:14px;margin-bottom:28px;}
+@media (max-width: 920px){.hero-lanes{grid-template-columns:1fr;}}
+.hero-lane{position:relative;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:18px;padding:22px 22px 20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer;display:flex;flex-direction:column;min-height:228px;transition:transform var(--m-med,250ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)),background var(--m-fast,150ms),border-color var(--m-fast,150ms);}
+.hero-lane:hover{transform:translateY(-3px);background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.30);}
+.hero-lane:active{transform:translateY(-1px);}
+.hero-lane-primary{background:rgba(255,255,255,0.97);border-color:rgba(255,255,255,0.97);cursor:default;box-shadow:0 18px 48px rgba(0,40,24,0.32);}
+.hero-lane-primary:hover{transform:none;background:rgba(255,255,255,0.99);border-color:rgba(255,255,255,1);}
+.hero-lane-eyebrow{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.55);margin-bottom:14px;}
+.hero-lane-primary .hero-lane-eyebrow{color:var(--c-accent-dk,#1B7A4F);}
+.hero-lane-icon{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:14px;transition:transform var(--m-med,250ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.hero-lane:hover .hero-lane-icon{transform:scale(1.08) rotate(-3deg);}
+.hero-lane-icon-primary{background:linear-gradient(135deg, var(--c-accent,#29BA74) 0%, var(--c-accent-dk,#1B7A4F) 100%);border-color:transparent;box-shadow:0 8px 22px -8px rgba(13,59,44,0.55);}
+.hero-lane-title{font-size:18px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:5px;letter-spacing:-0.3px;}
+.hero-lane-primary .hero-lane-title{color:var(--c-ink,#0B0F1A);}
+.hero-lane-sub{font-size:12.5px;color:rgba(255,255,255,0.74);line-height:1.5;margin-bottom:auto;padding-bottom:14px;}
+.hero-lane-primary .hero-lane-sub{color:var(--c-ink-3,#4A4F62);}
+.hero-lane-cta{font-size:12.5px;font-weight:700;color:#fff;display:inline-flex;align-items:center;gap:6px;margin-top:10px;}
+.hero-lane-cta .ar{display:inline-block;transition:transform var(--m-fast,200ms);}
+.hero-lane:hover .hero-lane-cta .ar{transform:translateX(4px);}
+.hero-lane-input{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--c-line,#E5E7EE);border-radius:12px;padding:5px 5px 5px 12px;margin-top:auto;transition:border-color var(--m-fast,150ms),box-shadow var(--m-fast,150ms);}
+.hero-lane-input:focus-within{border-color:var(--c-accent,#29BA74);box-shadow:0 0 0 3px rgba(41,186,116,0.18);}
+.hero-lane-input-icon{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;color:var(--c-accent,#29BA74);flex-shrink:0;}
+.hero-lane-input input{flex:1;border:none;background:transparent;font-size:13px;color:var(--c-ink,#0B0F1A);padding:9px 0;outline:none;font-family:inherit;min-width:0;}
+.hero-lane-input button{background:linear-gradient(135deg, var(--c-accent,#29BA74) 0%, var(--c-accent-dk,#1B7A4F) 100%);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;flex-shrink:0;transition:transform var(--m-fast,150ms),box-shadow var(--m-fast,150ms);box-shadow:0 4px 12px -4px rgba(13,59,44,0.45);}
+.hero-lane-input button:hover{transform:translateY(-1px);box-shadow:0 8px 18px -6px rgba(13,59,44,0.55);}
 /* Quick-launch tiles — Phase 2 redesign */
 .quick-tile{transition:transform var(--m-med,250ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)),box-shadow var(--m-med,250ms),border-color var(--m-fast,200ms);cursor:pointer;position:relative;}
 .quick-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg,0 18px 42px rgba(14,30,63,0.10))!important;border-color:var(--c-navy-300,#6B82B5)!important;}
@@ -147,6 +174,7 @@ button:not(:disabled):active{transform:translateY(0.5px);}
   .hero-blob,.studio-hero-bg{animation:none!important;}
   .app-main.route-fade-in{animation:none!important;}
   .quick-tile,.quick-tile:hover,.quick-tile .qt-icon,.quick-tile:hover .qt-icon{transition:none!important;transform:none!important;}
+  .hero-lane,.hero-lane:hover,.hero-lane .hero-lane-icon,.hero-lane:hover .hero-lane-icon{transition:none!important;transform:none!important;}
 }
 .featured-rail{scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none;}
 .featured-rail::-webkit-scrollbar{display:none;}
@@ -459,9 +487,9 @@ function studioIcon(name){ return STUDIO_ICONS[name]||""; }
                        work as accents instead of structural color.
    `grad`            = navy → brand-accent mesh used on the landing hero. */
 const B = {
-  bcg:    { n:"BCG",    pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #18305E 45%, #29BA74 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
-  bcgu:   { n:"BCG U",  pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #18305E 45%, #197A56 100%)", font:"'BCG Henderson Sans','Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
-  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0E1E3F 0%, #2A4A8A 45%, #6366F1 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcg:    { n:"BCG",    pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0D5A3C 0%, #1B7A4F 35%, #29BA74 75%, #4FD295 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcgu:   { n:"BCG U",  pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #0D3B2C 0%, #197A56 40%, #29A06E 75%, #43B985 100%)", font:"'BCG Henderson Sans','Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", nav:"#0E1E3F", navLt:"#E6EAF3", tx:"#1F2436", txL:"#4A4F62", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #312E81 0%, #4338CA 40%, #6366F1 80%, #818CF8 100%)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
 };
 
 /* ── Language / Font presets ── */
@@ -3799,32 +3827,68 @@ function render() {
     var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
     var hm='<div>';
 
-    /* ── HERO ── animated mesh-blob gradient + prompt ── */
-    hm+='<div class="hero-mesh" style="padding:84px 0 64px;">';
-    hm+='<div class="hero-blob a"></div><div class="hero-blob b"></div><div class="hero-blob c"></div>';
-    hm+='<div style="position:relative;z-index:2;max-width:1140px;margin:0 auto;padding:0 40px;">';
+    /* ── HERO ── green-dominant mesh + 3-lane "ways to start" ── */
+    hm+='<div class="hero-mesh" style="padding:74px 0 60px;">';
+    hm+='<div class="hero-blob a"></div><div class="hero-blob b"></div><div class="hero-blob c"></div><div class="hero-blob d"></div>';
+    hm+='<div style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 40px;">';
 
     /* Kicker */
-    hm+='<div class="studio-fade" style="display:inline-flex;align-items:center;gap:9px;padding:5px 13px 5px 8px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:999px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2.4px;color:rgba(255,255,255,0.82);margin-bottom:18px;">'
+    hm+='<div class="studio-fade" style="display:inline-flex;align-items:center;gap:9px;padding:5px 13px 5px 8px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:999px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2.4px;color:rgba(255,255,255,0.86);margin-bottom:16px;">'
       +'<span style="width:18px;height:18px;border-radius:50%;background:'+b.grad+';display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:800;">U</span>'
       +'BCG U · AI Learning Design Studio'
       +'</div>';
 
     /* Big headline */
-    hm+='<div class="studio-fade d1" style="font-size:clamp(38px,5.6vw,var(--t-3xl,56px));font-weight:300;color:#fff;line-height:1.04;margin-bottom:16px;letter-spacing:-1.4px;max-width:880px;">What will you <span style="font-weight:600;background:linear-gradient(120deg, #fff 0%, '+b.pri+' 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">design</span> today?</div>';
-    hm+='<div class="studio-fade d2" style="font-size:var(--t-md,16px);color:rgba(255,255,255,0.82);line-height:var(--lh-normal,1.6);max-width:640px;margin-bottom:32px;font-weight:400;">Your AI co-pilot for Learning Design. Branded components, interactive SCORM activities, and full course journeys — ready for Rise, NovoEd, Docebo, Moodle, Canvas, or any SCORM-compatible LMS.</div>';
+    hm+='<div class="studio-fade d1" style="font-size:clamp(36px,5.2vw,52px);font-weight:300;color:#fff;line-height:1.04;margin-bottom:10px;letter-spacing:-1.4px;max-width:880px;">What will you <span style="font-weight:600;background:linear-gradient(120deg, #fff 0%, #B7F0CC 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">design</span> today?</div>';
+    hm+='<div class="studio-fade d2" style="font-size:15px;color:rgba(255,255,255,0.78);line-height:1.55;max-width:640px;margin-bottom:30px;font-weight:400;">Three ways to start. Pick the one that matches what you have.</div>';
 
-    /* Prompt input */
-    hm+='<div class="studio-fade d2 studio-prompt" style="display:flex;align-items:center;gap:8px;max-width:740px;background:rgba(255,255,255,0.97);border-radius:18px;padding:7px 7px 7px 22px;margin-bottom:18px;">';
-    hm+='<span style="display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;color:'+b.pri+';margin-right:4px;">'
-      +'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L13.4 9 L19 10 L14.5 13.6 L16 19 L12 16 L8 19 L9.5 13.6 L5 10 L10.6 9 Z"/></svg>'
-      +'</span>';
-    hm+='<input id="studioPrompt" type="text" onkeydown="if(event.key===\'Enter\')studioPromptGo()" placeholder="Describe a component, scenario, or learning goal…" style="flex:1;border:none;background:transparent;font-size:15px;color:'+b.tx+';padding:14px 0;outline:none;"/>';
-    hm+='<button onclick="studioPromptGo()" style="background:'+b.grad+';color:#fff;border:none;border-radius:14px;padding:13px 22px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(14,30,63,0.32);transition:transform var(--m-fast,150ms) var(--ease,ease),box-shadow var(--m-fast,150ms);" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 12px 28px rgba(14,30,63,0.38)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 8px 22px rgba(14,30,63,0.32)\';">Design <span style="font-size:16px;">→</span></button>';
-    hm+='</div>';
+    /* THREE LANES — Drop deck · Brief in chat · Browse parts */
+    hm+='<div class="studio-fade d2 hero-lanes">';
 
-    /* Example chips */
-    hm+='<div class="studio-fade d3" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:36px;">';
+    /* Lane A — From a deck (routes to Storyline) */
+    hm+='<div class="hero-lane" onclick="enterStoryline()" title="Drop a PPTX/PDF/DOCX — Studio drafts a full course Word file">'
+      +'<div class="hero-lane-icon">'
+        +'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3 H7 Q5 3 5 5 V19 Q5 21 7 21 H17 Q19 21 19 19 V8 Z"/><path d="M14 3 V8 H19"/><path d="M9 13 H15"/><path d="M9 17 H13"/></svg>'
+      +'</div>'
+      +'<div class="hero-lane-eyebrow">A · From a deck</div>'
+      +'<div class="hero-lane-title">Drop a deck</div>'
+      +'<div class="hero-lane-sub">PPTX · PDF · DOCX → cover, modules, lessons, scripts, knowledge checks — in one Word file.</div>'
+      +'<div class="hero-lane-cta">Open Storyline <span class="ar">→</span></div>'
+    +'</div>';
+
+    /* Lane B — From an idea (chat input lives here, primary lane) */
+    hm+='<div class="hero-lane hero-lane-primary">'
+      +'<div class="hero-lane-icon hero-lane-icon-primary">'
+        +'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12 Q21 16.4 17 18.4 V21 L13.5 18.7 Q12.8 18.8 12 18.8 Q3 18.8 3 12 Q3 5.2 12 5.2 Q21 5.2 21 12 Z"/><path d="M8 11.5 H8.01"/><path d="M12 11.5 H12.01"/><path d="M16 11.5 H16.01"/></svg>'
+      +'</div>'
+      +'<div class="hero-lane-eyebrow">B · From an idea</div>'
+      +'<div class="hero-lane-title">Brief in chat</div>'
+      +'<div class="hero-lane-sub">Describe a course, scenario, or single component. Studio drafts the structure.</div>'
+      +'<div class="hero-lane-input">'
+        +'<span class="hero-lane-input-icon">'
+          +'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L13.4 9 L19 10 L14.5 13.6 L16 19 L12 16 L8 19 L9.5 13.6 L5 10 L10.6 9 Z"/></svg>'
+        +'</span>'
+        +'<input id="studioPrompt" type="text" onkeydown="if(event.key===\'Enter\')studioPromptGo()" placeholder="e.g. 30-min course on AI ethics for new joiners…"/>'
+        +'<button onclick="studioPromptGo()">Design <span>→</span></button>'
+      +'</div>'
+    +'</div>';
+
+    /* Lane C — From the catalog (routes to Components) */
+    hm+='<div class="hero-lane" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Browse all '+(htmlCount+scormCount)+' HTML embeds + SCORM activities">'
+      +'<div class="hero-lane-icon">'
+        +'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>'
+      +'</div>'
+      +'<div class="hero-lane-eyebrow">C · From the catalog</div>'
+      +'<div class="hero-lane-title">Browse parts</div>'
+      +'<div class="hero-lane-sub">'+(htmlCount+scormCount)+' components · journey canvas · media studio. Pick a piece, fill it with your data, paste anywhere.</div>'
+      +'<div class="hero-lane-cta">Open library <span class="ar">→</span></div>'
+    +'</div>';
+
+    hm+='</div>'; /* end hero-lanes */
+
+    /* Try-a-prompt chip rail (tied to lane B) */
+    hm+='<div class="studio-fade d3" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">';
+    hm+='<span style="font-size:10.5px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.55);font-weight:700;margin-right:4px;">Try a prompt</span>';
     var chips=[
       '3-card summary of AI maturity phases',
       'Timeline of a product launch',
@@ -3834,16 +3898,7 @@ function render() {
     ];
     chips.forEach(function(chip){
       var safe=chip.replace(/'/g,"\\'");
-      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:8px 14px;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;color:#fff;font-size:11.5px;font-weight:500;">'+chip+'</button>';
-    });
-    hm+='</div>';
-
-    /* Stat pills (brand switcher removed — lives in Settings drawer now) */
-    hm+='<div class="studio-fade d3" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
-    var iconCount=(window.BCG_ICONS?Object.keys(window.BCG_ICONS).length:0);
-    var iconPill=hasBCGIcons()?[[iconCount.toLocaleString(),'BCG Icons']]:[];
-    [[''+htmlCount,'HTML'],[''+scormCount,'SCORM'],['3','Brand Themes']].concat(iconPill).forEach(function(s){
-      hm+='<div style="padding:6px 14px;background:rgba(255,255,255,0.13);backdrop-filter:blur(8px);border-radius:999px;border:1px solid rgba(255,255,255,0.22);color:#fff;font-size:11.5px;font-weight:600;"><span style="font-size:14px;font-weight:800;margin-right:6px;">'+s[0]+'</span>'+s[1]+'</div>';
+      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:7px 13px;background:rgba(255,255,255,0.10);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.20);border-radius:999px;color:#fff;font-size:11px;font-weight:500;">'+chip+'</button>';
     });
     hm+='</div>';
 
@@ -3859,34 +3914,16 @@ function render() {
       +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.12);z-index:50;max-height:280px;overflow:auto;"></div>'
       +'</div>';
 
-    /* Quick launch — 4 tiles. Two browse-the-catalog tiles + two AI-drafted-deliverable tiles. */
-    hm+='<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;">'
-      +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';">Quick launch</div>'
-      +'<div style="font-size:13px;color:'+b.tx+';margin-top:3px;font-weight:500;">Pick a starting point — every flow ends with a paste-ready or LMS-ready file.</div></div>'
-      +'</div>';
-    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">';
-    var tiles=[
-      {iconKey:'html',     title:'HTML Components',  desc:htmlCount+' paste-ready embeds',           onclick:"setState({mode:'html',sel:null,search:'',cat:'all',goal:'all',format:'html'})",      grad:b.grad,                                                  badge:null,  cta:'Browse'},
-      {iconKey:'scorm',    title:'SCORM Interactives',desc:scormCount+' animated activities',         onclick:"setState({mode:'scorm',sel:null,search:'',cat:'all',goal:'all',format:'scorm'})",   grad:'linear-gradient(135deg,#0E1E3F 0%,#5B3DBE 50%,#7C3AED 100%)', badge:null,  cta:'Browse'},
-      {iconKey:'journey',  title:'Journey Canvas',   desc:'Visual flow editor — drag modules',        onclick:"enterJourney()",                                                                     grad:'linear-gradient(135deg,#0E1E3F 0%,#A75A0E 50%,#F59E0B 100%)', badge:null,  cta:'Open canvas'},
-      {iconKey:'storyline',title:'Storyline',         desc:'Brief in chat → full course in Word',     onclick:"enterStoryline()",                                                                  grad:'linear-gradient(135deg,#0E1E3F 0%,#B23C58 50%,#FF7A00 100%)', badge:'NEW', cta:'Generate doc'}
-    ];
-    tiles.forEach(function(t){
-      hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid var(--c-line,#E5E7EE);border-radius:18px;padding:24px 22px;box-shadow:var(--shadow-sm,0 1px 2px rgba(14,30,63,0.06));">';
-      if(t.badge) hm+='<div style="position:absolute;top:14px;right:14px;padding:3px 9px;background:var(--c-navy,#0E1E3F);color:#fff;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:0.8px;">'+t.badge+'</div>';
-      hm+='<div class="qt-icon" style="background:'+t.grad+';">'+studioIcon(t.iconKey)+'</div>';
-      hm+='<div style="font-size:14.5px;font-weight:700;color:var(--c-ink,#0B0F1A);margin-bottom:4px;letter-spacing:-0.2px;">'+t.title+'</div>';
-      hm+='<div style="font-size:11.5px;color:var(--c-ink-3,#4A4F62);line-height:1.5;margin-bottom:14px;">'+t.desc+'</div>';
-      hm+='<div style="font-size:11px;color:var(--c-navy,#0E1E3F);font-weight:700;display:inline-flex;align-items:center;gap:5px;">'+t.cta+' <span class="qt-arrow">→</span></div>';
-      hm+='</div>';
-    });
-    hm+='</div>';
+    /* Phase 2 Day 3: Primary entry points moved into the hero (3 lanes above).
+       What used to be a 4-tile Quick Launch row would just duplicate them, so
+       the home page now jumps straight from search → secondary tools (small
+       shortcuts) → featured component rail. Cleaner hierarchy, no repeats. */
 
     /* Secondary tools row */
     var libCount=libGet().length;
     hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;">';
     [
-      {onclick:'openRecommender()',  iconKey:'recommend',title:'Pick by teaching goal',sub:'Filter the catalog by what you want learners to do'},
+      {onclick:'openRecommender()',  iconKey:'recommend',title:'Pick by goal',sub:'Filter components by teaching goal'},
       {onclick:'enterMedia()',       iconKey:'media',    title:'Media Studio',          sub:'Trim + thumbnail via ffmpeg'},
       {onclick:'openLibrary()',      iconKey:'library',  title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
       {onclick:'openBrandEditor()',  iconKey:'brand',    title:'Brand Studio',          sub:'Custom palette, RTL support'}
