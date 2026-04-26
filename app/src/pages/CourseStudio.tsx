@@ -606,6 +606,8 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           <BlockDrawer
             block={lesson.blocks.find((b) => b.id === editingBlockId)!}
             brand={course.brand}
+            mod={course.modules[am]}
+            lessonIndex={al}
             onUpdate={(fn) => patchBlock(editingBlockId, fn)}
             onClose={() => setEditingBlockId(null)}
             onDelete={() => removeBlock(editingBlockId)}
@@ -892,6 +894,30 @@ function buildLessonWriterPrefill(mod: Module | undefined, lesson: Lesson, lesso
     : "";
 
   return `Write lesson ${ref}: ${stripped}.\n${objectivesBlock}Target: ~${lesson.duration} min.\nFill this in.`;
+}
+
+function buildVideoScriptPrefill(mod: Module | undefined, lessonIndex: number, blockId: string, mode: "write" | "regenerate"): string {
+  const week = mod?.weekNumber ?? 1;
+  const lessonNum = lessonIndex + 1;
+  const ref = `${week}.${lessonNum}`;
+
+  if (mode === "regenerate") {
+    return `Regenerate the Synthesia script for video block ${blockId} on lesson ${ref}. Same scope, fresh take.`;
+  }
+
+  return `Write a Synthesia script for the video block on lesson ${ref}.\nVideo block id: ${blockId}\nTarget: ~90 sec.\nFill this in.`;
+}
+
+function wordCount(s: string): number {
+  const trimmed = s.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+function estimateSeconds(s: string): number {
+  // Strip bracket cues so [PAUSE], [ON-SCREEN: …], [B-ROLL: …] don't inflate the count.
+  const spoken = s.replace(/\[[^\]]*\]/g, "");
+  return Math.round((wordCount(spoken) / 150) * 60);
 }
 
 function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
@@ -1208,10 +1234,11 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
 /* ═══════════════════════════════════════════════════════════════════════════
    BLOCK DRAWER — slide-over editor for complex blocks
    ═══════════════════════════════════════════════════════════════════════════ */
-function BlockDrawer({ block, brand, onUpdate, onClose, onDelete }: { block: Block; brand: BrandKey; onUpdate: (fn: (b: Block) => void) => void; onClose: () => void; onDelete: () => void }) {
+function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDelete }: { block: Block; brand: BrandKey; mod: Module | undefined; lessonIndex: number; onUpdate: (fn: (b: Block) => void) => void; onClose: () => void; onDelete: () => void }) {
   const bt = BTYPES.find((x) => x.id === block.type);
   const d = block.data || {};
   const items = d.items || [];
+  const { setOpen: setChatOpen, prefillInput } = useAgent();
 
   function patchField(field: string, val: any) { onUpdate((b) => { (b.data as any)[field] = val; }); }
   function patchItem(i: number, field: string, val: any) { onUpdate((b) => { if (b.data.items && b.data.items[i]) (b.data.items[i] as any)[field] = val; }); }
@@ -1220,6 +1247,11 @@ function BlockDrawer({ block, brand, onUpdate, onClose, onDelete }: { block: Blo
     const minItems = block.type === "quiz" ? 2 : 1;
     if ((items.length) <= minItems) { toast("Need at least " + minItems + " item(s)", false); return; }
     onUpdate((b) => { if (b.data.items) b.data.items.splice(i, 1); });
+  }
+
+  function triggerScriptWriter(mode: "write" | "regenerate") {
+    setChatOpen(true);
+    prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, mode));
   }
 
   return (
@@ -1265,6 +1297,42 @@ function BlockDrawer({ block, brand, onUpdate, onClose, onDelete }: { block: Blo
             </Field>
             <Field label="Caption">
               <input value={d.caption || ""} onChange={(e) => patchField("caption", e.target.value)} className="input" />
+            </Field>
+            <Field label="Synthesia avatar script">
+              {!d.script ? (
+                <button
+                  onClick={() => triggerScriptWriter("write")}
+                  className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-3 text-left flex items-start gap-2.5 group"
+                >
+                  <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+                    <Sparkles size={13} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-ink-900 group-hover:text-brand-700 mb-0.5">Write a Synthesia script</div>
+                    <div className="text-[11px] text-ink-600 leading-snug">~90 sec avatar script with [PAUSE], on-screen text, and B-roll cues.</div>
+                  </div>
+                </button>
+              ) : (
+                <>
+                  <textarea
+                    value={d.script}
+                    onChange={(e) => patchField("script", e.target.value)}
+                    rows={8}
+                    className="w-full bg-white border border-ink-200 rounded-md px-2.5 py-2 text-[12px] font-mono leading-relaxed outline-none focus:border-brand-500 resize-y"
+                    placeholder="Synthesia script..."
+                  />
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-ink-400">~{wordCount(d.script)} words · ~{estimateSeconds(d.script)} sec at 150 wpm</span>
+                    <button
+                      onClick={() => triggerScriptWriter("regenerate")}
+                      className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+                      title="Wipe this script and regenerate from scratch"
+                    >
+                      <Sparkles size={10} /> Regenerate script
+                    </button>
+                  </div>
+                </>
+              )}
             </Field>
           </>
         )}
