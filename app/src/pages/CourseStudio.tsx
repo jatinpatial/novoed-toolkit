@@ -14,10 +14,12 @@ import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock } from "../course/previewBlock";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
-import type { Block, BlockData, BlockItem, Course, Lesson } from "../course/types";
+import type { Block, BlockData, BlockItem, Course, Lesson, Module } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat } from "../agent/AgentChat";
+import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
+import type { CourseOutlineProposal } from "../agent/types";
 
 /* ── small helpers ───────────────────────────────────────────────────────── */
 const rid = () => "b" + Math.random().toString(36).slice(2, 10);
@@ -43,6 +45,24 @@ function makeCourse(brand: BrandKey): Course {
       lessons: [{ id: rid(), title: "1.1 Introduction", duration: 5, blocks: [] }],
     }],
   };
+}
+
+function buildCourseFromProposal(proposal: CourseOutlineProposal, brand: BrandKey): Course {
+  const modules: Module[] = proposal.modules.map((m) => ({
+    id: rid(),
+    title: m.title,
+    weekNumber: m.weekNumber,
+    summary: m.summary,
+    objectives: m.objectives,
+    lessons: m.lessons.map((l) => ({
+      id: rid(),
+      title: l.title,
+      duration: l.durationMin ?? 10,
+      blocks: [],
+      objectives: l.objectives,
+    })),
+  }));
+  return { id: rid(), title: proposal.title, client: "", brand, modules };
 }
 
 function newItem(type: string): BlockItem {
@@ -151,6 +171,7 @@ function CourseStudioInner() {
    ═══════════════════════════════════════════════════════════════════════════ */
 function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
   const [projects, setProjects] = useState<Project[]>([]);
+  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen } = useAgent();
 
   useEffect(() => {
     const refresh = () => setProjects(listProjects().filter((p) => p.kind === "course"));
@@ -158,11 +179,40 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     return subscribeProjects(refresh);
   }, []);
 
+  const homeAgentActions = useMemo<AgentActions>(() => ({
+    getCourse: () => null,
+    navigate: () => {},
+    setBrand: () => {},
+    addModule: () => { throw new Error("No course is open. Call propose_course_outline; the LD will build the course from there."); },
+    addLesson: () => { throw new Error("No course is open."); },
+    addBlock: () => { throw new Error("No course is open."); },
+    updateBlock: () => { throw new Error("No course is open."); },
+    deleteBlock: () => { throw new Error("No course is open."); },
+    reorder: () => {},
+    exportLesson: () => {},
+    setOutlineProposal: (proposal) => {
+      setOutlineProposal(proposal);
+      setChatOpen(true);
+    },
+  }), [setOutlineProposal, setChatOpen]);
+
+  useRegisterAgentActions(homeAgentActions);
+
   function handleNew() {
     const course = makeCourse(brand);
     const id = uid();
     saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
     onOpen(course, id);
+  }
+
+  function handleBuild() {
+    if (!outlineProposal) return;
+    const course = buildCourseFromProposal(outlineProposal, brand);
+    const id = uid();
+    saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
+    clearOutlineProposal();
+    onOpen(course, id);
+    toast("Course built — fill in the lessons next");
   }
 
   function handleImport() {
@@ -199,7 +249,7 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
           <PageHeader
             eyebrow="Course Studio"
             title="Design full learning journeys."
-            subtitle="Build multi-module courses with video, interactives, and quizzes. Export each lesson as SCORM."
+            subtitle="Tell the Copilot what course you want to build, or start from scratch and import existing work."
             actions={
               <>
                 <button onClick={handleImport} className="btn-secondary btn-sm"><FileJson size={14} /> Import JSON</button>
@@ -208,19 +258,30 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
             }
           />
 
-          {projects.length === 0 ? (
+          {outlineProposal && (
+            <div className="mb-6">
+              <CourseOutlineProposalCard
+                proposal={outlineProposal}
+                onBuild={handleBuild}
+                onDiscard={clearOutlineProposal}
+              />
+            </div>
+          )}
+
+          {!outlineProposal && projects.length === 0 ? (
             <EmptyState
               icon={<BookOpen size={24} />}
               title="No courses yet"
-              description="Create your first course or import one you've saved before."
+              description="Open the Copilot and describe a course — topic, audience, duration in weeks. The Course Architect proposes a weekly outline you can build with one click."
               action={
                 <div className="flex gap-2">
+                  <button onClick={() => setChatOpen(true)} className="btn-primary btn-sm"><Sparkles size={14} /> Open Copilot</button>
                   <button onClick={handleImport} className="btn-secondary btn-sm">Import JSON</button>
-                  <button onClick={handleNew} className="btn-primary btn-sm">Start new course</button>
+                  <button onClick={handleNew} className="btn-secondary btn-sm">Start blank</button>
                 </div>
               }
             />
-          ) : (
+          ) : projects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {projects.map((p) => {
                 if (p.data.kind !== "course") return null;
@@ -256,9 +317,10 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
                 );
               })}
             </div>
-          )}
+          ) : null}
         </main>
       </div>
+      <FloatingCopilot />
     </div>
   );
 }
