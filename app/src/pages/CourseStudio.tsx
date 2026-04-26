@@ -192,6 +192,7 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     reorder: () => {},
     exportLesson: () => {},
     writeLesson: () => { throw new Error("No course is open. Open a course before asking for a lesson to be written."); },
+    writeScript: () => { throw new Error("No course is open. Open a course and add a video block before asking for a script."); },
     setOutlineProposal: (proposal) => {
       setOutlineProposal(proposal);
       setChatOpen(true);
@@ -510,6 +511,25 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         }));
       });
       return { replaced, added };
+    },
+    writeScript: (videoBlockId, script) => {
+      let ok = false;
+      let previousScriptLength = 0;
+      mutate((c) => {
+        for (const m of c.modules) {
+          for (const l of m.lessons) {
+            for (const b of l.blocks) {
+              if (b.id === videoBlockId && b.type === "video") {
+                previousScriptLength = (b.data.script ?? "").length;
+                b.data.script = script;
+                ok = true;
+                return;
+              }
+            }
+          }
+        }
+      });
+      return { ok, previousScriptLength };
     },
   }), [course, mutate]);
 

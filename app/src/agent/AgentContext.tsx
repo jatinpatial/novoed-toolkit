@@ -22,6 +22,7 @@ export interface AgentActions {
   reorder: (kind: "module" | "lesson" | "block", id: string, newIndex: number) => void;
   exportLesson: (lessonId: string, format: "scorm" | "json") => void;
   writeLesson: (lessonId: string, blocks: WriterBlock[]) => { replaced: number; added: number };
+  writeScript: (videoBlockId: string, script: string) => { ok: boolean; previousScriptLength: number };
   setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
 }
 

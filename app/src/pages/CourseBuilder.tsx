@@ -343,6 +343,25 @@ function CourseBuilderInner() {
       });
       return { replaced, added };
     },
+    writeScript: (videoBlockId, script) => {
+      let ok = false;
+      let previousScriptLength = 0;
+      updateCourse((c) => {
+        for (const m of c.modules) {
+          for (const l of m.lessons) {
+            for (const b of l.blocks) {
+              if (b.id === videoBlockId && b.type === "video") {
+                previousScriptLength = (b.data.script ?? "").length;
+                b.data.script = script;
+                ok = true;
+                return;
+              }
+            }
+          }
+        }
+      });
+      return { ok, previousScriptLength };
+    },
   };
   useRegisterAgentActions(agentActions);
 

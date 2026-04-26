@@ -39,6 +39,18 @@ export async function dispatchToolCall(
         message: `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`,
       };
     }
+    case "write_script": {
+      const videoBlockId = asString(args.video_block_id, "video_block_id");
+      const script = asString(args.script, "script");
+      const result = actions.writeScript(videoBlockId, script);
+      return {
+        ok: result.ok,
+        previousScriptLength: result.previousScriptLength,
+        message: result.ok
+          ? `Script ${result.previousScriptLength > 0 ? "regenerated" : "written"} — ${script.length} chars on video block ${videoBlockId}.`
+          : `No video block found with id ${videoBlockId}.`,
+      };
+    }
     case "read_materials": {
       const course = actions.getCourse();
       const materials = course?.materials ?? [];
@@ -126,11 +138,19 @@ function summarizeCourse(course: Course) {
         id: l.id,
         title: l.title,
         duration: l.duration,
-        blocks: l.blocks.map((b) => ({
-          id: b.id,
-          type: b.type,
-          summary: summarizeBlock(b.type, b.data),
-        })),
+        blocks: l.blocks.map((b) => {
+          const base = {
+            id: b.id,
+            type: b.type,
+            summary: summarizeBlock(b.type, b.data),
+          };
+          // Video blocks get a hasScript flag so the Synthesia Scriptwriter
+          // can pick Write vs Regenerate without a separate lookup.
+          if (b.type === "video") {
+            return { ...base, hasScript: typeof b.data.script === "string" && b.data.script.trim().length > 0 };
+          }
+          return base;
+        }),
       })),
     })),
   };
