@@ -106,6 +106,42 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def propose_course_outline(args):
         return await _forward("propose_course_outline", args)
 
+    # --- lesson writer ---
+
+    @tool(
+        "write_lesson",
+        (
+            "Write or regenerate the body of a single lesson. Replaces any prior writer-generated "
+            "blocks in the lesson with the new ones; manually-authored blocks are preserved. Provide "
+            "3-5 text blocks covering Hook → Body → Examples → Summary, in order."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "lesson_id": {"type": "string"},
+                "blocks": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 5,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string", "enum": ["text"]},
+                            "content": {
+                                "type": "string",
+                                "description": "Markdown body. Open with a bold section label (**Hook**, **Body**, **Examples**, **Summary**).",
+                            },
+                        },
+                        "required": ["type", "content"],
+                    },
+                },
+            },
+            "required": ["lesson_id", "blocks"],
+        },
+    )
+    async def write_lesson(args):
+        return await _forward("write_lesson", args)
+
     # --- course builder: read ---
 
     @tool(
@@ -209,6 +245,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
             navigate,
             set_brand,
             propose_course_outline,
+            write_lesson,
             list_structure,
             add_module,
             add_lesson,
@@ -225,6 +262,7 @@ ALLOWED_TOOL_NAMES = [
     "mcp__ui__navigate",
     "mcp__ui__set_brand",
     "mcp__ui__propose_course_outline",
+    "mcp__ui__write_lesson",
     "mcp__ui__list_structure",
     "mcp__ui__add_module",
     "mcp__ui__add_lesson",
