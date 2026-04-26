@@ -43,6 +43,69 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def set_brand(args):
         return await _forward("set_brand", args)
 
+    # --- course architect: propose ---
+
+    @tool(
+        "propose_course_outline",
+        (
+            "Propose a structured course outline for the LD to review. The LD will see the outline "
+            "rendered in the UI and clicks 'Build this course' to create it; the UI then handles "
+            "building. Do NOT call add_module / add_lesson after this — your turn ends with this call."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Course title."},
+                "audience": {
+                    "type": "string",
+                    "description": "Who the course is for, in plain English (e.g. 'senior managers leading change initiatives').",
+                },
+                "duration_weeks": {"type": "integer", "minimum": 1, "maximum": 52},
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "week_number": {"type": "integer", "minimum": 1},
+                            "title": {"type": "string"},
+                            "summary": {
+                                "type": "string",
+                                "description": "One sentence describing what this week covers.",
+                            },
+                            "objectives": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "2-4 measurable learning objectives starting with a verb.",
+                            },
+                            "lessons": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {
+                                            "type": "string",
+                                            "description": "Format: '{module}.{lesson} {Title}', e.g. '1.1 Why change is hard'.",
+                                        },
+                                        "duration_min": {"type": "integer", "minimum": 1},
+                                        "objectives": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                        },
+                                    },
+                                    "required": ["title"],
+                                },
+                            },
+                        },
+                        "required": ["week_number", "title", "lessons"],
+                    },
+                },
+            },
+            "required": ["title", "duration_weeks", "modules"],
+        },
+    )
+    async def propose_course_outline(args):
+        return await _forward("propose_course_outline", args)
+
     # --- course builder: read ---
 
     @tool(
@@ -145,6 +208,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
         tools=[
             navigate,
             set_brand,
+            propose_course_outline,
             list_structure,
             add_module,
             add_lesson,
@@ -160,6 +224,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
 ALLOWED_TOOL_NAMES = [
     "mcp__ui__navigate",
     "mcp__ui__set_brand",
+    "mcp__ui__propose_course_outline",
     "mcp__ui__list_structure",
     "mcp__ui__add_module",
     "mcp__ui__add_lesson",
