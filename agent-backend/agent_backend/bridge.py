@@ -1,6 +1,10 @@
 import asyncio
+import json
+import logging
 import uuid
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 
 class ToolBridge:
@@ -27,6 +31,8 @@ class ToolBridge:
         loop = asyncio.get_running_loop()
         future: asyncio.Future[Any] = loop.create_future()
         self._pending[call_id] = future
+
+        log.info("tool_call %s args=%s", name, json.dumps(args, default=str)[:500])
 
         try:
             await self._send_to_fe({
