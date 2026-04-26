@@ -2,13 +2,27 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import { useAgent } from "./AgentContext";
 
 export function AgentChat() {
-  const { status, messages, isThinking, open, setOpen, sendMessage } = useAgent();
+  const { status, messages, isThinking, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isThinking]);
+
+  useEffect(() => {
+    if (pendingInput == null) return;
+    setDraft(pendingInput);
+    clearPendingInput();
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
+  }, [pendingInput, clearPendingInput]);
 
   function submit() {
     const text = draft.trim();
@@ -63,6 +77,7 @@ export function AgentChat() {
 
       <div style={inputRow}>
         <textarea
+          ref={textareaRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKey}

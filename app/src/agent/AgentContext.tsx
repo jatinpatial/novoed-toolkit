@@ -36,6 +36,9 @@ interface AgentContextValue {
   outlineProposal: CourseOutlineProposal | null;
   setOutlineProposal: (proposal: CourseOutlineProposal) => void;
   clearOutlineProposal: () => void;
+  pendingInput: string | null;
+  prefillInput: (text: string) => void;
+  clearPendingInput: () => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -49,6 +52,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [outlineProposal, setOutlineProposal] = useState<CourseOutlineProposal | null>(null);
   const clearOutlineProposal = useCallback(() => setOutlineProposal(null), []);
+  const [pendingInput, setPendingInput] = useState<string | null>(null);
+  const prefillInput = useCallback((text: string) => setPendingInput(text), []);
+  const clearPendingInput = useCallback(() => setPendingInput(null), []);
 
   const appendMessage = useCallback((entry: ChatEntry) => {
     setMessages((prev) => [...prev, entry]);
@@ -116,8 +122,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       outlineProposal,
       setOutlineProposal,
       clearOutlineProposal,
+      pendingInput,
+      prefillInput,
+      clearPendingInput,
     }),
-    [status, messages, isThinking, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal],
+    [status, messages, isThinking, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

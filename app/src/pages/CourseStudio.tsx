@@ -536,6 +536,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           {lesson ? (
             <LessonCanvas
               lesson={lesson}
+              module={course.modules[am]}
               brand={course.brand}
               am={am} al={al}
               onUpdateLesson={patchLesson}
@@ -779,12 +780,49 @@ function CourseOutline({ course, am, al, onSelect, onUpdate, onCollapse }: any) 
 /* ═══════════════════════════════════════════════════════════════════════════
    LESSON CANVAS
    ═══════════════════════════════════════════════════════════════════════════ */
-function LessonCanvas({ lesson, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
+function buildLessonWriterPrefill(mod: Module | undefined, lesson: Lesson, lessonIndex: number, mode: "write" | "regenerate"): string {
+  const week = mod?.weekNumber ?? 1;
+  const lessonNum = lessonIndex + 1;
+  const ref = `${week}.${lessonNum}`;
+  const stripped = lesson.title.replace(new RegExp(`^${week}\\.${lessonNum}\\s*`), "");
+
+  if (mode === "regenerate") {
+    return `Regenerate lesson ${ref}: ${stripped}. Same scope, fresh take.`;
+  }
+
+  const objectives = lesson.objectives ?? [];
+  const objectivesBlock = objectives.length
+    ? `Objectives:\n${objectives.map((o) => `• ${o}`).join("\n")}\n`
+    : "";
+
+  return `Write lesson ${ref}: ${stripped}.\n${objectivesBlock}Target: ~${lesson.duration} min.\nFill this in.`;
+}
+
+function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
+  const { setOpen: setChatOpen, prefillInput } = useAgent();
+  const hasWriterBlocks = lesson.blocks.some((b: Block) => b.source === "writer");
+
+  function triggerWriter(mode: "write" | "regenerate") {
+    setChatOpen(true);
+    prefillInput(buildLessonWriterPrefill(mod, lesson, al, mode));
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
       {/* Lesson header */}
       <div className="mb-8">
-        <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider mb-1">Lesson</div>
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider">Lesson</div>
+          {hasWriterBlocks && (
+            <button
+              onClick={() => triggerWriter("regenerate")}
+              className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-ink-200 text-[11px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+              title="Wipe AI-written blocks and regenerate"
+            >
+              <Sparkles size={12} /> Regenerate
+            </button>
+          )}
+        </div>
         <input
           value={lesson.title}
           onChange={(e) => onUpdateLesson((l: Lesson) => { l.title = e.target.value; })}
@@ -810,7 +848,21 @@ function LessonCanvas({ lesson, brand, am, al, onUpdateLesson, onUpdateBlock, on
 
       {/* Blocks */}
       {lesson.blocks.length === 0 ? (
-        <div className="py-10">
+        <div className="py-10 space-y-6">
+          <button
+            onClick={() => triggerWriter("write")}
+            className="w-full rounded-xl border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-5 text-left flex items-start gap-3 group"
+          >
+            <div className="w-9 h-9 rounded-lg bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+              <Sparkles size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-ink-900 mb-0.5 group-hover:text-brand-700">Write this lesson</div>
+              <div className="text-xs text-ink-600">
+                Have the Copilot draft a Hook → Body → Examples → Summary based on the title and objectives. You'll be able to edit the chat message before sending.
+              </div>
+            </div>
+          </button>
           <BlockInsertRow onPick={(t) => onAddBlock(t)} expanded />
         </div>
       ) : (
