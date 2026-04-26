@@ -1,4 +1,4 @@
-import type { AgentActions } from "./AgentContext";
+import type { AgentActions, WriterBlock } from "./AgentContext";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData, Course } from "../course/types";
 import type { CourseOutlineProposal, ProposedModule, ProposedLesson } from "./types";
@@ -26,6 +26,17 @@ export async function dispatchToolCall(
       return {
         ok: true,
         message: "Outline shown to the LD. Stop here — the LD reviews and clicks 'Build this course' to create it.",
+      };
+    }
+    case "write_lesson": {
+      const lessonId = asString(args.lesson_id, "lesson_id");
+      const blocks = parseWriterBlocks(args.blocks);
+      const result = actions.writeLesson(lessonId, blocks);
+      return {
+        ok: true,
+        replaced: result.replaced,
+        added: result.added,
+        message: `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`,
       };
     }
     case "list_structure": {
@@ -170,6 +181,21 @@ function parseLesson(raw: unknown, modIndex: number, lessonIndex: number): Propo
     undefined;
   const objectives = parseStringArray(l.objectives);
   return { title, durationMin, objectives };
+}
+
+function parseWriterBlocks(raw: unknown): WriterBlock[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error("blocks must be a non-empty array");
+  }
+  return raw.map((b, i) => {
+    if (typeof b !== "object" || b === null) {
+      throw new Error(`block #${i + 1} must be an object`);
+    }
+    const obj = b as Record<string, unknown>;
+    const type = asString(obj.type, `block #${i + 1} type`);
+    const content = asString(obj.content, `block #${i + 1} content`);
+    return { type, content };
+  });
 }
 
 function parseStringArray(v: unknown): string[] | undefined {

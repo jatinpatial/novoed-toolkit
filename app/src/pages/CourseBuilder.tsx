@@ -321,6 +321,28 @@ function CourseBuilderInner() {
       if (format === "scorm") exportLessonSCORM(c, loc.lesson);
       else exportCourseJSON(c);
     },
+    writeLesson: (lessonId, blocks) => {
+      let replaced = 0;
+      let added = 0;
+      updateCourse((c) => {
+        const loc = findLesson(c, lessonId);
+        if (!loc) throw new Error(`lesson not found: ${lessonId}`);
+        const lesson = c.modules[loc.mi].lessons[loc.li];
+        const before = lesson.blocks.length;
+        lesson.blocks = lesson.blocks.filter((b) => b.source !== "writer");
+        replaced = before - lesson.blocks.length;
+        for (const b of blocks) {
+          lesson.blocks.push({
+            id: uid(),
+            type: b.type,
+            data: { content: b.content },
+            source: "writer",
+          });
+          added += 1;
+        }
+      });
+      return { replaced, added };
+    },
   };
   useRegisterAgentActions(agentActions);
 

@@ -190,6 +190,7 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     deleteBlock: () => { throw new Error("No course is open."); },
     reorder: () => {},
     exportLesson: () => {},
+    writeLesson: () => { throw new Error("No course is open. Open a course before asking for a lesson to be written."); },
     setOutlineProposal: (proposal) => {
       setOutlineProposal(proposal);
       setChatOpen(true);
@@ -466,6 +467,28 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         else exportCourseJSON(course);
         break c;
       }
+    },
+    writeLesson: (lessonId, blocks) => {
+      let replaced = 0;
+      let added = 0;
+      mutate((c) => {
+        c.modules.forEach((m) => m.lessons.forEach((l) => {
+          if (l.id !== lessonId) return;
+          const before = l.blocks.length;
+          l.blocks = l.blocks.filter((b) => b.source !== "writer");
+          replaced = before - l.blocks.length;
+          for (const b of blocks) {
+            l.blocks.push({
+              id: rid(),
+              type: b.type,
+              data: { content: b.content },
+              source: "writer",
+            });
+            added += 1;
+          }
+        }));
+      });
+      return { replaced, added };
     },
   }), [course, mutate]);
 

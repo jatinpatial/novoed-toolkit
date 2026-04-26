@@ -5,6 +5,11 @@ import type { BlockData } from "../course/types";
 import type { ChatEntry, ConnectionStatus, CourseOutlineProposal } from "./types";
 import { useAgentSocket } from "./useAgentSocket";
 
+export interface WriterBlock {
+  type: string;
+  content: string;
+}
+
 export interface AgentActions {
   getCourse: () => Course | null;
   navigate: (route: string) => Promise<void> | void;
@@ -16,6 +21,7 @@ export interface AgentActions {
   deleteBlock: (blockId: string) => void;
   reorder: (kind: "module" | "lesson" | "block", id: string, newIndex: number) => void;
   exportLesson: (lessonId: string, format: "scorm" | "json") => void;
+  writeLesson: (lessonId: string, blocks: WriterBlock[]) => { replaced: number; added: number };
   setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
 }
 
