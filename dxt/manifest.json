@@ -2,9 +2,9 @@
   "dxt_version": "0.1",
   "name": "bcg-toolkit",
   "display_name": "BCG U Studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Your AI agent for Learning Design. Draft branded HTML embeds and interactive SCORM activities for any LMS (Rise, NovoEd, Docebo, Moodle, Canvas) directly from Claude Desktop. Claude orchestrates the component catalog, fills in your data, and renders everything live in a local browser tab — no API keys, no data leaves your machine.",
-  "long_description": "BCG U Studio turns Claude Desktop into an end-to-end Learning Design agent. Ask Claude to 'draft a 3-card summary of the AI maturity phases' and the Studio renders it live in your browser, ready to export as HTML (paste into any LMS) or as a self-editing SCORM 1.2 zip (upload to any SCORM-compatible platform). 31 HTML components (cards, timelines, KPIs, stats, SWOT, pyramids, funnels, quizzes) and 16 interactive SCORM activities (flip cards, accordions, polls, drag-to-sort, hotspot, branching scenarios). Includes BCG and BCG U brand themes plus a Custom brand editor with full Arabic/Hebrew RTL support.",
+  "long_description": "BCG U Studio turns Claude Desktop into an end-to-end Learning Design agent. Ask Claude to 'draft a 3-card summary of the AI maturity phases' and the Studio renders it live in your browser, ready to export as HTML (paste into any LMS) or as a self-editing SCORM 1.2 zip (upload to any SCORM-compatible platform). 31 HTML components (cards, timelines, KPIs, stats, SWOT, pyramids, funnels, quizzes) and 16 interactive SCORM activities (flip cards, accordions, polls, drag-to-sort, hotspot, branching scenarios). Includes BCG and BCG U brand themes plus a Custom brand editor with full Arabic/Hebrew RTL support. v0.2: Storyline Generator — turn a PPTX, PDF, or DOCX into a full course Word file (cover page, learning outcomes, modules, lessons, video scripts, knowledge checks, glossary).",
   "author": {
     "name": "Jatin Patial",
     "email": "patial.jatin@bcg.com"
@@ -63,6 +63,18 @@
     {
       "name": "extract_thumbnail",
       "description": "Extract a single-frame thumbnail from a local video (.jpg / .png / .webp) via ffmpeg."
+    },
+    {
+      "name": "ingest_source",
+      "description": "Read a local PPTX, PDF, DOCX, MD, or TXT into structured chunks (title + body + speaker notes) for the storyline drafter."
+    },
+    {
+      "name": "draft_storyline",
+      "description": "Turn a brief (topic + audience + duration, plus optional ingested source) into a structured course JSON: cover, learning outcomes, modules → lessons with body, component suggestion, video script, and knowledge-check questions."
+    },
+    {
+      "name": "assemble_storyline_docx",
+      "description": "Write a course storyline JSON to a clean default Word file: cover page, course overview, per-module sections with lessons + scripts + Q&A, and an appendix with glossary and design notes."
     }
   ],
   "compatibility": {

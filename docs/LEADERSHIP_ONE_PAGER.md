@@ -1,6 +1,6 @@
 # BCG U Studio — Learning Design Agent
 
-**One-pager for BCG U leadership · v1.7 (Day 6 of 6, MVP complete)**
+**One-pager for BCG U leadership · v1.8 (Day 7 of 7, MVP + Storyline Generator)**
 
 ---
 
@@ -19,18 +19,19 @@ Producing a 30-minute course module today takes a Learning Designer **8–14 hou
 
 A Learning Designer opens Claude Desktop and types:
 
-> *"Draft a 25-min onboarding journey on AI ethics for new analysts. Three core modules, one branching scenario, one knowledge check. Use BCG U brand."*
+> *"Turn `~/Desktop/ai-ethics-deck.pptx` into a 30-min new-joiner course. Save the Word file to my Desktop."*
 
-Claude orchestrates **9 toolkit functions** behind the scenes:
-1. Drafts the journey outline (5–7 modules with durations + learning objectives).
-2. Pushes the structure into the Studio's visual canvas.
-3. Renders 31 brand-themed HTML embeds (cards, timelines, SWOT, KPI tiles, charts).
-4. Generates 16 interactive SCORM activities (flip cards, drag-to-sort, branching scenarios, quizzes).
-5. Trims and thumbnails source video via local `ffmpeg` — no upload.
+Claude orchestrates **12 toolkit functions** behind the scenes:
+1. Reads PPTX/PDF/DOCX/MD locally — speaker notes included, nothing uploaded.
+2. Drafts a full storyline (modules, lessons, body text, video scripts, knowledge checks, glossary).
+3. Writes the result to a clean default **Word file** (`.docx`) — ready to hand to a Rise/Storyline builder or drop on NovoEd.
+4. Pushes the same outline into the Studio's visual Journey canvas if the LD prefers in-app authoring.
+5. Renders 31 brand-themed HTML embeds + 16 interactive SCORM activities for the inline pieces.
+6. Trims and thumbnails any source video via local `ffmpeg` — no upload.
 
-Output drops as **paste-ready HTML** for Rise/NovoEd/Docebo/Moodle/Canvas, plus **SCORM 1.2 zips** for any LMS. Self-editing: press `Ctrl+Shift+E` inside a deployed activity to edit in place and re-download.
+Output drops as a **course Word file** (cover page → modules → lessons → scripts → Q&A → appendix), plus **paste-ready HTML** for Rise/NovoEd/Docebo/Moodle/Canvas and **SCORM 1.2 zips** for any LMS. Self-editing: press `Ctrl+Shift+E` inside a deployed activity to edit in place and re-download.
 
-## What's shipped (6-day sprint)
+## What's shipped (7-day sprint)
 
 | Day | Deliverable |
 |-----|-------------|
@@ -40,6 +41,7 @@ Output drops as **paste-ready HTML** for Rise/NovoEd/Docebo/Moodle/Canvas, plus 
 | 4 | Content Writer + 2 new MCP tools (`suggest_component`, `push_journey`) — Claude pushes outlines straight into the canvas. |
 | 5 | Media Studio + 4 ffmpeg MCP tools (`check_ffmpeg`, `video_info`, `trim_video`, `extract_thumbnail`). |
 | 6 | Polish pass — Pro Tip banners, keyboard-shortcut footer, sidebar tooltips, leadership materials. |
+| 7 | Storyline Generator + 3 MCP tools (`ingest_source`, `draft_storyline`, `assemble_storyline_docx`). PPTX/PDF/DOCX → full course Word file (cover, modules, lessons, scripts, knowledge checks, glossary) — ready to hand to an Articulate Rise/Storyline builder or load straight onto NovoEd. |
 
 ## Why this matters for BCG U
 

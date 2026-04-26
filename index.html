@@ -2929,6 +2929,193 @@ function renderMedia(){
   return h;
 }
 
+/* ── Storyline Generator (Day 7) ── */
+function storylineNew(){
+  return {
+    topic:"",
+    audience:"",
+    duration:25,
+    owner:"BCG U Studio",
+    source:"",
+    output:"",
+    questionsPerLesson:2,
+    includeVideoScripts:true,
+    includeGlossary:true,
+    lastAction:""
+  };
+}
+function enterStoryline(){
+  if(!state.storyline){
+    try{ var saved=localStorage.getItem("studioStoryline"); if(saved) state.storyline=JSON.parse(saved); }catch(e){}
+    if(!state.storyline) state.storyline=storylineNew();
+  }
+  state.mode="storyline"; state.sel=null;
+  render();
+}
+function storylineUpdate(k,v){
+  if(!state.storyline) state.storyline=storylineNew();
+  state.storyline[k]=v;
+  try{ localStorage.setItem("studioStoryline", JSON.stringify(state.storyline)); }catch(e){}
+}
+function storylineSlug(s){
+  return String(s||"course").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40)||"course";
+}
+function storylineDefaultOutput(){
+  var s=state.storyline||storylineNew();
+  var slug=storylineSlug(s.topic);
+  // Best-effort Desktop path; user can override.
+  var sep = (navigator.platform||"").toLowerCase().indexOf("win")>=0 ? "\\" : "/";
+  var home = (navigator.platform||"").toLowerCase().indexOf("win")>=0 ? "%USERPROFILE%" : "$HOME";
+  return home+sep+"Desktop"+sep+slug+".docx";
+}
+function storylineCopyPrompt(which){
+  var s=state.storyline||storylineNew();
+  if(!s.topic||!s.audience){ studioToast("Topic and audience are required"); return; }
+  var ctx="[BCG U Studio · Storyline Generator]\n\n";
+  var out=s.output||storylineDefaultOutput();
+  var optsObj={
+    include_video_scripts:!!s.includeVideoScripts,
+    questions_per_lesson:Math.max(0,Math.min(5,parseInt(s.questionsPerLesson)||0)),
+    include_glossary:!!s.includeGlossary
+  };
+  var optsLine=JSON.stringify(optsObj);
+  var draftArgs='{\n  "topic": '+JSON.stringify(s.topic)+',\n  "audience": '+JSON.stringify(s.audience)+',\n  "duration_min": '+(parseInt(s.duration)||25)+',\n  "owner": '+JSON.stringify(s.owner||"BCG U Studio")+',\n  "options": '+optsLine+'\n}';
+  var req="";
+  if(which==="ingest"){
+    if(!s.source){ studioToast("Add a source file path first"); return; }
+    req='Call `ingest_source` with:\n\n{"path":"'+s.source+'"}\n\nReport how many chunks you got back and the source_type.';
+  } else if(which==="draft"){
+    var pre = s.source ? 'First call `ingest_source` with {"path":"'+s.source+'"} and pass the result back into `draft_storyline` as the `source` field. Then ' : '';
+    req=pre+'call `draft_storyline` with:\n\n'+draftArgs+'\n\nReturn the JSON. I want to review the modules and lessons before we write the Word file.';
+  } else if(which==="full"){
+    var pre2 = s.source ? '1) Call `ingest_source` with {"path":"'+s.source+'"} — note the chunk count.\n2) ' : '1) ';
+    req=pre2+'Call `draft_storyline` with the brief below'+(s.source?' and the ingested source as `source`':'')+':\n\n'+draftArgs+'\n\n'+(s.source?'3':'2')+') Then call `assemble_storyline_docx` with `course` set to the JSON you just generated and:\n\n{"output_path":"'+out+'"}\n\nReport: total modules, total lessons, output file path, and file size.';
+  } else return;
+  navigator.clipboard.writeText(ctx+req).then(function(){
+    studioToast("✓ MCP prompt copied — paste into Claude Desktop");
+    storylineUpdate("lastAction", which+" @ "+new Date().toLocaleTimeString());
+    setTimeout(function(){ window.open("https://claude.ai/new","_blank"); }, 300);
+  });
+}
+function storylineReset(){
+  if(!confirm("Clear Storyline fields?")) return;
+  state.storyline=storylineNew();
+  try{ localStorage.removeItem("studioStoryline"); }catch(e){}
+  render();
+}
+function renderStoryline(){
+  var b=B[state.brand];
+  if(!state.storyline) state.storyline=storylineNew();
+  var s=state.storyline;
+  var defOut=storylineDefaultOutput();
+  var h='<div class="cw-wrap">';
+  h+=protipBanner({
+    id:"storyline-claude",
+    kicker:"Pro tip · skip the form, brief Claude in plain English",
+    title:"In Claude Desktop, just say it — \"Turn this PPTX into a 30-min course\"",
+    body:'With the <code>.dxt</code> extension installed, you can paste a path to your deck, PDF, or whitepaper and Claude will run <code>ingest_source</code> → <code>draft_storyline</code> → <code>assemble_storyline_docx</code> in one turn. This form is here so you can copy a precise prompt or run it from a browser.',
+    ctaLabel:"Install the extension",
+    ctaHref:DXT_README_URL,
+    icon:"📖"
+  });
+  h+='<div class="cw-head"><div class="cw-eyebrow">DAY 7 · STORYLINE GENERATOR</div>';
+  h+='<h1 class="cw-h1">Brief in. Word file out.</h1>';
+  h+='<div class="cw-sub">Drop in a deck or PDF, give us a topic and audience, and Claude returns a full course in a Word document — cover page, learning outcomes, modules, lessons, video scripts, knowledge checks, glossary. Edit, hand to your builder, or take it straight into Articulate Rise/Storyline as a lesson.</div></div>';
+
+  /* Two-col grid: form (left) + actions (right) */
+  h+='<div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:24px;margin-top:22px;">';
+
+  /* ─ Left: form ─ */
+  h+='<div style="background:#fff;border:1px solid '+b.n2+';border-radius:14px;padding:24px;">';
+  h+='<div style="font-size:11px;font-weight:700;color:'+b.txL+';text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;">Course brief</div>';
+
+  h+='<label class="cw-label">Topic <span style="color:#D33;">*</span></label>';
+  h+='<input class="cw-input" placeholder="e.g. AI ethics for new analysts" value="'+esc(s.topic)+'" oninput="storylineUpdate(\'topic\',this.value)" />';
+
+  h+='<label class="cw-label" style="margin-top:14px;">Audience <span style="color:#D33;">*</span></label>';
+  h+='<input class="cw-input" placeholder="e.g. BCG new-joiner consultants, week 1" value="'+esc(s.audience)+'" oninput="storylineUpdate(\'audience\',this.value)" />';
+
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">';
+  h+='<div><label class="cw-label">Duration (minutes)</label>';
+  h+='<input class="cw-input" type="number" min="3" max="240" value="'+(parseInt(s.duration)||25)+'" oninput="storylineUpdate(\'duration\',parseInt(this.value)||25)" /></div>';
+  h+='<div><label class="cw-label">Owner / LD</label>';
+  h+='<input class="cw-input" placeholder="Your name" value="'+esc(s.owner||"")+'" oninput="storylineUpdate(\'owner\',this.value)" /></div>';
+  h+='</div>';
+
+  h+='<label class="cw-label" style="margin-top:14px;">Source file path <span style="font-weight:400;color:'+b.txL+';">· optional</span></label>';
+  h+='<input class="cw-input" placeholder="C:\\Users\\you\\Desktop\\deck.pptx  ·  .pptx, .pdf, .docx, .md, .txt" value="'+esc(s.source||"")+'" oninput="storylineUpdate(\'source\',this.value)" />';
+  h+='<div style="font-size:10.5px;color:#888;margin-top:6px;">If provided, Claude reads it locally (no upload) and uses it as factual seed.</div>';
+
+  h+='<label class="cw-label" style="margin-top:14px;">Output .docx path <span style="font-weight:400;color:'+b.txL+';">· optional</span></label>';
+  h+='<input class="cw-input" placeholder="'+esc(defOut)+'" value="'+esc(s.output||"")+'" oninput="storylineUpdate(\'output\',this.value)" />';
+  h+='<div style="font-size:10.5px;color:#888;margin-top:6px;">Defaults to your Desktop with a slug from the topic. Must end in <code>.docx</code>.</div>';
+
+  /* Options */
+  h+='<div style="margin-top:18px;padding-top:16px;border-top:1px dashed '+b.n2+';">';
+  h+='<div style="font-size:11px;font-weight:700;color:'+b.txL+';text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Options</div>';
+  h+='<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#444;margin-bottom:6px;cursor:pointer;">'
+    +'<input type="checkbox" '+(s.includeVideoScripts?"checked":"")+' onchange="storylineUpdate(\'includeVideoScripts\',this.checked)" /> Include short video scripts per lesson</label>';
+  h+='<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#444;margin-bottom:6px;cursor:pointer;">'
+    +'<input type="checkbox" '+(s.includeGlossary?"checked":"")+' onchange="storylineUpdate(\'includeGlossary\',this.checked)" /> Include glossary in appendix</label>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-top:8px;">'
+    +'<span style="font-size:12.5px;color:#444;">Knowledge-check questions per lesson:</span>'
+    +'<select class="cw-input" style="width:auto;padding:4px 8px;" onchange="storylineUpdate(\'questionsPerLesson\',parseInt(this.value))">'
+    +[0,1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(s.questionsPerLesson===n?' selected':'')+'>'+n+'</option>';}).join("")
+    +'</select></div>';
+  h+='</div>';
+
+  h+='<div style="margin-top:18px;display:flex;gap:10px;">'
+    +'<button class="cw-btn" onclick="storylineReset()">↺ Clear</button>'
+    +'</div>';
+  h+='</div>'; /* end form card */
+
+  /* ─ Right: actions ─ */
+  h+='<div>';
+
+  h+='<div style="background:linear-gradient(135deg,'+b.priLt+' 0%,#fff 100%);border:1px solid '+b.priLt+';border-radius:14px;padding:18px;margin-bottom:14px;">';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:2px;color:'+b.priDk+';margin-bottom:6px;">▶ FULL PIPELINE</div>';
+  h+='<div style="font-size:14px;font-weight:600;color:'+b.priDk+';line-height:1.35;margin-bottom:8px;">'+(s.source?"Ingest → Draft → Word file":"Draft → Word file")+'</div>';
+  h+='<div style="font-size:12px;color:'+b.priDk+';opacity:0.9;margin-bottom:14px;">Hands Claude the full sequence — outputs a saved <code>.docx</code> at your chosen path.</div>';
+  h+='<button class="cw-btn pri" style="width:100%;" onclick="storylineCopyPrompt(\'full\')">▶ Generate Word file</button>';
+  h+='</div>';
+
+  h+='<div style="background:#fff;border:1px solid '+b.n2+';border-radius:14px;padding:16px;margin-bottom:14px;">';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:2px;color:'+b.txL+';margin-bottom:6px;">STEP 1 · INGEST</div>';
+  h+='<div style="font-size:13px;color:#444;margin-bottom:10px;">Read source file → structured chunks (no Word file written).</div>';
+  h+='<button class="cw-btn" style="width:100%;" onclick="storylineCopyPrompt(\'ingest\')">📥 Ingest only</button>';
+  h+='</div>';
+
+  h+='<div style="background:#fff;border:1px solid '+b.n2+';border-radius:14px;padding:16px;margin-bottom:14px;">';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:2px;color:'+b.txL+';margin-bottom:6px;">STEP 2 · DRAFT</div>';
+  h+='<div style="font-size:13px;color:#444;margin-bottom:10px;">Brief → full course JSON. Review modules + lessons before writing Word file.</div>';
+  h+='<button class="cw-btn" style="width:100%;" onclick="storylineCopyPrompt(\'draft\')">✎ Draft JSON only</button>';
+  h+='</div>';
+
+  /* What's in the Word file */
+  h+='<div style="background:#fafafa;border:1px solid '+b.n2+';border-radius:14px;padding:16px;">';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:2px;color:'+b.txL+';margin-bottom:8px;">WHAT YOU GET</div>';
+  h+='<ul style="margin:0;padding-left:18px;font-size:12px;color:#444;line-height:1.7;">'
+    +'<li>Cover page — title, audience, duration, owner, version, date</li>'
+    +'<li>Course overview — learning outcomes, prerequisites, structure table</li>'
+    +'<li>Per module: heading, objective, per-lesson body, component callout</li>'
+    +'<li>Per lesson: video script (timecode/visual/narration table)</li>'
+    +'<li>Per lesson: knowledge-check questions with answer + rationale</li>'
+    +'<li>Appendix: glossary, design notes for the builder, references</li>'
+    +'</ul>';
+  h+='</div>';
+
+  h+='</div>'; /* end actions col */
+
+  h+='</div>'; /* end grid */
+
+  if(s.lastAction){
+    h+='<div style="font-size:10.5px;color:#888;text-align:center;margin-top:18px;">Last action: '+esc(s.lastAction)+'</div>';
+  }
+
+  h+='</div>'; /* end cw-wrap */
+  return h;
+}
+
 function renderWriter(){
   var b=B[state.brand];
   if(!state.writer) state.writer=writerNew();
@@ -3033,6 +3220,8 @@ function renderSidebar(){
     +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
   s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos + grab thumbnails via local ffmpeg (no upload)">'
     +'<span class="sb-icon">▶</span><span>Media Studio</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
+  s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Turn a PPTX, PDF, or DOCX into a full course Word file — modules, lessons, scripts, knowledge checks">'
+    +'<span class="sb-icon">📖</span><span>Storyline</span><span class="sb-badge" style="background:#FF7A00;color:#fff;">NEW</span></button>';
   /* Tools */
   s+='<div class="sb-section">Tools</div>';
   s+='<button class="sb-item" onclick="openLibrary()" title="Reuse components you\'ve saved across projects">'
@@ -3314,6 +3503,12 @@ function render() {
     return;
   }
 
+  /* ─── STORYLINE GENERATOR (Day 7 v0) ─── */
+  if(state.mode==="storyline"){
+    root.innerHTML=shell(renderStoryline());
+    return;
+  }
+
   /* ─── HOME SCREEN (Studio landing v2) ─── */
   if(!state.mode){
     var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
@@ -3380,14 +3575,15 @@ function render() {
       +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.12);z-index:50;max-height:280px;overflow:auto;"></div>'
       +'</div>';
 
-    /* Quick launch — 4 tiles */
+    /* Quick launch — 5 tiles */
     hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';margin-bottom:12px;">Quick launch</div>';
-    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">';
+    hm+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;">';
     var tiles=[
       {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
       {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
       {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'NEW',cta:'Open canvas →'},
-      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"enterWriter()",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'NEW',cta:'Open writer →'}
+      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"enterWriter()",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'NEW',cta:'Open writer →'},
+      {icon:'📖',title:'Storyline',desc:'Brief → full course in Word',onclick:"enterStoryline()",grad:'linear-gradient(135deg,#FF7A00,#E0367C)',badge:'NEW',cta:'Generate doc →'}
     ];
     tiles.forEach(function(t){
       hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid '+b.n2+';border-radius:16px;padding:22px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">';
@@ -3457,8 +3653,8 @@ function render() {
     /* What's new + Feedback */
     hm+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
     hm+='<div style="padding:20px 22px;background:'+b.n1+';border-radius:14px;border:1px solid '+b.n2+';">'
-      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.7 Studio</div>'
-      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.75;"><strong>Media Studio:</strong> ffmpeg-powered trim + thumbnail tools, driven by Claude.<br><strong>Journey Builder + Content Writer:</strong> design full course flows; AI drafts the outline.<br><strong>Command palette (⌘K):</strong> jump to any of '+(htmlCount+scormCount)+' components in two keystrokes.<br><strong>Claude Desktop extension:</strong> 9 MCP tools, one-click <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:11px;background:'+b.priLt+';padding:1px 5px;border-radius:3px;">.dxt</code> install.</div>'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:'+b.pri+';margin-bottom:10px;">What\'s New — v1.8 Studio</div>'
+      +'<div style="font-size:12px;color:'+b.tx+';line-height:1.75;"><strong>Storyline Generator (Day 7):</strong> brief in chat → full course Word file with cover, modules, lessons, video scripts, and knowledge checks. Drop a PPTX/PDF/DOCX as factual seed.<br><strong>Media Studio (Day 5):</strong> ffmpeg-powered trim + thumbnail, all local.<br><strong>Journey Builder + Content Writer:</strong> design course flows; Claude drafts the outline.<br><strong>Claude Desktop extension:</strong> now <strong>12 MCP tools</strong>, one-click <code style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:11px;background:'+b.priLt+';padding:1px 5px;border-radius:3px;">.dxt</code> install.</div>'
       +'</div>';
     hm+='<div style="padding:20px 22px;background:'+b.priLt+';border-radius:14px;border:1px solid '+b.pri+'22;display:flex;align-items:center;gap:14px;">'
       +'<div style="width:38px;height:38px;background:'+b.pri+';border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;">✉</div>'
