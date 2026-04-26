@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Course } from "../course/types";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
-import type { ChatEntry, ConnectionStatus } from "./types";
+import type { ChatEntry, ConnectionStatus, CourseOutlineProposal } from "./types";
 import { useAgentSocket } from "./useAgentSocket";
 
 export interface AgentActions {
@@ -16,6 +16,7 @@ export interface AgentActions {
   deleteBlock: (blockId: string) => void;
   reorder: (kind: "module" | "lesson" | "block", id: string, newIndex: number) => void;
   exportLesson: (lessonId: string, format: "scorm" | "json") => void;
+  setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
 }
 
 interface AgentContextValue {
@@ -26,6 +27,9 @@ interface AgentContextValue {
   setOpen: (b: boolean) => void;
   sendMessage: (text: string) => void;
   registerActions: (actions: AgentActions) => () => void;
+  outlineProposal: CourseOutlineProposal | null;
+  setOutlineProposal: (proposal: CourseOutlineProposal) => void;
+  clearOutlineProposal: () => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -37,6 +41,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [open, setOpen] = useState(false);
+  const [outlineProposal, setOutlineProposal] = useState<CourseOutlineProposal | null>(null);
+  const clearOutlineProposal = useCallback(() => setOutlineProposal(null), []);
 
   const appendMessage = useCallback((entry: ChatEntry) => {
     setMessages((prev) => [...prev, entry]);
@@ -93,8 +99,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AgentContextValue>(
-    () => ({ status, messages, isThinking, open, setOpen, sendMessage, registerActions }),
-    [status, messages, isThinking, open, sendMessage, registerActions],
+    () => ({
+      status,
+      messages,
+      isThinking,
+      open,
+      setOpen,
+      sendMessage,
+      registerActions,
+      outlineProposal,
+      setOutlineProposal,
+      clearOutlineProposal,
+    }),
+    [status, messages, isThinking, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
