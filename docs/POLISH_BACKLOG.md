@@ -10,6 +10,7 @@
 - Writer currently outputs only Text blocks (B3 design call). Should mix in Callouts, Card Grids, Accordions, Banners, Stats blocks where appropriate.
 - Need decision logic: "use callout for key insights, card grid for examples/comparisons, accordion for FAQ-style content."
 - Could be Writer prompt v2 or a separate "Block Picker" sub-agent.
+- **Video blocks are off-limits to Lesson Writer.** Scripts are owned by the Synthesia Scriptwriter agent (Phase 1 #4) and live in a per-block drawer, not in the lesson body. Lesson Writer v2 may suggest *where* video blocks belong and add empty ones, but it must not write text content into a video block — the Scriptwriter writes the script in its own pass.
 
 ## Rendering quality
 - Text block should render markdown (bold, italic, lists, basic headings) — even with B3 prompt, agents may emit markdown.
