@@ -479,11 +479,22 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       }
     },
     writeLesson: (lessonId, blocks) => {
+      // Fallback: if the agent passes a display label like "1.1" instead of a
+      // real lesson id, resolve it positionally to modules[M-1].lessons[L-1].id.
+      let resolvedId = lessonId;
+      const labelMatch = /^(\d+)\.(\d+)$/.exec(lessonId.trim());
+      if (labelMatch) {
+        const mi = parseInt(labelMatch[1], 10) - 1;
+        const li = parseInt(labelMatch[2], 10) - 1;
+        const fallback = course.modules[mi]?.lessons[li]?.id;
+        if (fallback) resolvedId = fallback;
+      }
+
       let replaced = 0;
       let added = 0;
       mutate((c) => {
         c.modules.forEach((m) => m.lessons.forEach((l) => {
-          if (l.id !== lessonId) return;
+          if (l.id !== resolvedId) return;
           const before = l.blocks.length;
           l.blocks = l.blocks.filter((b) => b.source !== "writer");
           replaced = before - l.blocks.length;
