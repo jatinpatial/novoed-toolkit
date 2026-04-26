@@ -241,6 +241,50 @@ button:not(:disabled):active{transform:translateY(0.5px);}
 .sd-row-sub{font-size:11px;color:var(--c-ink-4,#767C90);margin-top:2px;line-height:1.5;}
 .sd-row-action{padding:7px 13px;border:1.5px solid var(--c-line,#E5E7EE);background:#fff;border-radius:var(--r-md,10px);font-size:11.5px;font-weight:700;color:var(--c-ink-2,#1F2436);cursor:pointer;font-family:inherit;transition:all var(--m-fast,120ms) var(--ease,ease);white-space:nowrap;}
 .sd-row-action:hover{border-color:var(--c-navy,#0E1E3F);color:var(--c-navy,#0E1E3F);}
+/* Phase 2 Day 3C: Help drawer + welcome modal */
+.hd-lanes{display:flex;flex-direction:column;gap:10px;}
+.hd-lane{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#F7F8FA;border:1px solid var(--c-line-2,#EEF0F4);border-radius:var(--r-md,10px);}
+.hd-lane-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;letter-spacing:-0.3px;}
+.hd-lane-title{font-size:13px;font-weight:700;color:var(--c-ink,#0B0F1A);margin-bottom:3px;}
+.hd-lane-sub{font-size:11.5px;color:var(--c-ink-3,#4A4F62);line-height:1.5;}
+.hd-compare{display:grid;grid-template-columns:1fr;gap:10px;}
+.hd-compare-card{padding:14px;background:#fff;border:1.5px solid var(--c-line,#E5E7EE);border-radius:var(--r-md,10px);}
+.hd-compare-tag{display:inline-block;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;}
+.hd-compare-title{font-size:13px;font-weight:700;color:var(--c-ink,#0B0F1A);margin-bottom:8px;}
+.hd-compare-list{font-size:11.5px;color:var(--c-ink-3,#4A4F62);line-height:1.7;margin-bottom:8px;}
+.hd-compare-list code{font-family:var(--bcgu-font-mono,monospace);font-size:10.5px;background:#F1F3F8;padding:1px 5px;border-radius:4px;color:var(--c-accent-dk,#1B7A4F);}
+.hd-compare-when{font-size:11px;color:var(--c-ink-2,#1F2436);font-weight:600;line-height:1.5;background:var(--c-accent-lt,#E6F7EF);padding:8px 10px;border-radius:8px;border-left:3px solid var(--c-accent,#29BA74);}
+.hd-kbd{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;background:#F7F8FA;border:1px solid var(--c-line,#E5E7EE);border-bottom-width:2px;border-radius:6px;font-family:var(--bcgu-font-mono,monospace);font-size:11px;font-weight:700;color:var(--c-ink-2,#1F2436);white-space:nowrap;}
+/* Welcome modal — first-run, 3 slides */
+@keyframes welcomeScrim{from{opacity:0;}to{opacity:1;}}
+@keyframes welcomeModalIn{from{opacity:0;transform:translate(-50%, calc(-50% + 18px)) scale(0.97);}to{opacity:1;transform:translate(-50%, -50%) scale(1);}}
+.welcome-scrim{position:fixed;inset:0;background:rgba(11,15,26,0.55);backdrop-filter:blur(6px);z-index:9996;animation:welcomeScrim var(--m-med,220ms) var(--ease,ease);}
+.welcome-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:92vw;max-height:88vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 32px 80px rgba(0,40,24,0.32),0 0 0 1px rgba(0,0,0,0.04);z-index:9997;padding:36px 38px 26px;animation:welcomeModalIn var(--m-med,260ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.wm-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:9px;border:none;background:transparent;color:var(--c-ink-4,#767C90);font-size:20px;cursor:pointer;transition:background var(--m-fast,120ms);}
+.wm-close:hover{background:#F7F8FA;color:var(--c-ink,#0B0F1A);}
+.wm-art{margin-bottom:20px;display:flex;}
+.wm-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--c-accent-dk,#1B7A4F);margin-bottom:8px;}
+.wm-title{font-size:24px;font-weight:700;color:var(--c-ink,#0B0F1A);line-height:1.2;letter-spacing:-0.5px;margin-bottom:14px;}
+.wm-body{font-size:13.5px;color:var(--c-ink-3,#4A4F62);line-height:1.65;margin-bottom:24px;}
+.wm-lanes{display:flex;flex-direction:column;gap:10px;}
+.wm-lane{display:flex;align-items:center;gap:12px;padding:11px 14px;background:#F7F8FA;border-radius:10px;}
+.wm-lane-num{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg, var(--c-accent,#29BA74), var(--c-accent-dk,#1B7A4F));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.wm-lane-t{font-size:13px;font-weight:700;color:var(--c-ink,#0B0F1A);}
+.wm-lane-s{font-size:11.5px;color:var(--c-ink-3,#4A4F62);margin-top:1px;}
+.wm-shortcuts{display:flex;flex-direction:column;gap:12px;}
+.wm-shortcut{display:flex;align-items:center;gap:11px;padding:11px 14px;background:#F7F8FA;border-radius:10px;font-size:12.5px;color:var(--c-ink-2,#1F2436);line-height:1.5;}
+.wm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.wm-dots{display:flex;gap:6px;}
+.wm-dot{width:6px;height:6px;border-radius:50%;background:var(--c-line,#E5E7EE);transition:width var(--m-fast,150ms),background var(--m-fast,150ms);}
+.wm-dot.active{width:18px;background:var(--c-accent,#29BA74);border-radius:3px;}
+.wm-nav{display:flex;gap:8px;}
+.wm-skip,.wm-back{padding:9px 14px;background:transparent;border:none;color:var(--c-ink-4,#767C90);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;border-radius:8px;transition:background var(--m-fast,120ms);}
+.wm-skip:hover,.wm-back:hover{background:#F7F8FA;color:var(--c-ink,#0B0F1A);}
+.wm-next{padding:9px 18px;background:linear-gradient(135deg, var(--c-accent,#29BA74), var(--c-accent-dk,#1B7A4F));color:#fff;border:none;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px -4px rgba(13,59,44,0.45);transition:transform var(--m-fast,120ms),box-shadow var(--m-fast,120ms);}
+.wm-next:hover{transform:translateY(-1px);box-shadow:0 8px 18px -6px rgba(13,59,44,0.55);}
+@media (prefers-reduced-motion: reduce){
+  .welcome-modal,.welcome-scrim,.sd-drawer,.sd-scrim{animation:none!important;}
+}
 /* --- Library refresh: hero + category sections + richer cards --- */
 .lib-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid #EEE;flex-wrap:wrap;}
 .lib-hero-left{flex:1;min-width:260px;}
@@ -3462,6 +3506,10 @@ function renderSidebar(){
     +'<span>Settings</span>'
     +'<span class="sb-settings-meta">'+esc(b.n)+'</span>'
     +'</button>';
+  s+='<button class="sb-settings" onclick="openHelp()" title="How this works · HTML vs SCORM · output formats · keyboard shortcuts" style="margin-top:6px;">'
+    +'<span class="sb-settings-icon">?</span>'
+    +'<span>Help &amp; how it works</span>'
+    +'</button>';
   s+='<a class="sb-cta" href="'+DXT_README_URL+'" target="_blank" title="One-click .dxt install — draft components hands-free in any Claude chat">⌘ Install Claude Desktop</a>';
   s+='<div class="sb-feedback">Feedback · <a href="mailto:patial.jatin@bcg.com">patial.jatin@bcg.com</a></div>';
   s+='</div>';
@@ -3545,6 +3593,190 @@ function closeSettings(){
   var d=document.getElementById("settingsDrawer"); if(d) d.remove();
   if(window._settingsEsc){ document.removeEventListener("keydown", window._settingsEsc); window._settingsEsc=null; }
 }
+
+/* ── Help drawer ─────────────────────────────────────────────────────────────
+   Mirrors the Settings drawer pattern. Right-side slide-out, scrim, Esc to
+   close. Teaches LDs what each surface is for, when to use HTML vs SCORM,
+   where output goes, keyboard shortcuts, and where to send feedback. */
+function openHelp(){
+  closeHelp();
+  var b=B[state.brand];
+  var scrim=document.createElement("div");
+  scrim.id="helpScrim"; scrim.className="sd-scrim";
+  scrim.onclick=function(e){ if(e.target===scrim) closeHelp(); };
+
+  /* Lane diagram inside drawer — mirrors the home hero so the mental model
+     stays consistent. */
+  var lanes=''
+    +'<div class="hd-lane"><div class="hd-lane-icon" style="background:'+b.priLt+';color:'+b.priDk+';">A</div>'
+      +'<div><div class="hd-lane-title">From a deck</div><div class="hd-lane-sub">PPTX / PDF / DOCX → Storyline drafts a full course Word file (cover, modules, lessons, scripts, knowledge checks, glossary).</div></div></div>'
+    +'<div class="hd-lane"><div class="hd-lane-icon" style="background:'+b.priLt+';color:'+b.priDk+';">B</div>'
+      +'<div><div class="hd-lane-title">From an idea</div><div class="hd-lane-sub">Describe a course or single component in chat. Studio drafts the structure and pre-fills components with your data.</div></div></div>'
+    +'<div class="hd-lane"><div class="hd-lane-icon" style="background:'+b.priLt+';color:'+b.priDk+';">C</div>'
+      +'<div><div class="hd-lane-title">From the catalog</div><div class="hd-lane-sub">Browse '+(HTML_COMPS.length+SCORM_COMPS.length)+' pre-built components. Pick one, fill it with your data, paste into Rise / NovoEd / Docebo / Moodle / Canvas.</div></div></div>';
+
+  var bodyHTML=''
+    /* How this works */
+    +'<div class="sd-section">'
+      +'<div class="sd-section-title">How this works</div>'
+      +'<div class="hd-lanes">'+lanes+'</div>'
+    +'</div>'
+    /* HTML vs SCORM */
+    +'<div class="sd-section">'
+      +'<div class="sd-section-title">HTML vs SCORM — when to use which</div>'
+      +'<div class="hd-compare">'
+        +'<div class="hd-compare-card">'
+          +'<div class="hd-compare-tag" style="background:'+b.priLt+';color:'+b.priDk+';">HTML</div>'
+          +'<div class="hd-compare-title">Static, paste-anywhere embeds</div>'
+          +'<div class="hd-compare-list">'
+            +'<div>• Cards, timelines, KPIs, SWOT, pyramids, funnels, stats</div>'
+            +'<div>• Pure HTML/CSS/SVG — no runtime, no JavaScript needed</div>'
+            +'<div>• Drop into a Rise block, NovoEd page, or any LMS that takes raw HTML</div>'
+          +'</div>'
+          +'<div class="hd-compare-when">Use when: presenting facts, summaries, comparisons that don\'t need a learner choice.</div>'
+        +'</div>'
+        +'<div class="hd-compare-card">'
+          +'<div class="hd-compare-tag" style="background:#EDE9FE;color:#7C3AED;">SCORM</div>'
+          +'<div class="hd-compare-title">Interactive activities, tracked</div>'
+          +'<div class="hd-compare-list">'
+            +'<div>• Flip cards, accordions, polls, drag-to-sort, hotspot, branching</div>'
+            +'<div>• SCORM 1.2 zip — completion + score posts back to LMS</div>'
+            +'<div>• Inline editor: press <code>Ctrl+Shift+E</code> in any deployed activity</div>'
+          +'</div>'
+          +'<div class="hd-compare-when">Use when: you need a learner action (click, choose, drag) or LMS completion tracking.</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    /* Output formats */
+    +'<div class="sd-section">'
+      +'<div class="sd-section-title">Where your output goes</div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Word document (.docx)</div><div class="sd-row-sub">Storyline writes the full course outline — hand to a Rise/Articulate builder or load straight onto NovoEd.</div></div></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Paste-ready HTML</div><div class="sd-row-sub">Every component has a <strong>Copy HTML</strong> button. Paste into Rise, NovoEd, Docebo, Moodle, Canvas.</div></div></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">SCORM 1.2 zip</div><div class="sd-row-sub">Self-contained zip with the activity + manifest. Upload to any SCORM-compatible LMS.</div></div></div>'
+    +'</div>'
+    /* Keyboard shortcuts */
+    +'<div class="sd-section">'
+      +'<div class="sd-section-title">Keyboard shortcuts</div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Open command palette</div><div class="sd-row-sub">Search every component, journey, and tool from anywhere.</div></div><kbd class="hd-kbd">⌘&nbsp;K</kbd></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Edit a deployed SCORM activity in place</div><div class="sd-row-sub">Open any rendered SCORM zip → press the shortcut → edit + re-download.</div></div><kbd class="hd-kbd">Ctrl + Shift + E</kbd></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Close any drawer or modal</div><div class="sd-row-sub">Settings, Help, Brand Studio, command palette.</div></div><kbd class="hd-kbd">Esc</kbd></div>'
+    +'</div>'
+    /* About */
+    +'<div class="sd-section">'
+      +'<div class="sd-section-title">About</div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">BCG U Studio</div><div class="sd-row-sub">Learning Design Agent · v0.2 · '+HTML_COMPS.length+' HTML + '+SCORM_COMPS.length+' SCORM components.</div></div></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Feedback</div><div class="sd-row-sub"><a href="mailto:patial.jatin@bcg.com" style="color:var(--c-accent-dk,#1B7A4F);font-weight:700;text-decoration:none;">patial.jatin@bcg.com</a></div></div></div>'
+    +'</div>';
+
+  var drawer=document.createElement("aside");
+  drawer.id="helpDrawer"; drawer.className="sd-drawer";
+  drawer.innerHTML=
+    '<div class="sd-head">'
+    +'<div><div class="sd-head-title">Help &amp; how it works</div><div class="sd-head-sub">3 ways to start · output formats · shortcuts</div></div>'
+    +'<button class="sd-close" onclick="closeHelp()" aria-label="Close help">×</button>'
+    +'</div>'
+    +'<div class="sd-body">'+bodyHTML+'</div>';
+
+  document.body.appendChild(scrim);
+  document.body.appendChild(drawer);
+
+  if(!window._helpEsc){
+    window._helpEsc=function(ev){ if(ev.key==="Escape") closeHelp(); };
+    document.addEventListener("keydown", window._helpEsc);
+  }
+}
+function closeHelp(){
+  var s=document.getElementById("helpScrim"); if(s) s.remove();
+  var d=document.getElementById("helpDrawer"); if(d) d.remove();
+  if(window._helpEsc){ document.removeEventListener("keydown", window._helpEsc); window._helpEsc=null; }
+}
+
+/* ── First-run welcome modal ─────────────────────────────────────────────────
+   Shown once per browser (gated by localStorage flag). Three slides matching
+   the home hero's mental model: welcome → 3 lanes → keyboard hints. */
+function maybeShowWelcome(){
+  try {
+    if(localStorage.getItem("bcgu_seen_welcome")==="1") return;
+  } catch(e){ return; }
+  /* Defer to next tick so the page paints first */
+  setTimeout(function(){ openWelcome(); }, 380);
+}
+function openWelcome(){
+  closeWelcome();
+  var b=B[state.brand];
+  var scrim=document.createElement("div");
+  scrim.id="welcomeScrim";
+  scrim.className="welcome-scrim";
+  scrim.onclick=function(e){ if(e.target===scrim) closeWelcome(true); };
+
+  var slides=[
+    {
+      eyebrow:"Welcome",
+      title:"Your AI co-pilot for Learning Design.",
+      body:"BCG U Studio collapses the 8–14 hour course-build into a single chat. Branded HTML embeds, interactive SCORM, and full course Word files — ready for Rise, NovoEd, Docebo, Moodle, Canvas.",
+      art:"<div style=\"width:96px;height:96px;border-radius:24px;background:"+b.grad+";display:flex;align-items:center;justify-content:center;font-size:42px;color:#fff;font-weight:800;letter-spacing:-2px;box-shadow:0 18px 42px -12px rgba(13,59,44,0.42);\">U</div>"
+    },
+    {
+      eyebrow:"Three ways to start",
+      title:"Pick the one that matches what you have.",
+      body:"<div class='wm-lanes'>"
+        +"<div class='wm-lane'><div class='wm-lane-num'>A</div><div><div class='wm-lane-t'>Drop a deck</div><div class='wm-lane-s'>PPTX / PDF / DOCX → full course Word file</div></div></div>"
+        +"<div class='wm-lane'><div class='wm-lane-num'>B</div><div><div class='wm-lane-t'>Brief in chat</div><div class='wm-lane-s'>Describe a course or component, Studio drafts it</div></div></div>"
+        +"<div class='wm-lane'><div class='wm-lane-num'>C</div><div><div class='wm-lane-t'>Browse parts</div><div class='wm-lane-s'>"+(HTML_COMPS.length+SCORM_COMPS.length)+" components, journey canvas, media studio</div></div></div>"
+        +"</div>",
+      art:""
+    },
+    {
+      eyebrow:"Stay fast",
+      title:"Two shortcuts that pay for themselves.",
+      body:"<div class='wm-shortcuts'>"
+        +"<div class='wm-shortcut'><kbd class='hd-kbd'>⌘&nbsp;K</kbd> opens the command palette — search every component, journey, and tool.</div>"
+        +"<div class='wm-shortcut'><span style='font-size:18px;'>?</span>&nbsp; in the sidebar opens this Help drawer anytime.</div>"
+        +"</div>",
+      art:""
+    }
+  ];
+
+  function renderSlide(idx){
+    var s=slides[idx];
+    var dots="";
+    slides.forEach(function(_,i){ dots+='<span class="wm-dot'+(i===idx?' active':'')+'"></span>'; });
+    var nav=(idx<slides.length-1)
+      ? '<button class="wm-skip" onclick="closeWelcome(true)">Skip</button><button class="wm-next" onclick="window._wmGo('+(idx+1)+')">Next →</button>'
+      : '<button class="wm-back" onclick="window._wmGo('+(idx-1)+')">← Back</button><button class="wm-next" onclick="closeWelcome(true)">Got it</button>';
+    return ''
+      +'<div class="wm-art">'+s.art+'</div>'
+      +'<div class="wm-eyebrow">'+s.eyebrow+'</div>'
+      +'<div class="wm-title">'+s.title+'</div>'
+      +'<div class="wm-body">'+s.body+'</div>'
+      +'<div class="wm-foot"><div class="wm-dots">'+dots+'</div><div class="wm-nav">'+nav+'</div></div>';
+  }
+
+  var modal=document.createElement("div");
+  modal.id="welcomeModal";
+  modal.className="welcome-modal";
+  modal.innerHTML='<button class="wm-close" onclick="closeWelcome(true)" aria-label="Close welcome">×</button><div id="wmInner">'+renderSlide(0)+'</div>';
+
+  window._wmGo=function(i){
+    var inner=document.getElementById("wmInner");
+    if(!inner) return;
+    inner.innerHTML=renderSlide(i);
+  };
+
+  document.body.appendChild(scrim);
+  document.body.appendChild(modal);
+  if(!window._wmEsc){
+    window._wmEsc=function(ev){ if(ev.key==="Escape") closeWelcome(true); };
+    document.addEventListener("keydown", window._wmEsc);
+  }
+}
+function closeWelcome(markSeen){
+  var s=document.getElementById("welcomeScrim"); if(s) s.remove();
+  var m=document.getElementById("welcomeModal"); if(m) m.remove();
+  if(window._wmEsc){ document.removeEventListener("keydown", window._wmEsc); window._wmEsc=null; }
+  if(markSeen){ try{ localStorage.setItem("bcgu_seen_welcome","1"); }catch(e){} }
+}
+
 function shell(content){
   return '<div class="app-shell">'+renderSidebar()+'<div class="app-main">'+content+'</div></div>';
 }
@@ -4127,12 +4359,24 @@ function render() {
     if(pills){
       h+='<div class="lib-active-pills"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:'+b.txL+';margin-right:4px;">Filtering:</span>'+pills+'<span style="font-size:11px;color:'+b.txL+';margin-left:4px;">'+filtered.length+' result'+(filtered.length===1?"":"s")+'</span></div>';
     }
-    /* Empty state */
+    /* Empty state — teach the user how to recover */
     if(filtered.length===0){
+      var activeFilters=[];
+      if(state.cat&&state.cat!=="all") activeFilters.push("category");
+      if(state.goal&&state.goal!=="all") activeFilters.push("teaching goal");
+      if(state.format&&state.format!=="all") activeFilters.push("format");
+      if(state.search) activeFilters.push("search");
+      var filterPhrase=activeFilters.length?"<strong>"+activeFilters.join(" + ")+"</strong>":"current filters";
       h+='<div class="lib-empty">'
         +'<div class="lib-empty-icon">⊘</div>'
-        +'<div class="lib-empty-title">No components match</div>'
-        +'<div class="lib-empty-sub">Try clearing a filter on the left, or <a onclick="state.cat=\'all\';state.goal=\'all\';state.search=\'\';render();" style="color:var(--c-navy,#0E1E3F);cursor:pointer;font-weight:700;">reset all filters</a>.</div>'
+        +'<div class="lib-empty-title">No components match '+filterPhrase+'</div>'
+        +'<div class="lib-empty-sub">'
+          +'Two ways forward: '
+          +'<a onclick="state.cat=\'all\';state.goal=\'all\';state.search=\'\';state.format=\'all\';render();" style="color:var(--c-accent-dk,#1B7A4F);cursor:pointer;font-weight:700;">reset all filters</a>'
+          +' to see all '+(HTML_COMPS.length+SCORM_COMPS.length)+' components, or '
+          +'<a onclick="setState({mode:null,sel:null});setTimeout(function(){var el=document.getElementById(\'studioPrompt\');if(el)el.focus();},100);" style="color:var(--c-accent-dk,#1B7A4F);cursor:pointer;font-weight:700;">describe what you want in chat</a>'
+          +' and Studio will pick the best component for you.'
+        +'</div>'
       +'</div>';
       h+='</div></div></div>'; /* close right + layout + container */
       root.innerHTML=shell(h); return;
@@ -4344,6 +4588,9 @@ function render() {
 }
 if(!loadFromHash())render();
 window.addEventListener("hashchange",function(){loadFromHash();});
+/* Phase 2 Day 3C: first-run welcome modal — once per browser, gated by
+   localStorage. Fires after initial paint so the hero is visible behind. */
+if(typeof maybeShowWelcome==="function") maybeShowWelcome();
 
 /* ── MCP bridge ──────────────────────────────────────────────────────────
    When served from the local MCP server (localhost/127.0.0.1), connect to
