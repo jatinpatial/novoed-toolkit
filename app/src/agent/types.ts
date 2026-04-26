@@ -16,3 +16,24 @@ export interface ChatEntry {
 }
 
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
+
+export interface ProposedLesson {
+  title: string;
+  durationMin?: number;
+  objectives?: string[];
+}
+
+export interface ProposedModule {
+  weekNumber: number;
+  title: string;
+  summary?: string;
+  objectives?: string[];
+  lessons: ProposedLesson[];
+}
+
+export interface CourseOutlineProposal {
+  title: string;
+  audience?: string;
+  durationWeeks: number;
+  modules: ProposedModule[];
+}

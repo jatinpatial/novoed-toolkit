@@ -29,12 +29,16 @@ export interface Lesson {
   title: string;
   duration: number;
   blocks: Block[];
+  objectives?: string[];
 }
 
 export interface Module {
   id: string;
   title: string;
   lessons: Lesson[];
+  weekNumber?: number;
+  summary?: string;
+  objectives?: string[];
 }
 
 export interface Course {
