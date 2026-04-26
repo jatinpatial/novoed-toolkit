@@ -14,9 +14,13 @@
 @font-face { font-family:'BCG Henderson Sans'; src:url('./fonts/BCGHendersonSans-Bold.woff2') format('woff2');    font-weight:700; font-style:normal; font-display:swap; }
 /* --- BCG Henderson Serif --- */
 @font-face { font-family:'BCG Henderson Serif'; src:url('./fonts/BCGHendersonSerif-Regular.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
-/* --- Brand font stack tokens (Henderson → Trebuchet → Inter → system) --- */
+/* --- Brand font stack tokens ---
+   Default everywhere: Trebuchet MS (BCG house font, 100% available on user systems).
+   BCG U brand active → switches to Henderson Sans (with Trebuchet fallback when
+   the licensed .woff2 isn't loaded). See applyBrandVars() in JS for the runtime swap. --- */
 :root {
-  --bcgu-font: 'BCG Henderson Sans', 'Trebuchet MS', 'Inter', system-ui, sans-serif;
+  --bcgu-font: 'Trebuchet MS', 'Lucida Sans', 'Inter', system-ui, sans-serif;
+  --bcgu-font-bcgu: 'BCG Henderson Sans', 'Trebuchet MS', 'Lucida Sans', 'Inter', system-ui, sans-serif;
   --bcgu-font-serif: 'BCG Henderson Serif', Georgia, serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -284,14 +288,14 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 
 /* ── Brand Tokens ── */
 const B = {
-  bcg: { n:"BCG", pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", tx:"#333333", txL:"#666666", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #29BA74, #1B7A4F)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
-  bcgu: { n:"BCG U", pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", tx:"#323232", txL:"#666666", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #197A56, #0D3B2C)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
-  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", tx:"#1F2937", txL:"#6B7280", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #6366F1, #4338CA)", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcg: { n:"BCG", pri:"#29BA74", priDk:"#1B7A4F", priLt:"#E6F7EF", tx:"#333333", txL:"#666666", n1:"#F5F5F5", n2:"#E8E8E8", wh:"#FFFFFF", grad:"linear-gradient(135deg, #29BA74, #1B7A4F)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  bcgu: { n:"BCG U", pri:"#197A56", priDk:"#0D3B2C", priLt:"#E8F3ED", tx:"#323232", txL:"#666666", n1:"#F1EEEA", n2:"#DFD7CD", wh:"#FFFFFF", grad:"linear-gradient(135deg, #197A56, #0D3B2C)", font:"'BCG Henderson Sans','Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
+  custom: { n:"Custom", pri:"#6366F1", priDk:"#4338CA", priLt:"#EEF2FF", tx:"#1F2937", txL:"#6B7280", n1:"#F9FAFB", n2:"#E5E7EB", wh:"#FFFFFF", grad:"linear-gradient(135deg, #6366F1, #4338CA)", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif", dir:"ltr" },
 };
 
 /* ── Language / Font presets ── */
 const LANG_PRESETS = {
-  en:  { n:"English",    dir:"ltr", font:"'BCG Henderson Sans','Trebuchet MS','Inter',system-ui,sans-serif" },
+  en:  { n:"English",    dir:"ltr", font:"'Trebuchet MS','Lucida Sans','Inter',system-ui,sans-serif" },
   ar:  { n:"العربية",    dir:"rtl", font:"'Noto Sans Arabic','Cairo','Tajawal',Tahoma,sans-serif" },
   he:  { n:"עברית",       dir:"rtl", font:"'Noto Sans Hebrew',Arial,sans-serif" },
   fr:  { n:"Français",   dir:"ltr", font:"'Inter','Helvetica Neue',sans-serif" },
@@ -3192,6 +3196,13 @@ function applyBrandVars(){
   document.body.style.setProperty("--sb-active-bg", b.priLt);
   document.body.style.setProperty("--sb-active-fg", b.priDk);
   document.body.style.setProperty("--sb-active-pri", b.pri);
+  /* Page font follows brand: Henderson Sans for BCG U (with Trebuchet fallback),
+     Trebuchet for everything else. The Henderson .woff2 files only ship inside
+     the DXT bundle / hosted /fonts dir, so Trebuchet always picks up the slack. */
+  var pageFont = (state.brand === "bcgu")
+    ? "var(--bcgu-font-bcgu)"
+    : "var(--bcgu-font)";
+  document.body.style.setProperty("font-family", pageFont);
 }
 function renderSidebar(){
   var b=B[state.brand];
@@ -3214,14 +3225,12 @@ function renderSidebar(){
     +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
   s+='<button class="sb-item'+(compsActive?' active':'')+'" onclick="setState({mode:\'html\',sel:null,search:\'\',cat:\'all\'})" title="Browse all '+totalComps+' HTML embeds + SCORM activities">'
     +'<span class="sb-icon">▦</span><span>Components</span><span class="sb-count">'+totalComps+'</span></button>';
-  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Design the full course flow — modules, durations, components per module">'
-    +'<span class="sb-icon">◈</span><span>Journeys</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="writer"?' active':'')+'" onclick="enterWriter()" title="AI-drafted course outlines — Claude writes, you approve">'
-    +'<span class="sb-icon">✎</span><span>Content Writer</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos + grab thumbnails via local ffmpeg (no upload)">'
-    +'<span class="sb-icon">▶</span><span>Media Studio</span><span class="sb-badge" style="background:#29BA74;color:#fff;">NEW</span></button>';
-  s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Turn a PPTX, PDF, or DOCX into a full course Word file — modules, lessons, scripts, knowledge checks">'
+  s+='<button class="sb-item'+(state.mode==="journey"?' active':'')+'" onclick="enterJourney()" title="Visual canvas — drag modules, set durations, see the flow at a glance">'
+    +'<span class="sb-icon">◈</span><span>Journey Canvas</span></button>';
+  s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Brief in chat → full course Word file. Drop a PPTX/PDF/DOCX as factual seed.">'
     +'<span class="sb-icon">📖</span><span>Storyline</span><span class="sb-badge" style="background:#FF7A00;color:#fff;">NEW</span></button>';
+  s+='<button class="sb-item'+(state.mode==="media"?' active':'')+'" onclick="enterMedia()" title="Trim videos + grab thumbnails via local ffmpeg (no upload)">'
+    +'<span class="sb-icon">▶</span><span>Media Studio</span></button>';
   /* Tools */
   s+='<div class="sb-section">Tools</div>';
   s+='<button class="sb-item" onclick="openLibrary()" title="Reuse components you\'ve saved across projects">'
@@ -3575,15 +3584,14 @@ function render() {
       +'<div id="searchResults" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.12);z-index:50;max-height:280px;overflow:auto;"></div>'
       +'</div>';
 
-    /* Quick launch — 5 tiles */
+    /* Quick launch — 4 tiles. Two browse-the-catalog tiles + two AI-drafted-deliverable tiles. */
     hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';margin-bottom:12px;">Quick launch</div>';
-    hm+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;">';
+    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">';
     var tiles=[
       {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
       {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
-      {icon:'◈',title:'Journey Builder',desc:'Design the full course flow',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:'NEW',cta:'Open canvas →'},
-      {icon:'✎',title:'Content Writer',desc:'AI drafts copy, you approve',onclick:"enterWriter()",grad:'linear-gradient(135deg,#06B6D4,#3B82F6)',badge:'NEW',cta:'Open writer →'},
-      {icon:'📖',title:'Storyline',desc:'Brief → full course in Word',onclick:"enterStoryline()",grad:'linear-gradient(135deg,#FF7A00,#E0367C)',badge:'NEW',cta:'Generate doc →'}
+      {icon:'◈',title:'Journey Canvas',desc:'Visual flow editor — drag modules',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:null,cta:'Open canvas →'},
+      {icon:'📖',title:'Storyline',desc:'Brief in chat → full course in Word',onclick:"enterStoryline()",grad:'linear-gradient(135deg,#FF7A00,#E0367C)',badge:'NEW',cta:'Generate doc →'}
     ];
     tiles.forEach(function(t){
       hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid '+b.n2+';border-radius:16px;padding:22px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">';
