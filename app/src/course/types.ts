@@ -22,6 +22,7 @@ export interface Block {
   id: string;
   type: string;
   data: BlockData;
+  source?: "writer";
 }
 
 export interface Lesson {
@@ -41,12 +42,21 @@ export interface Module {
   objectives?: string[];
 }
 
+export interface Material {
+  id: string;
+  filename: string;
+  text: string;
+  charCount: number;
+  addedAt: number;
+}
+
 export interface Course {
   id: string;
   title: string;
   client: string;
   brand: BrandKey;
   modules: Module[];
+  materials?: Material[];
 }
 
 export interface BlockType {
