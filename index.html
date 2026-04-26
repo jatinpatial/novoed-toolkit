@@ -2719,6 +2719,19 @@ function palKey(ev){
   });
 })();
 
+/* Phase 2 Day 3F: platform-aware keyboard shortcut labels.
+   ⌘K is the Mac convention; Ctrl K is Windows/Linux. Displaying the wrong
+   one (e.g. ⌘K to a Windows user) makes the shortcut feel like it's "for
+   somebody else." We flip the label based on navigator.platform so every
+   surface (welcome modal, help drawer, sidebar Search button, footer,
+   search-bar chip) shows the user the keys they actually need to press.
+   The keydown handler above already accepts BOTH metaKey and ctrlKey, so
+   the underlying behavior is identical on both platforms. */
+const IS_MAC = /Mac|iPod|iPhone|iPad/i.test((navigator.platform||"") + " " + (navigator.userAgent||""));
+const KBD_MOD_K       = IS_MAC ? "⌘&nbsp;K"  : "Ctrl&nbsp;K";   /* for <kbd> elements */
+const KBD_MOD_K_TIGHT = IS_MAC ? "⌘K"        : "Ctrl+K";        /* for inline tooltips and tight chips */
+const KBD_MOD_LABEL   = IS_MAC ? "⌘"         : "Ctrl";          /* lone modifier chip */
+
 /* ── Journey Builder v0 ── */
 var JOURNEY_TYPES={
   intro:{label:"Intro",icon:"▶",desc:"Welcome + learning objectives"},
@@ -3548,8 +3561,8 @@ function renderSidebar(){
   s+='<div class="sb-section">Workspace</div>';
   s+='<button class="sb-item'+(homeActive?' active':'')+'" onclick="setState({mode:null,sel:null,search:\'\',cat:\'all\',goal:\'all\',format:\'all\'})" title="Studio landing — three ways to start a course">'
     +'<span class="sb-icon">⌂</span><span>Home</span></button>';
-  s+='<button class="sb-item" onclick="openPalette()" title="Search every component, journey template, and tool (Ctrl+K / Cmd+K)">'
-    +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">⌘K</span></button>';
+  s+='<button class="sb-item" onclick="openPalette()" title="Search every component, journey template, and tool ('+KBD_MOD_K_TIGHT+')">'
+    +'<span class="sb-icon">⌕</span><span>Search</span><span class="sb-count" style="font-family:\'SFMono-Regular\',Menlo,monospace;font-size:9px;border:1px solid #EEE;padding:1px 5px;border-radius:4px;background:#FAFAFA;">'+KBD_MOD_K_TIGHT+'</span></button>';
   /* Start a course — entry points for a brand-new project */
   s+='<div class="sb-section">Start a course</div>';
   s+='<button class="sb-item'+(state.mode==="storyline"?' active':'')+'" onclick="enterStoryline()" title="Drop a deck (PPTX/PDF/DOCX) or describe the course in chat — Studio drafts a full course Word file">'
@@ -3730,7 +3743,7 @@ function openHelp(){
     /* Keyboard shortcuts */
     +'<div class="sd-section">'
       +'<div class="sd-section-title">Keyboard shortcuts</div>'
-      +'<div class="sd-row"><div><div class="sd-row-label">Open command palette</div><div class="sd-row-sub">Search every component, journey, and tool from anywhere.</div></div><kbd class="hd-kbd">⌘&nbsp;K</kbd></div>'
+      +'<div class="sd-row"><div><div class="sd-row-label">Open command palette</div><div class="sd-row-sub">Search every component, journey, and tool from anywhere.</div></div><kbd class="hd-kbd">'+KBD_MOD_K+'</kbd></div>'
       +'<div class="sd-row"><div><div class="sd-row-label">Edit a deployed SCORM activity in place</div><div class="sd-row-sub">Open any rendered SCORM zip → press the shortcut → edit + re-download.</div></div><kbd class="hd-kbd">Ctrl + Shift + E</kbd></div>'
       +'<div class="sd-row"><div><div class="sd-row-label">Close any drawer or modal</div><div class="sd-row-sub">Settings, Help, Brand Studio, command palette.</div></div><kbd class="hd-kbd">Esc</kbd></div>'
     +'</div>'
@@ -3803,7 +3816,7 @@ function openWelcome(){
       eyebrow:"Stay fast",
       title:"Two shortcuts that pay for themselves.",
       body:"<div class='wm-shortcuts'>"
-        +"<div class='wm-shortcut'><kbd class='hd-kbd'>⌘&nbsp;K</kbd> opens the command palette — search every component, journey, and tool.</div>"
+        +"<div class='wm-shortcut'><kbd class='hd-kbd'>"+KBD_MOD_K+"</kbd> opens the command palette — search every component, journey, and tool.</div>"
         +"<div class='wm-shortcut'><span style='font-size:18px;'>?</span>&nbsp; in the sidebar opens this Help drawer anytime.</div>"
         +"</div>",
       art:""
@@ -4293,7 +4306,7 @@ function render() {
     /* Keyboard shortcuts footer (Day 6 polish) */
     hm+='<div style="margin-top:24px;padding:16px 22px;background:#0F172A;border-radius:14px;color:#94A3B8;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:11.5px;">'
       +'<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#FBBF24;">Keyboard</span>'
-      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">⌘</span><span class="kbd-chip" style="color:#F8FAFC;">K</span> open command palette</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">'+KBD_MOD_LABEL+'</span><span class="kbd-chip" style="color:#F8FAFC;">K</span> open command palette</span>'
       +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">/</span> focus list search</span>'
       +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">⌃</span><span class="kbd-chip" style="color:#F8FAFC;">⇧</span><span class="kbd-chip" style="color:#F8FAFC;">E</span> edit a deployed SCORM activity</span>'
       +'<span style="display:inline-flex;align-items:center;gap:7px;"><span class="kbd-chip" style="color:#F8FAFC;">↑</span><span class="kbd-chip" style="color:#F8FAFC;">↓</span> navigate · <span class="kbd-chip" style="color:#F8FAFC;">⏎</span> open</span>'
@@ -4370,11 +4383,11 @@ function render() {
       +'</div>'
     +'</div>';
     /* Search */
-    var searchPlaceholder="Search "+allCs.length+" "+(fmt==="all"?"components":fmt==="scorm"?"activities":"components")+" in this view (press / ) — or ⌘K to search all";
+    var searchPlaceholder="Search "+allCs.length+" "+(fmt==="all"?"components":fmt==="scorm"?"activities":"components")+" in this view (press / ) — or "+KBD_MOD_K_TIGHT+" to search all";
     h+='<div class="lib-search">'
       +'<span class="lib-search-icon">⌕</span>'
       +'<input class="lib-search-input" value="'+esc(state.search)+'" oninput="state.search=this.value;render();" placeholder="'+esc(searchPlaceholder)+'" autofocus/>'
-      +(state.search?'<button onclick="state.search=\'\';render();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;padding:4px;">✕</button>':'<button onclick="openPalette()" class="lib-search-kbd" style="cursor:pointer;border:1px solid #E8E8E8;background:#FAFAFA;font-family:var(--bcgu-font-mono,monospace);" title="Open global search (Ctrl+K)">⌘K</button>')
+      +(state.search?'<button onclick="state.search=\'\';render();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;padding:4px;">✕</button>':'<button onclick="openPalette()" class="lib-search-kbd" style="cursor:pointer;border:1px solid #E8E8E8;background:#FAFAFA;font-family:var(--bcgu-font-mono,monospace);" title="Open global search ('+KBD_MOD_K_TIGHT+')">'+KBD_MOD_K_TIGHT+'</button>')
     +'</div>';
     /* ── Layout: left rail (filters) + right (active filters + grid) ── */
     h+='<div class="lib-layout">';
