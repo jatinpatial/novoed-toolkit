@@ -155,6 +155,34 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def read_materials(args):
         return await _forward("read_materials", args)
 
+    # --- synthesia scriptwriter ---
+
+    @tool(
+        "write_script",
+        (
+            "Write or regenerate a Synthesia avatar script for a single video block. Replaces "
+            "the existing script on that block, if any. The script is a single plain-text string "
+            "with inline cue markers: [PAUSE], [ON-SCREEN: …], [B-ROLL: …]. ~150 wpm pacing, "
+            "sentences <12 words. Default target ~90 seconds (~225 words) unless specified."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "video_block_id": {
+                    "type": "string",
+                    "description": "Real id of the target video block (NOT a display label like '1.2'). Get it from list_structure.",
+                },
+                "script": {
+                    "type": "string",
+                    "description": "Full plain-text script with inline [PAUSE] / [ON-SCREEN: …] / [B-ROLL: …] cues.",
+                },
+            },
+            "required": ["video_block_id", "script"],
+        },
+    )
+    async def write_script(args):
+        return await _forward("write_script", args)
+
     # --- course builder: read ---
 
     @tool(
@@ -260,6 +288,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
             propose_course_outline,
             write_lesson,
             read_materials,
+            write_script,
             list_structure,
             add_module,
             add_lesson,
@@ -278,6 +307,7 @@ ALLOWED_TOOL_NAMES = [
     "mcp__ui__propose_course_outline",
     "mcp__ui__write_lesson",
     "mcp__ui__read_materials",
+    "mcp__ui__write_script",
     "mcp__ui__list_structure",
     "mcp__ui__add_module",
     "mcp__ui__add_lesson",
