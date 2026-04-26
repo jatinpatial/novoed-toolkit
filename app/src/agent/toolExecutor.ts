@@ -39,6 +39,17 @@ export async function dispatchToolCall(
         message: `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`,
       };
     }
+    case "read_materials": {
+      const course = actions.getCourse();
+      const materials = course?.materials ?? [];
+      if (materials.length === 0) {
+        return { ok: true, count: 0, charCount: 0, text: "" };
+      }
+      const text = materials
+        .map((m) => `=== ${m.filename} ===\n${m.text}`)
+        .join("\n\n");
+      return { ok: true, count: materials.length, charCount: text.length, text };
+    }
     case "list_structure": {
       const course = actions.getCourse();
       return course ? summarizeCourse(course) : { course: null };

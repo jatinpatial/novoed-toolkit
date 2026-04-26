@@ -142,6 +142,19 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def write_lesson(args):
         return await _forward("write_lesson", args)
 
+    @tool(
+        "read_materials",
+        (
+            "Return the concatenated text of every source-material file the LD has uploaded for "
+            "the current course (PPTX, PDF, DOCX, TXT, MD). Use this before write_lesson when the "
+            "course has materials, so the lesson body is grounded in them. Quote sparingly; "
+            "paraphrase otherwise. If no materials are attached, returns an empty string."
+        ),
+        {"type": "object", "properties": {}},
+    )
+    async def read_materials(args):
+        return await _forward("read_materials", args)
+
     # --- course builder: read ---
 
     @tool(
@@ -246,6 +259,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
             set_brand,
             propose_course_outline,
             write_lesson,
+            read_materials,
             list_structure,
             add_module,
             add_lesson,
@@ -263,6 +277,7 @@ ALLOWED_TOOL_NAMES = [
     "mcp__ui__set_brand",
     "mcp__ui__propose_course_outline",
     "mcp__ui__write_lesson",
+    "mcp__ui__read_materials",
     "mcp__ui__list_structure",
     "mcp__ui__add_module",
     "mcp__ui__add_lesson",
