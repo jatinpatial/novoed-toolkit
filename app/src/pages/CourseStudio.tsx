@@ -1,0 +1,1199 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  Plus, X, MoreHorizontal, ArrowUp, ArrowDown, Trash2, Copy, Settings2, ChevronLeft, ChevronRight,
+  Save, Check, Download, FileJson, FileText, Eye, Sparkles, MessageSquare, BookOpen, PlayCircle, Home, Type,
+  Video, Image as ImageIcon, Rows3, Hash, ListChecks, Layers, Clock, HelpCircle, BarChart3, Minus, AlertCircle, LucideProps
+} from "lucide-react";
+import { Sidebar } from "../shell/Sidebar";
+import { TopBar, useActiveBrand } from "../shell/TopBar";
+import { PageHeader } from "../ui/PageHeader";
+import { EmptyState } from "../ui/EmptyState";
+import { Button } from "../ui/Button";
+import { B, type BrandKey } from "../brand/tokens";
+import { BTYPES, BDEFAULTS } from "../course/blockTypes";
+import { previewBlock } from "../course/previewBlock";
+import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
+import type { Block, BlockData, BlockItem, Course, Lesson } from "../course/types";
+import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
+import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
+import { AgentChat } from "../agent/AgentChat";
+
+/* ── small helpers ───────────────────────────────────────────────────────── */
+const rid = () => "b" + Math.random().toString(36).slice(2, 10);
+
+function toast(msg: string, ok = true) {
+  const t = document.createElement("div");
+  t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:" + (ok ? "#197A56" : "#dc2626") + ";color:#fff;padding:10px 22px;border-radius:999px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);white-space:nowrap;";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.cssText += ";opacity:0;transition:opacity 0.4s;"; }, 1600);
+  setTimeout(() => { t.parentNode && t.parentNode.removeChild(t); }, 2100);
+}
+
+function makeCourse(brand: BrandKey): Course {
+  return {
+    id: rid(),
+    title: "Untitled Course",
+    client: "",
+    brand,
+    modules: [{
+      id: rid(),
+      title: "Module 1",
+      lessons: [{ id: rid(), title: "1.1 Introduction", duration: 5, blocks: [] }],
+    }],
+  };
+}
+
+function newItem(type: string): BlockItem {
+  if (type === "quiz") return { title: "New option", desc: "0" };
+  if (type === "poll") return { title: "New option", desc: "25" };
+  if (type === "flipcard") return { title: "New card", img: "", desc: "Flip side content" };
+  return { title: "New item", desc: "" };
+}
+
+const BLOCK_ICON: Record<string, React.ComponentType<LucideProps>> = {
+  text: Type, video: Video, image: ImageIcon, banner: Sparkles, callout: AlertCircle,
+  cards: Rows3, stats: Hash, accordion: ListChecks, flipcard: Layers, timeline: Clock,
+  quiz: HelpCircle, poll: BarChart3, divider: Minus,
+};
+
+function BlockIcon({ type, size = 14 }: { type: string; size?: number }) {
+  const Ic = BLOCK_ICON[type] || Type;
+  return <Ic size={size} />;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOP-LEVEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+export default function CourseStudio() {
+  return (
+    <AgentProvider>
+      <CourseStudioInner />
+    </AgentProvider>
+  );
+}
+
+function CourseStudioInner() {
+  const [brand, setBrand] = useActiveBrand();
+  const [params, setParams] = useSearchParams();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const loadedProjectRef = useRef<string | null>(null);
+
+  const urlProjectId = params.get("project");
+
+  // Load project from URL — ONLY when the project id in the URL actually changes.
+  // Without the ref guard, this effect re-fires on every render (because setBrand
+  // and setParams are fresh refs), overwriting in-memory edits with the last-saved
+  // version from localStorage and wiping newly-added blocks.
+  useEffect(() => {
+    if (!urlProjectId) {
+      if (loadedProjectRef.current !== null) {
+        setCourse(null);
+        setProjectId(null);
+        loadedProjectRef.current = null;
+      }
+      return;
+    }
+    if (loadedProjectRef.current === urlProjectId) return;
+
+    const p = getProject(urlProjectId);
+    if (p && p.data.kind === "course") {
+      setCourse(p.data.course);
+      setProjectId(p.id);
+      setBrand(p.brand);
+      loadedProjectRef.current = p.id;
+    } else {
+      setCourse(null);
+      setProjectId(null);
+      loadedProjectRef.current = null;
+      setParams((prev) => { const n = new URLSearchParams(prev); n.delete("project"); return n; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlProjectId]);
+
+  // Autosave
+  useEffect(() => {
+    if (!course || !projectId) return;
+    const t = setTimeout(() => {
+      saveProject({
+        id: projectId,
+        name: course.title,
+        kind: "course",
+        brand: course.brand,
+        data: { kind: "course", course },
+      });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [course, projectId]);
+
+  function openCourse(newCourse: Course, newId: string) {
+    loadedProjectRef.current = newId;
+    setCourse(newCourse);
+    setProjectId(newId);
+    setParams({ project: newId }, { replace: false });
+  }
+
+  function closeCourse() {
+    loadedProjectRef.current = null;
+    setCourse(null);
+    setProjectId(null);
+    setParams((prev) => { const n = new URLSearchParams(prev); n.delete("project"); return n; }, { replace: true });
+  }
+
+  if (!course) return <CoursesHome onOpen={openCourse} brand={brand} />;
+  return <CourseCanvas course={course} setCourse={setCourse} projectId={projectId!} onClose={closeCourse} />;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COURSES HOME — list + create/import
+   ═══════════════════════════════════════════════════════════════════════════ */
+function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    const refresh = () => setProjects(listProjects().filter((p) => p.kind === "course"));
+    refresh();
+    return subscribeProjects(refresh);
+  }, []);
+
+  function handleNew() {
+    const course = makeCourse(brand);
+    const id = uid();
+    saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
+    onOpen(course, id);
+  }
+
+  function handleImport() {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".json";
+    inp.onchange = (e) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = (ev) => {
+        try {
+          const c = JSON.parse(ev.target!.result as string) as Course;
+          if (!c.modules) throw new Error("Not a valid course file");
+          const id = uid();
+          saveProject({ id, name: c.title, kind: "course", brand: c.brand, data: { kind: "course", course: c } });
+          onOpen(c, id);
+          toast("Imported " + c.title);
+        } catch {
+          toast("Could not read that file", false);
+        }
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  }
+
+  return (
+    <div className="h-full flex">
+      <Sidebar />
+      <div className="flex-1 min-w-0 flex flex-col">
+        <TopBar />
+        <main className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+          <PageHeader
+            eyebrow="Course Studio"
+            title="Design full learning journeys."
+            subtitle="Build multi-module courses with video, interactives, and quizzes. Export each lesson as SCORM."
+            actions={
+              <>
+                <button onClick={handleImport} className="btn-secondary btn-sm"><FileJson size={14} /> Import JSON</button>
+                <button onClick={handleNew} className="btn-primary btn-sm"><Plus size={14} /> New course</button>
+              </>
+            }
+          />
+
+          {projects.length === 0 ? (
+            <EmptyState
+              icon={<BookOpen size={24} />}
+              title="No courses yet"
+              description="Create your first course or import one you've saved before."
+              action={
+                <div className="flex gap-2">
+                  <button onClick={handleImport} className="btn-secondary btn-sm">Import JSON</button>
+                  <button onClick={handleNew} className="btn-primary btn-sm">Start new course</button>
+                </div>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {projects.map((p) => {
+                if (p.data.kind !== "course") return null;
+                const c = p.data.course;
+                const mods = c.modules.length;
+                const lessons = c.modules.reduce((s, m) => s + m.lessons.length, 0);
+                const blocks = c.modules.reduce((s, m) => s + m.lessons.reduce((ss, l) => ss + l.blocks.length, 0), 0);
+                return (
+                  <div key={p.id} className="card card-hover group overflow-hidden">
+                    <button
+                      onClick={() => { onOpen(c, p.id); }}
+                      className="w-full text-left p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center">
+                          <BookOpen size={14} />
+                        </div>
+                        <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wide">{p.brand}</span>
+                        <span className="text-[10px] text-ink-300 ml-auto">{new Date(p.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="text-sm font-semibold text-ink-900 mb-1 truncate">{c.title}</div>
+                      <div className="text-xs text-ink-500">{mods} module{mods !== 1 ? "s" : ""} · {lessons} lesson{lessons !== 1 ? "s" : ""} · {blocks} block{blocks !== 1 ? "s" : ""}</div>
+                    </button>
+                    <div className="flex items-center border-t border-ink-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { if (confirm("Delete " + c.title + "?")) deleteProject(p.id); }}
+                        className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COURSE CANVAS — full-bleed editor
+   ═══════════════════════════════════════════════════════════════════════════ */
+interface CanvasProps {
+  course: Course;
+  setCourse: (c: Course) => void;
+  projectId: string;
+  onClose: () => void;
+}
+
+function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
+  const [am, setAm] = useState(0);
+  const [al, setAl] = useState(0);
+  const [outlineOpen, setOutlineOpen] = useState(true);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const mod = course.modules[am] || course.modules[0];
+  const lesson = mod?.lessons[al] || mod?.lessons[0];
+
+  /* ── mutations ─────────────────────────────────────────────────────────── */
+  const mutate = useCallback((fn: (draft: Course) => void) => {
+    const next = JSON.parse(JSON.stringify(course)) as Course;
+    fn(next);
+    setCourse(next);
+  }, [course, setCourse]);
+
+  const patchLesson = useCallback((fn: (l: Lesson) => void) => {
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (l) fn(l);
+    });
+  }, [am, al, mutate]);
+
+  const patchBlock = useCallback((id: string, fn: (b: Block) => void) => {
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (!l) return;
+      const b = l.blocks.find((x) => x.id === id);
+      if (b) fn(b);
+    });
+  }, [am, al, mutate]);
+
+  function addBlock(type: string, atIndex?: number) {
+    const blk: Block = { id: rid(), type, data: JSON.parse(JSON.stringify(BDEFAULTS[type] || {})) };
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (!l) return;
+      const pos = atIndex ?? l.blocks.length;
+      l.blocks.splice(pos, 0, blk);
+    });
+    setInsertAt(null);
+    if (["cards", "stats", "accordion", "flipcard", "timeline", "quiz", "poll"].includes(type)) {
+      setEditingBlockId(blk.id);
+    }
+  }
+
+  function removeBlock(id: string) {
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (l) l.blocks = l.blocks.filter((b) => b.id !== id);
+    });
+    if (editingBlockId === id) setEditingBlockId(null);
+  }
+
+  function duplicateBlock(id: string) {
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (!l) return;
+      const i = l.blocks.findIndex((b) => b.id === id);
+      if (i < 0) return;
+      const copy: Block = { ...l.blocks[i], id: rid(), data: JSON.parse(JSON.stringify(l.blocks[i].data)) };
+      l.blocks.splice(i + 1, 0, copy);
+    });
+  }
+
+  function moveBlock(id: string, dir: -1 | 1) {
+    mutate((c) => {
+      const l = c.modules[am]?.lessons[al];
+      if (!l) return;
+      const i = l.blocks.findIndex((b) => b.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= l.blocks.length) return;
+      [l.blocks[i], l.blocks[j]] = [l.blocks[j], l.blocks[i]];
+    });
+  }
+
+  /* ── agent integration ────────────────────────────────────────────────── */
+  const agentActions = useMemo<AgentActions>(() => ({
+    getCourse: () => course,
+    navigate: () => {},
+    setBrand: (b) => { mutate((c) => { c.brand = b; }); },
+    addModule: (title) => {
+      const id = rid();
+      mutate((c) => {
+        c.modules.push({ id, title, lessons: [{ id: rid(), title: (c.modules.length + 1) + ".1 New Lesson", duration: 5, blocks: [] }] });
+      });
+      return { module_id: id };
+    },
+    addLesson: (moduleId, title, duration = 5) => {
+      const id = rid();
+      mutate((c) => {
+        const m = c.modules.find((x) => x.id === moduleId);
+        if (m) m.lessons.push({ id, title, duration, blocks: [] });
+      });
+      return { lesson_id: id };
+    },
+    addBlock: (lessonId, blockType, data) => {
+      const id = rid();
+      mutate((c) => {
+        c.modules.forEach((m) => m.lessons.forEach((l) => {
+          if (l.id === lessonId) {
+            const base = JSON.parse(JSON.stringify(BDEFAULTS[blockType] || {}));
+            l.blocks.push({ id, type: blockType, data: { ...base, ...(data || {}) } });
+          }
+        }));
+      });
+      return { block_id: id };
+    },
+    updateBlock: (blockId, data) => {
+      mutate((c) => {
+        c.modules.forEach((m) => m.lessons.forEach((l) => l.blocks.forEach((b) => {
+          if (b.id === blockId) b.data = { ...b.data, ...data };
+        })));
+      });
+    },
+    deleteBlock: (blockId) => {
+      mutate((c) => {
+        c.modules.forEach((m) => m.lessons.forEach((l) => {
+          l.blocks = l.blocks.filter((b) => b.id !== blockId);
+        }));
+      });
+    },
+    reorder: () => {},
+    exportLesson: (lessonId, format) => {
+      c: for (const m of course.modules) for (const l of m.lessons) if (l.id === lessonId) {
+        if (format === "scorm") exportLessonSCORM(course, l);
+        else exportCourseJSON(course);
+        break c;
+      }
+    },
+  }), [course, mutate]);
+
+  useRegisterAgentActions(agentActions);
+
+  /* ── render ────────────────────────────────────────────────────────────── */
+  return (
+    <div className="h-full flex flex-col bg-ink-50">
+      <CourseTopBar
+        course={course}
+        lesson={lesson}
+        onTitleChange={(v: string) => mutate((c) => { c.title = v; })}
+        onBrandChange={(b: BrandKey) => mutate((c) => { c.brand = b; })}
+        onPreview={() => setPreviewOpen(true)}
+        onExportScorm={() => { if (lesson) { exportLessonSCORM(course, lesson); toast("SCORM package downloaded"); } }}
+        onExportJson={() => { exportCourseJSON(course); toast("JSON downloaded"); }}
+        onExportOutline={() => { exportOutlineText(course); toast("Outline downloaded"); }}
+        onClose={onClose}
+        projectId={projectId}
+      />
+
+      <div className="flex-1 min-h-0 flex">
+        {/* Outline */}
+        {outlineOpen && (
+          <CourseOutline
+            course={course}
+            am={am} al={al}
+            onSelect={(mi: number, li: number) => { setAm(mi); setAl(li); setEditingBlockId(null); }}
+            onUpdate={mutate}
+            onCollapse={() => setOutlineOpen(false)}
+          />
+        )}
+        {!outlineOpen && (
+          <button
+            onClick={() => setOutlineOpen(true)}
+            title="Open outline"
+            className="w-8 bg-white border-r border-ink-200 flex flex-col items-center justify-start pt-4 text-ink-400 hover:text-ink-700 hover:bg-ink-50 transition"
+          >
+            <ChevronRight size={16} />
+          </button>
+        )}
+
+        {/* Canvas */}
+        <div className="flex-1 min-w-0 overflow-y-auto">
+          {lesson ? (
+            <LessonCanvas
+              lesson={lesson}
+              brand={course.brand}
+              am={am} al={al}
+              onUpdateLesson={patchLesson}
+              onUpdateBlock={patchBlock}
+              onAddBlock={addBlock}
+              onRemoveBlock={removeBlock}
+              onMoveBlock={moveBlock}
+              onDuplicateBlock={duplicateBlock}
+              onEditBlock={setEditingBlockId}
+              insertAt={insertAt}
+              setInsertAt={setInsertAt}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <EmptyState icon={<BookOpen size={24} />} title="Pick a lesson" description="Select a lesson from the outline on the left to start building." />
+            </div>
+          )}
+        </div>
+
+        {/* Block editor slide-over */}
+        {editingBlockId && lesson && (
+          <BlockDrawer
+            block={lesson.blocks.find((b) => b.id === editingBlockId)!}
+            brand={course.brand}
+            onUpdate={(fn) => patchBlock(editingBlockId, fn)}
+            onClose={() => setEditingBlockId(null)}
+            onDelete={() => removeBlock(editingBlockId)}
+          />
+        )}
+      </div>
+
+      {/* Floating Copilot */}
+      <FloatingCopilot />
+
+      {/* Preview modal */}
+      {previewOpen && lesson && (
+        <LessonPreviewModal lesson={lesson} course={course} onClose={() => setPreviewOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOP BAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview, onExportScorm, onExportJson, onExportOutline, onClose, projectId }: any) {
+  const [saved, setSaved] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    setSaved(false);
+    const t = setTimeout(() => setSaved(true), 600);
+    return () => clearTimeout(t);
+  }, [course]);
+
+  return (
+    <header className="h-14 bg-white border-b border-ink-200 flex items-center px-4 gap-3 flex-shrink-0">
+      <Link to="/" className="btn-ghost btn-sm -ml-2" title="Dashboard"><Home size={14} /></Link>
+      <div className="h-5 w-px bg-ink-200" />
+      <Link to="/courses" onClick={onClose} className="btn-ghost btn-sm">
+        <ChevronLeft size={14} /> Courses
+      </Link>
+
+      <div className="flex-1 min-w-0 flex items-center gap-2 justify-center">
+        <input
+          value={course.title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="Untitled course"
+          className="max-w-md text-base font-bold text-ink-900 bg-transparent border-none outline-none text-center px-2 h-8 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+        />
+        {lesson && (
+          <>
+            <span className="text-ink-300 text-sm">/</span>
+            <span className="text-sm font-medium text-ink-500 truncate max-w-xs">{lesson.title}</span>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={`text-[11px] font-medium flex items-center gap-1 ${saved ? "text-ink-400" : "text-brand-700"}`}>
+          {saved ? <><Check size={12} /> Saved</> : <><Save size={12} /> Saving…</>}
+        </span>
+
+        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100">
+          {(Object.keys(B) as BrandKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => onBrandChange(k)}
+              className={`px-2 h-7 rounded text-[11px] font-semibold transition ${course.brand === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+            >
+              {B[k].n}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onPreview} className="btn-secondary btn-sm" disabled={!lesson}><Eye size={14} /> Preview</button>
+
+        <div className="relative" ref={menuRef}>
+          <button onClick={() => setMenuOpen((v) => !v)} className="btn-primary btn-sm"><Download size={14} /> Export</button>
+          {menuOpen && (
+            <div className="absolute right-0 top-10 z-40 bg-white rounded-lg border border-ink-200 shadow-elevated w-56 py-1">
+              <button onClick={() => { setMenuOpen(false); onExportScorm(); }} className="w-full text-left px-3 py-2 text-xs hover:bg-ink-50 flex items-center gap-2">
+                <Download size={13} className="text-brand-600" />
+                <div>
+                  <div className="font-semibold text-ink-900">Lesson as SCORM (.zip)</div>
+                  <div className="text-[10px] text-ink-400">Upload to NovoEd</div>
+                </div>
+              </button>
+              <button onClick={() => { setMenuOpen(false); onExportJson(); }} className="w-full text-left px-3 py-2 text-xs hover:bg-ink-50 flex items-center gap-2">
+                <FileJson size={13} className="text-indigo-600" />
+                <div>
+                  <div className="font-semibold text-ink-900">Course as JSON</div>
+                  <div className="text-[10px] text-ink-400">Back up or share with the team</div>
+                </div>
+              </button>
+              <button onClick={() => { setMenuOpen(false); onExportOutline(); }} className="w-full text-left px-3 py-2 text-xs hover:bg-ink-50 flex items-center gap-2">
+                <FileText size={13} className="text-amber-600" />
+                <div>
+                  <div className="font-semibold text-ink-900">Outline as text</div>
+                  <div className="text-[10px] text-ink-400">Summary of modules and lessons</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OUTLINE
+   ═══════════════════════════════════════════════════════════════════════════ */
+function CourseOutline({ course, am, al, onSelect, onUpdate, onCollapse }: any) {
+  function addModule() {
+    onUpdate((c: Course) => {
+      const mi = c.modules.length + 1;
+      c.modules.push({ id: rid(), title: "Module " + mi, lessons: [{ id: rid(), title: mi + ".1 New Lesson", duration: 5, blocks: [] }] });
+    });
+  }
+
+  function addLesson(mi: number) {
+    onUpdate((c: Course) => {
+      const m = c.modules[mi];
+      if (!m) return;
+      const li = m.lessons.length + 1;
+      m.lessons.push({ id: rid(), title: (mi + 1) + "." + li + " New lesson", duration: 5, blocks: [] });
+    });
+  }
+
+  function removeLesson(mi: number, li: number) {
+    onUpdate((c: Course) => {
+      const m = c.modules[mi];
+      if (!m || m.lessons.length <= 1) return;
+      m.lessons.splice(li, 1);
+    });
+  }
+
+  function removeModule(mi: number) {
+    onUpdate((c: Course) => {
+      if (c.modules.length <= 1) return;
+      c.modules.splice(mi, 1);
+    });
+  }
+
+  return (
+    <aside className="w-64 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
+      <div className="h-11 flex items-center justify-between px-4 border-b border-ink-200">
+        <span className="text-[10px] font-bold text-ink-500 uppercase tracking-wide">Course outline</span>
+        <button onClick={onCollapse} title="Collapse outline" className="text-ink-400 hover:text-ink-700">
+          <ChevronLeft size={14} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-2">
+        {course.modules.map((m: any, mi: number) => (
+          <div key={m.id} className="mb-1">
+            <div className="px-3 pt-2 pb-1 flex items-center gap-1.5 group">
+              <span className="w-5 h-5 flex-shrink-0 rounded bg-ink-900 text-white text-[9px] font-bold flex items-center justify-center">{mi + 1}</span>
+              <input
+                value={m.title}
+                onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
+                className="flex-1 text-xs font-bold text-ink-900 bg-transparent border-none outline-none min-w-0"
+              />
+              {course.modules.length > 1 && (
+                <button
+                  onClick={() => { if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
+                  className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500"
+                  title="Delete module"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+            {m.lessons.map((l: any, li: number) => {
+              const active = am === mi && al === li;
+              return (
+                <div key={l.id} className={`group mx-2 rounded-md flex items-center gap-1.5 pl-7 pr-2 py-1.5 cursor-pointer ${active ? "bg-brand-50" : "hover:bg-ink-50"}`}
+                  onClick={() => onSelect(mi, li)}
+                >
+                  <span className={`text-[10px] font-bold flex-shrink-0 ${active ? "text-brand-700" : "text-ink-400"}`}>{mi + 1}.{li + 1}</span>
+                  <span className={`text-[12px] flex-1 truncate ${active ? "text-brand-800 font-semibold" : "text-ink-700"}`}>
+                    {l.title.replace(/^\d+\.\d+\s*/, "")}
+                  </span>
+                  <span className="text-[10px] text-ink-300">{l.blocks.length}</span>
+                  {m.lessons.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (confirm("Delete lesson?")) removeLesson(mi, li); }}
+                      className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500"
+                      title="Delete"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <button onClick={() => addLesson(mi)} className="mx-2 mt-0.5 px-7 py-1 text-[11px] text-ink-400 hover:text-brand-700 rounded hover:bg-brand-50 w-[calc(100%-16px)] text-left">
+              + lesson
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={addModule} className="mx-3 my-3 py-2 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
+        <Plus size={12} /> Add module
+      </button>
+    </aside>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LESSON CANVAS
+   ═══════════════════════════════════════════════════════════════════════════ */
+function LessonCanvas({ lesson, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
+  return (
+    <div className="max-w-3xl mx-auto px-8 py-10">
+      {/* Lesson header */}
+      <div className="mb-8">
+        <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider mb-1">Lesson</div>
+        <input
+          value={lesson.title}
+          onChange={(e) => onUpdateLesson((l: Lesson) => { l.title = e.target.value; })}
+          placeholder="Lesson title"
+          className="w-full text-3xl font-bold text-ink-900 bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+        />
+        <div className="flex items-center gap-3 text-xs text-ink-500">
+          <div className="flex items-center gap-1.5">
+            <Clock size={12} className="text-ink-400" />
+            <input
+              type="number"
+              value={lesson.duration}
+              min={1}
+              onChange={(e) => onUpdateLesson((l: Lesson) => { l.duration = parseInt(e.target.value) || 5; })}
+              className="w-10 bg-transparent border-none outline-none text-xs font-medium"
+            />
+            <span>minutes</span>
+          </div>
+          <span>·</span>
+          <span>{lesson.blocks.length} block{lesson.blocks.length !== 1 ? "s" : ""}</span>
+        </div>
+      </div>
+
+      {/* Blocks */}
+      {lesson.blocks.length === 0 ? (
+        <div className="py-10">
+          <BlockInsertRow onPick={(t) => onAddBlock(t)} expanded />
+        </div>
+      ) : (
+        <>
+          <BlockInsertRow onPick={(t) => onAddBlock(t, 0)} compact />
+          {lesson.blocks.map((blk: Block, i: number) => (
+            <div key={blk.id}>
+              <BlockCard
+                block={blk}
+                brand={brand}
+                first={i === 0}
+                last={i === lesson.blocks.length - 1}
+                onInlineEdit={(field: string, val: unknown) => onUpdateBlock(blk.id, (b: Block) => { (b.data as Record<string, unknown>)[field] = val; })}
+                onOpenEditor={() => onEditBlock(blk.id)}
+                onMove={(d: -1 | 1) => onMoveBlock(blk.id, d)}
+                onDuplicate={() => onDuplicateBlock(blk.id)}
+                onRemove={() => onRemoveBlock(blk.id)}
+              />
+              <BlockInsertRow onPick={(t) => onAddBlock(t, i + 1)} compact />
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCK INSERT ROW — the "hover to insert" gap
+   ═══════════════════════════════════════════════════════════════════════════ */
+function BlockInsertRow({ onPick, compact = false, expanded = false }: { onPick: (type: string) => void; compact?: boolean; expanded?: boolean }) {
+  const [open, setOpen] = useState(expanded);
+
+  if (expanded || open) {
+    return (
+      <div className="my-4">
+        <BlockPickerPanel onPick={(t) => { onPick(t); setOpen(false); }} onClose={() => setOpen(false)} expanded={expanded} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="group relative h-6 my-1 flex items-center justify-center">
+      <div className="absolute inset-x-0 h-px bg-transparent group-hover:bg-brand-200 transition-colors" />
+      <button
+        onClick={() => setOpen(true)}
+        className={`relative z-10 inline-flex items-center gap-1.5 px-3 h-6 rounded-full bg-white border border-ink-200 text-[11px] font-semibold text-ink-400 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition ${compact ? "opacity-0 group-hover:opacity-100" : ""}`}
+      >
+        <Plus size={11} /> Add block
+      </button>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCK PICKER PANEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+function BlockPickerPanel({ onPick, onClose, expanded }: { onPick: (t: string) => void; onClose: () => void; expanded: boolean }) {
+  const categories: { label: string; ids: string[] }[] = [
+    { label: "Text & media", ids: ["text", "banner", "callout", "image", "video", "divider"] },
+    { label: "Data", ids: ["cards", "stats", "timeline", "accordion", "flipcard"] },
+    { label: "Assessment", ids: ["quiz", "poll"] },
+  ];
+
+  return (
+    <div className="card p-5 relative">
+      {!expanded && (
+        <button onClick={onClose} className="absolute top-3 right-3 text-ink-400 hover:text-ink-700">
+          <X size={14} />
+        </button>
+      )}
+      <div className="text-xs font-bold text-ink-900 mb-4">Add a block</div>
+      <div className="space-y-4">
+        {categories.map((cat) => (
+          <div key={cat.label}>
+            <div className="text-[10px] font-bold text-ink-400 uppercase tracking-wide mb-2">{cat.label}</div>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+              {cat.ids.map((id) => {
+                const bt = BTYPES.find((x) => x.id === id);
+                if (!bt) return null;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => onPick(id)}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-ink-200 bg-white hover:border-brand-500 hover:bg-brand-50 transition group"
+                  >
+                    <div className="w-9 h-9 rounded-md flex items-center justify-center text-ink-500 bg-ink-100 group-hover:bg-white group-hover:text-brand-700 transition">
+                      <BlockIcon type={id} size={16} />
+                    </div>
+                    <span className="text-[11px] font-semibold text-ink-700 group-hover:text-brand-700">{bt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCK CARD — one block on the canvas
+   ═══════════════════════════════════════════════════════════════════════════ */
+function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMove, onDuplicate, onRemove }: any) {
+  const isSimple = ["text", "banner", "callout", "divider"].includes(block.type);
+  const bt = BTYPES.find((x) => x.id === block.type);
+  const previewHtml = useMemo(() => previewBlock(block, brand), [block, brand]);
+
+  return (
+    <div className="group relative">
+      {/* Side actions */}
+      <div className="absolute -left-12 top-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={() => onMove(-1)} disabled={first} className="w-8 h-7 rounded text-ink-400 hover:text-ink-800 hover:bg-white disabled:opacity-30 flex items-center justify-center"><ArrowUp size={12} /></button>
+        <button onClick={() => onMove(1)} disabled={last} className="w-8 h-7 rounded text-ink-400 hover:text-ink-800 hover:bg-white disabled:opacity-30 flex items-center justify-center"><ArrowDown size={12} /></button>
+      </div>
+
+      <div className="rounded-xl bg-white border border-ink-200 hover:border-ink-300 hover:shadow-card transition group/block">
+        {/* Block header */}
+        <div className="flex items-center gap-2 px-4 h-9 border-b border-ink-100 bg-ink-50/50">
+          <div className="w-5 h-5 rounded-md bg-white border border-ink-200 flex items-center justify-center text-ink-500 flex-shrink-0">
+            <BlockIcon type={block.type} size={11} />
+          </div>
+          <span className="text-[11px] font-bold text-ink-700">{bt?.label || block.type}</span>
+          <div className="flex-1" />
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/block:opacity-100 transition-opacity">
+            {!isSimple && (
+              <button onClick={onOpenEditor} title="Edit contents" className="w-7 h-7 rounded text-ink-400 hover:text-brand-700 hover:bg-white flex items-center justify-center">
+                <Settings2 size={12} />
+              </button>
+            )}
+            <button onClick={onDuplicate} title="Duplicate" className="w-7 h-7 rounded text-ink-400 hover:text-ink-800 hover:bg-white flex items-center justify-center">
+              <Copy size={12} />
+            </button>
+            <button onClick={onRemove} title="Delete" className="w-7 h-7 rounded text-ink-400 hover:text-red-500 hover:bg-white flex items-center justify-center">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body: inline edit for simple, rendered preview for complex */}
+        <div className="p-5">
+          {isSimple ? (
+            <SimpleBlockEditor block={block} brand={brand} onChange={onInlineEdit} />
+          ) : (
+            <div onClick={onOpenEditor} className="cursor-pointer" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIMPLE BLOCK INLINE EDITORS
+   ═══════════════════════════════════════════════════════════════════════════ */
+function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: BrandKey; onChange: (field: string, val: any) => void }) {
+  const b = B[brand];
+  const d = block.data || {};
+
+  if (block.type === "text") {
+    return (
+      <textarea
+        value={d.content || ""}
+        onChange={(e) => onChange("content", e.target.value)}
+        rows={Math.max(3, (d.content || "").split("\n").length)}
+        placeholder="Start writing..."
+        className="w-full text-[15px] leading-relaxed text-ink-900 bg-transparent border-none outline-none resize-none placeholder:text-ink-300"
+      />
+    );
+  }
+
+  if (block.type === "banner") {
+    return (
+      <div className="rounded-lg overflow-hidden" style={{ background: b.grad }}>
+        <div className="p-6">
+          <input
+            value={d.title || ""}
+            onChange={(e) => onChange("title", e.target.value)}
+            placeholder="Banner title"
+            className="w-full text-lg font-bold text-white bg-transparent border-none outline-none placeholder:text-white/50 mb-2"
+          />
+          <textarea
+            value={d.body || ""}
+            onChange={(e) => onChange("body", e.target.value)}
+            rows={2}
+            placeholder="Supporting message"
+            className="w-full text-sm text-white/90 bg-transparent border-none outline-none resize-none placeholder:text-white/40"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "callout") {
+    const types = [{ v: "info", l: "Info", emoji: "ℹ️" }, { v: "tip", l: "Tip", emoji: "💡" }, { v: "warning", l: "Warning", emoji: "⚠️" }, { v: "success", l: "Success", emoji: "✅" }];
+    const current = types.find((t) => t.v === (d.type || "tip")) || types[1];
+    const isWarn = d.type === "warning";
+    return (
+      <div className={`rounded-r-lg border-l-4 ${isWarn ? "border-amber-500 bg-amber-50" : "border-brand-500 bg-brand-50"} p-4`}>
+        <div className="flex items-start gap-3">
+          <span className="text-xl">{current.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex gap-1 mb-2">
+              {types.map((t) => (
+                <button
+                  key={t.v}
+                  onClick={() => onChange("type", t.v)}
+                  className={`text-[10px] px-2 h-5 rounded-md font-semibold transition ${d.type === t.v ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+                >
+                  {t.l}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={d.body || ""}
+              onChange={(e) => onChange("body", e.target.value)}
+              rows={2}
+              placeholder="Your message..."
+              className="w-full text-sm text-ink-800 bg-transparent border-none outline-none resize-none placeholder:text-ink-400"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "divider") {
+    return (
+      <div className="flex items-center gap-3 py-3">
+        <div className="flex-1 h-0.5" style={{ background: b.pri }} />
+        <input
+          value={d.title || ""}
+          onChange={(e) => onChange("title", e.target.value)}
+          placeholder="Section label (optional)"
+          className="text-xs font-bold uppercase tracking-widest text-center bg-transparent border-none outline-none placeholder:text-ink-300"
+          style={{ color: b.pri, minWidth: d.title ? 0 : 140, width: (d.title?.length || 14) + "ch" }}
+        />
+        <div className="flex-1 h-0.5" style={{ background: b.pri }} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCK DRAWER — slide-over editor for complex blocks
+   ═══════════════════════════════════════════════════════════════════════════ */
+function BlockDrawer({ block, brand, onUpdate, onClose, onDelete }: { block: Block; brand: BrandKey; onUpdate: (fn: (b: Block) => void) => void; onClose: () => void; onDelete: () => void }) {
+  const bt = BTYPES.find((x) => x.id === block.type);
+  const d = block.data || {};
+  const items = d.items || [];
+
+  function patchField(field: string, val: any) { onUpdate((b) => { (b.data as any)[field] = val; }); }
+  function patchItem(i: number, field: string, val: any) { onUpdate((b) => { if (b.data.items && b.data.items[i]) (b.data.items[i] as any)[field] = val; }); }
+  function addItem() { onUpdate((b) => { if (b.data.items) b.data.items.push(newItem(block.type)); }); }
+  function rmItem(i: number) {
+    const minItems = block.type === "quiz" ? 2 : 1;
+    if ((items.length) <= minItems) { toast("Need at least " + minItems + " item(s)", false); return; }
+    onUpdate((b) => { if (b.data.items) b.data.items.splice(i, 1); });
+  }
+
+  return (
+    <aside className="w-[380px] flex-shrink-0 bg-white border-l border-ink-200 flex flex-col">
+      <div className="h-11 border-b border-ink-200 px-4 flex items-center gap-2">
+        <div className="w-6 h-6 rounded-md bg-ink-100 flex items-center justify-center text-ink-600">
+          <BlockIcon type={block.type} size={12} />
+        </div>
+        <span className="text-sm font-semibold text-ink-900">{bt?.label}</span>
+        <span className="text-[10px] text-ink-400 ml-auto">Block settings</span>
+        <button onClick={onClose} className="text-ink-400 hover:text-ink-700 ml-2"><X size={16} /></button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Title / body shared fields */}
+        {d.title !== undefined && (
+          <Field label="Title">
+            <input value={d.title} onChange={(e) => patchField("title", e.target.value)} className="input" />
+          </Field>
+        )}
+        {d.body !== undefined && (
+          <Field label="Body / description">
+            <textarea value={d.body} onChange={(e) => patchField("body", e.target.value)} rows={3} className="textarea" />
+          </Field>
+        )}
+
+        {/* Image URL for image */}
+        {block.type === "image" && (
+          <>
+            <Field label="Image URL">
+              <input value={d.url || ""} onChange={(e) => patchField("url", e.target.value)} placeholder="https://..." className="input" />
+            </Field>
+            <Field label="Caption">
+              <input value={d.caption || ""} onChange={(e) => patchField("caption", e.target.value)} className="input" />
+            </Field>
+          </>
+        )}
+
+        {block.type === "video" && (
+          <>
+            <Field label="Video URL (YouTube / Vimeo)">
+              <input value={d.url || ""} onChange={(e) => patchField("url", e.target.value)} placeholder="https://..." className="input" />
+            </Field>
+            <Field label="Caption">
+              <input value={d.caption || ""} onChange={(e) => patchField("caption", e.target.value)} className="input" />
+            </Field>
+          </>
+        )}
+
+        {/* Items */}
+        {d.items && (
+          <>
+            <Field label={block.type === "quiz" ? "Options" : block.type === "poll" ? "Options (with % result)" : "Items"}>
+              <div className="space-y-2">
+                {block.type === "quiz" && (
+                  <div className="rounded-lg bg-ink-50 border border-ink-100 p-2.5">
+                    <label className="text-[10px] font-bold text-ink-500 uppercase tracking-wide mb-1 block">Question</label>
+                    <textarea
+                      value={items[0]?.title || ""}
+                      onChange={(e) => patchItem(0, "title", e.target.value)}
+                      rows={2}
+                      className="textarea text-sm"
+                      placeholder="Type your question..."
+                    />
+                  </div>
+                )}
+                {(block.type === "quiz" ? items.slice(1) : items).map((it: BlockItem, i: number) => {
+                  const realIdx = block.type === "quiz" ? i + 1 : i;
+                  const isCorrect = block.type === "quiz" && it.desc === "1";
+                  return (
+                    <div key={realIdx} className="rounded-lg bg-ink-50 border border-ink-100 p-2.5 relative group">
+                      <div className="flex items-start gap-2">
+                        {block.type === "quiz" ? (
+                          <button
+                            onClick={() => patchItem(realIdx, "desc", isCorrect ? "0" : "1")}
+                            className={`w-6 h-6 rounded-md border-2 flex-shrink-0 flex items-center justify-center text-xs mt-0.5 ${isCorrect ? "border-brand-500 bg-brand-50 text-brand-700" : "border-ink-200 bg-white text-ink-400"}`}
+                            title={isCorrect ? "Correct answer" : "Mark correct"}
+                          >
+                            {isCorrect ? "✓" : ""}
+                          </button>
+                        ) : (
+                          <span className="w-6 h-6 flex-shrink-0 rounded-md bg-brand-50 text-brand-700 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <input
+                            value={it.title || ""}
+                            onChange={(e) => patchItem(realIdx, "title", e.target.value)}
+                            placeholder={block.type === "quiz" ? "Option text" : "Title"}
+                            className="w-full bg-white border border-ink-200 rounded-md px-2 h-7 text-xs font-semibold outline-none focus:border-brand-500 mb-1.5"
+                          />
+                          {it.desc !== undefined && block.type !== "quiz" && block.type !== "poll" && (
+                            <textarea
+                              value={it.desc}
+                              onChange={(e) => patchItem(realIdx, "desc", e.target.value)}
+                              rows={2}
+                              placeholder={block.type === "flipcard" ? "Back content" : "Description"}
+                              className="w-full bg-white border border-ink-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-brand-500 resize-none"
+                            />
+                          )}
+                          {block.type === "poll" && (
+                            <input
+                              value={it.desc || "25"}
+                              onChange={(e) => patchItem(realIdx, "desc", e.target.value)}
+                              placeholder="25"
+                              className="w-full bg-white border border-ink-200 rounded-md px-2 h-7 text-xs outline-none focus:border-brand-500"
+                            />
+                          )}
+                          {block.type === "flipcard" && it.img !== undefined && (
+                            <input
+                              value={it.img || ""}
+                              onChange={(e) => patchItem(realIdx, "img", e.target.value)}
+                              placeholder="Image URL (optional)"
+                              className="w-full bg-white border border-ink-200 rounded-md px-2 h-7 text-xs outline-none focus:border-brand-500 mt-1.5"
+                            />
+                          )}
+                        </div>
+                        <button
+                          onClick={() => rmItem(realIdx)}
+                          className="w-6 h-6 rounded text-ink-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center flex-shrink-0"
+                          title="Remove"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={addItem} className="w-full h-8 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
+                  <Plus size={12} /> Add {block.type === "quiz" ? "option" : block.type === "poll" ? "option" : block.type === "flipcard" ? "card" : "item"}
+                </button>
+              </div>
+            </Field>
+          </>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-ink-200">
+        <button onClick={() => { if (confirm("Delete this block?")) onDelete(); }} className="btn-danger btn-sm w-full">
+          <Trash2 size={13} /> Remove block
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="label mb-1.5 block">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LESSON PREVIEW (full-screen modal)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; course: Course; onClose: () => void }) {
+  const src = useMemo(() => {
+    // Stitch lesson preview HTML (reuse course preview)
+    const b = B[course.brand];
+    const inner = lesson.blocks.map((blk) => {
+      return '<div style="margin-bottom:28px;">' + previewBlock(blk, course.brand) + "</div>";
+    }).join("");
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Inter,system-ui,sans-serif;margin:0;background:#f6f7f8;color:${b.tx}}.hdr{background:${b.grad};padding:22px 40px;color:#fff}.hdr .crs{font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}.hdr .ttl{font-size:22px;font-weight:700;line-height:1.3}.bd{max-width:760px;margin:0 auto;padding:36px 24px}</style></head><body><div class="hdr"><div class="crs">${course.title}</div><div class="ttl">${lesson.title}</div></div><div class="bd">${inner}</div></body></html>`;
+  }, [lesson, course]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-ink-950/80 flex flex-col p-6">
+      <div className="flex items-center justify-between text-white mb-4">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70">Preview</div>
+          <div className="text-base font-semibold">{lesson.title}</div>
+        </div>
+        <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-ink-300 hover:text-white">
+          <X size={16} /> Close (Esc)
+        </button>
+      </div>
+      <iframe srcDoc={src} title="Lesson preview" className="flex-1 w-full bg-white rounded-xl border-0" />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLOATING COPILOT
+   ═══════════════════════════════════════════════════════════════════════════ */
+function FloatingCopilot() {
+  const { open, setOpen } = useAgent();
+
+  if (open) {
+    // AgentChat renders its own floating panel
+    return <AgentChat />;
+  }
+
+  return (
+    <button
+      onClick={() => setOpen(true)}
+      className="fixed bottom-6 right-6 z-40 px-4 h-11 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition flex items-center gap-2"
+    >
+      <Sparkles size={16} />
+      Copilot
+    </button>
+  );
+}
