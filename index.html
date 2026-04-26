@@ -316,6 +316,8 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 .lib-card-body{padding:12px 14px 14px;flex:1;display:flex;flex-direction:column;}
 .lib-card-name{font-size:13.5px;font-weight:700;color:#222;margin-bottom:4px;letter-spacing:-0.2px;}
 .lib-card-desc{font-size:11.5px;color:#777;line-height:1.5;flex:1;}
+.lib-card-when{font-size:10.5px;color:var(--c-accent-dk,#1B7A4F);line-height:1.5;margin-top:8px;padding:7px 9px;background:var(--c-accent-lt,#E6F7EF);border-radius:6px;border-left:2.5px solid var(--c-accent,#29BA74);font-weight:500;}
+.lib-card-when strong{font-weight:800;text-transform:uppercase;font-size:9px;letter-spacing:1.2px;margin-right:4px;color:var(--c-accent-dk,#1B7A4F);}
 .lib-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px dashed #F0F0F0;}
 .lib-card-chip{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding:3px 8px;border-radius:6px;}
 .lib-card-arrow{font-size:13px;color:#bbb;transition:transform 0.2s,color 0.2s;}
@@ -734,6 +736,67 @@ const SCORM_COMPS = [
   { id:"s_categorize", n:"Drag to Categorize", d:"Drag items into correct category buckets",       ic:"▤", cat:"assessment"  },
   { id:"s_promptflow", n:"Prompt Flow",        d:"Step through copyable AI prompts with progress", ic:"⚡", cat:"interactive" },
 ];
+
+/* Phase 2 Day 3D: "Use when:" microcopy.
+   The component description (`.d`) tells you WHAT it is. USE_WHEN tells you
+   the SITUATION — the trigger that should make an LD reach for this
+   component. Helps a brand-new LD pick correctly without trial-and-error. */
+const USE_WHEN = {
+  /* HTML — text */
+  callout:   "drawing attention to a single tip, warning, or success",
+  quote:     "quoting an expert or learner — short, no attribution image",
+  keypoints: "summarizing 3–5 things to remember at lesson end",
+  faq:       "answering predictable questions in one place",
+  numbered:  "showing 4–7 steps that have a fixed order",
+  checklist: "giving learners a list to verify their work against",
+  glossary:  "defining 5–15 jargon terms learners will see again",
+  aiprompt:  "showing a copy-ready prompt for learners to try",
+  divider:   "separating two distinct sections with a labeled break",
+  highlight: "opening a module with a hero banner",
+  /* HTML — layout */
+  cards:    "comparing 3–5 parallel options, ideas, or examples",
+  columns:  "long-form text that needs visual breathing room",
+  process:  "walking through 3–6 steps with a fixed order",
+  iconrow:  "showing 4–8 categories or pillars at a glance",
+  timeline: "tracking events in chronological order",
+  progress: "showing module or course completion stages",
+  badge:    "tagging skills, topics, or capability levels",
+  /* HTML — data */
+  table:    "structured rows × columns of facts",
+  compare:  "head-to-head: option A vs option B",
+  stats:    "3–4 standalone metrics with context",
+  twostat:  "one hero metric you want learners to remember",
+  kpi:      "dashboard of metrics with trend direction",
+  donut:    "showing parts of a whole (proportions)",
+  bar:      "comparing values across 4–8 categories",
+  /* HTML — framework */
+  matrix:   "classifying items along two axes (BCG-style)",
+  swot:     "strategic analysis: strengths / weaknesses / opportunities / threats",
+  pyramid:  "showing layered hierarchy or maturity levels",
+  funnel:   "narrowing-down stages (sales, hiring, decisions)",
+  proscons: "weighing two sides of a decision",
+  dodont:   "best practice vs anti-pattern",
+  roadmap:  "phased plan over time (quarters, months)",
+  /* SCORM — interactive */
+  s_flipcard:   "definitions or term/explanation pairs (3–8 cards)",
+  s_accordion:  "long content broken into collapsible sections",
+  s_tabs:       "parallel content groups the learner can switch between",
+  s_reveal:     "answers, hints, or solutions hidden until clicked",
+  s_stepper:    "guided walkthrough where each step builds on the last",
+  s_stacked:    "5–10 detailed items, one focused at a time",
+  s_cycle:      "circular processes (kaizen, design thinking)",
+  s_timeline_i: "events with rich detail behind each point",
+  s_hotspot:    "labeling parts of a diagram, photo, or screenshot",
+  s_scenario:   "decision-making practice with consequences",
+  s_promptflow: "teaching prompt-craft step by step",
+  /* SCORM — assessment */
+  s_sort:       "ordering steps, priorities, or chronology",
+  s_match:      "linking terms to definitions or causes to effects",
+  s_quiz:       "knowledge check with 4 options + feedback",
+  s_poll:       "gathering opinion before showing the answer",
+  s_categorize: "sorting items into 2–4 buckets",
+};
+function getUseWhen(id){ return USE_WHEN[id] || null; }
 
 /* ── HTML Generator ── */
 function genHTML(id, brand, data) {
@@ -2460,6 +2523,16 @@ function studioPromptFill(text){
   var pi=document.getElementById("studioPrompt");
   if(pi){ pi.value=text; pi.focus(); }
 }
+/* Phase 2 Day 3D: chip click should fill the prompt AND submit it, not just
+   sit in the input. The brief delay gives a visual confirmation that the
+   chip's text actually landed in the field before the modal opens. */
+function studioPromptFillAndGo(text){
+  var pi=document.getElementById("studioPrompt");
+  if(!pi){ return; }
+  pi.value=text;
+  pi.focus();
+  setTimeout(function(){ studioPromptGo(); }, 220);
+}
 function studioPromptGo(){
   var pi=document.getElementById("studioPrompt");
   if(!pi)return;
@@ -4130,7 +4203,7 @@ function render() {
     ];
     chips.forEach(function(chip){
       var safe=chip.replace(/'/g,"\\'");
-      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:7px 13px;background:rgba(255,255,255,0.10);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.20);border-radius:999px;color:#fff;font-size:11px;font-weight:500;">'+chip+'</button>';
+      hm+='<button class="studio-chip" onclick="studioPromptFillAndGo(\''+safe+'\')" title="Use this prompt — pre-fills + opens Claude" style="padding:7px 13px;background:rgba(255,255,255,0.10);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.20);border-radius:999px;color:#fff;font-size:11px;font-weight:500;">'+chip+'</button>';
     });
     hm+='</div>';
 
@@ -4388,11 +4461,14 @@ function render() {
       var isCardScorm=(c._t==="scorm")||c.id.indexOf("s_")===0;
       var chipBg=catTints[c.cat]||b.n1, chipFg=isCardScorm?"#6B21A8":b.priDk;
       var fmtTag=fmt==="all"?'<span class="lib-card-chip" style="background:'+(isCardScorm?"#EDE9FE":b.priLt)+';color:'+(isCardScorm?"#7C3AED":b.priDk)+';margin-right:5px;">'+(isCardScorm?"SCORM":"HTML")+'</span>':"";
+      var useWhen=getUseWhen(c.id);
+      var whenLine=useWhen?'<div class="lib-card-when"><strong>Use when</strong>'+useWhen+'</div>':'';
       return '<button class="lib-card" onclick="doSelect(\''+c.id+'\')">'
         +'<div class="lib-card-thumb">'+thumb+'</div>'
         +'<div class="lib-card-body">'
           +'<div class="lib-card-name" style="color:'+b.tx+';">'+c.n+'</div>'
           +'<div class="lib-card-desc">'+c.d+'</div>'
+          +whenLine
           +'<div class="lib-card-foot">'
             +'<span>'+fmtTag+'<span class="lib-card-chip" style="background:'+chipBg+';color:'+chipFg+';">'+chipLbl+'</span></span>'
             +'<span class="lib-card-arrow">→</span>'
