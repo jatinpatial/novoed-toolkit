@@ -14,11 +14,12 @@ import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock } from "../course/previewBlock";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
-import type { Block, BlockData, BlockItem, Course, Lesson, Module } from "../course/types";
+import type { Block, BlockData, BlockItem, Course, Lesson, Material, Module } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
+import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
 
 /* ── small helpers ───────────────────────────────────────────────────────── */
@@ -340,6 +341,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   const [am, setAm] = useState(0);
   const [al, setAl] = useState(0);
   const [outlineOpen, setOutlineOpen] = useState(true);
+  const [leftPane, setLeftPane] = useState<"outline" | "materials">("outline");
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [insertAt, setInsertAt] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -360,6 +362,14 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       if (l) fn(l);
     });
   }, [am, al, mutate]);
+
+  const addMaterial = useCallback((m: Material) => {
+    mutate((c) => { c.materials = [...(c.materials ?? []), m]; });
+  }, [mutate]);
+
+  const removeMaterial = useCallback((id: string) => {
+    mutate((c) => { c.materials = (c.materials ?? []).filter((x) => x.id !== id); });
+  }, [mutate]);
 
   const patchBlock = useCallback((id: string, fn: (b: Block) => void) => {
     mutate((c) => {
@@ -511,20 +521,24 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       />
 
       <div className="flex-1 min-h-0 flex">
-        {/* Outline */}
+        {/* Left sidebar — Outline / Materials */}
         {outlineOpen && (
-          <CourseOutline
+          <LeftSidebar
             course={course}
             am={am} al={al}
+            leftPane={leftPane}
+            setLeftPane={setLeftPane}
             onSelect={(mi: number, li: number) => { setAm(mi); setAl(li); setEditingBlockId(null); }}
             onUpdate={mutate}
             onCollapse={() => setOutlineOpen(false)}
+            onAddMaterial={addMaterial}
+            onRemoveMaterial={removeMaterial}
           />
         )}
         {!outlineOpen && (
           <button
             onClick={() => setOutlineOpen(true)}
-            title="Open outline"
+            title="Open sidebar"
             className="w-8 bg-white border-r border-ink-200 flex flex-col items-center justify-start pt-4 text-ink-400 hover:text-ink-700 hover:bg-ink-50 transition"
           >
             <ChevronRight size={16} />
@@ -677,9 +691,67 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   OUTLINE
+   LEFT SIDEBAR — Outline / Materials tabs
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseOutline({ course, am, al, onSelect, onUpdate, onCollapse }: any) {
+interface LeftSidebarProps {
+  course: Course;
+  am: number;
+  al: number;
+  leftPane: "outline" | "materials";
+  setLeftPane: (v: "outline" | "materials") => void;
+  onSelect: (mi: number, li: number) => void;
+  onUpdate: (fn: (c: Course) => void) => void;
+  onCollapse: () => void;
+  onAddMaterial: (m: Material) => void;
+  onRemoveMaterial: (id: string) => void;
+}
+
+function LeftSidebar({ course, am, al, leftPane, setLeftPane, onSelect, onUpdate, onCollapse, onAddMaterial, onRemoveMaterial }: LeftSidebarProps) {
+  const matCount = course.materials?.length ?? 0;
+  return (
+    <aside className="w-64 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
+      <div className="h-11 flex items-center px-2 border-b border-ink-200 gap-1">
+        <button
+          onClick={() => setLeftPane("outline")}
+          className={`flex-1 h-7 rounded-md text-[11px] font-bold uppercase tracking-wide transition ${
+            leftPane === "outline" ? "bg-brand-50 text-brand-700" : "text-ink-500 hover:text-ink-800 hover:bg-ink-50"
+          }`}
+        >
+          Outline
+        </button>
+        <button
+          onClick={() => setLeftPane("materials")}
+          className={`flex-1 h-7 rounded-md text-[11px] font-bold uppercase tracking-wide transition flex items-center justify-center gap-1.5 ${
+            leftPane === "materials" ? "bg-brand-50 text-brand-700" : "text-ink-500 hover:text-ink-800 hover:bg-ink-50"
+          }`}
+        >
+          Materials
+          {matCount > 0 && (
+            <span className="text-[10px] font-semibold opacity-70">{matCount}</span>
+          )}
+        </button>
+        <button onClick={onCollapse} title="Collapse sidebar" className="text-ink-400 hover:text-ink-700 px-1.5 h-7 flex items-center">
+          <ChevronLeft size={14} />
+        </button>
+      </div>
+
+      {leftPane === "outline" ? (
+        <CourseOutlineBody course={course} am={am} al={al} onSelect={onSelect} onUpdate={onUpdate} />
+      ) : (
+        <MaterialsShelf
+          materials={course.materials ?? []}
+          onAdd={onAddMaterial}
+          onRemove={onRemoveMaterial}
+        />
+      )}
+    </aside>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OUTLINE BODY — modules & lessons list (rendered inside LeftSidebar)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
   function addModule() {
     onUpdate((c: Course) => {
       const mi = c.modules.length + 1;
@@ -712,14 +784,7 @@ function CourseOutline({ course, am, al, onSelect, onUpdate, onCollapse }: any) 
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
-      <div className="h-11 flex items-center justify-between px-4 border-b border-ink-200">
-        <span className="text-[10px] font-bold text-ink-500 uppercase tracking-wide">Course outline</span>
-        <button onClick={onCollapse} title="Collapse outline" className="text-ink-400 hover:text-ink-700">
-          <ChevronLeft size={14} />
-        </button>
-      </div>
-
+    <>
       <div className="flex-1 overflow-y-auto py-2">
         {course.modules.map((m: any, mi: number) => (
           <div key={m.id} className="mb-1">
@@ -773,7 +838,7 @@ function CourseOutline({ course, am, al, onSelect, onUpdate, onCollapse }: any) 
       <button onClick={addModule} className="mx-3 my-3 py-2 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
         <Plus size={12} /> Add module
       </button>
-    </aside>
+    </>
   );
 }
 
