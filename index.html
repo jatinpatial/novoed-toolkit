@@ -107,15 +107,47 @@ input:focus,textarea:focus{outline:none;border-color:#29BA74!important;}
 @keyframes studioFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes studioFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes studioToastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+/* Phase 2: mesh-blob hero animations */
+@keyframes meshBlobA{0%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(60px,-40px,0) scale(1.12);}100%{transform:translate3d(0,0,0) scale(1);}}
+@keyframes meshBlobB{0%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-50px,30px,0) scale(0.9);}100%{transform:translate3d(0,0,0) scale(1);}}
+@keyframes meshBlobC{0%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-30px,-50px,0) scale(1.08);}100%{transform:translate3d(0,0,0) scale(1);}}
+@keyframes routeFadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .studio-hero-bg{background-size:220% 220%;animation:studioGradientShift 22s ease-in-out infinite;}
-.studio-prompt{box-shadow:0 24px 70px rgba(0,0,0,0.22),0 0 0 1px rgba(255,255,255,0.1) inset;transition:box-shadow 0.25s,transform 0.2s;}
-.studio-prompt:focus-within{box-shadow:0 32px 90px rgba(0,0,0,0.28),0 0 0 2px rgba(255,255,255,0.4) inset;transform:translateY(-1px);}
-.studio-chip{transition:all 0.2s;cursor:pointer;}
+/* Mesh hero — solid navy base + 3 floating colored blobs blurred + screen-blended */
+.hero-mesh{position:relative;overflow:hidden;background:var(--c-navy,#0E1E3F);isolation:isolate;}
+.hero-mesh::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 55%);pointer-events:none;z-index:1;}
+.hero-mesh::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(to bottom, transparent, rgba(0,0,0,0.18));pointer-events:none;z-index:1;}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(70px);mix-blend-mode:screen;opacity:0.62;pointer-events:none;will-change:transform;}
+.hero-blob.a{width:520px;height:520px;left:-120px;top:-160px;background:radial-gradient(circle, var(--c-accent,#29BA74) 0%, transparent 70%);animation:meshBlobA 22s var(--ease,ease-in-out) infinite;}
+.hero-blob.b{width:460px;height:460px;right:-100px;top:60px;background:radial-gradient(circle, var(--c-navy-500,#2A4A8A) 0%, transparent 65%);animation:meshBlobB 26s var(--ease,ease-in-out) infinite;}
+.hero-blob.c{width:380px;height:380px;left:35%;bottom:-160px;background:radial-gradient(circle, var(--c-accent-dk,#1B7A4F) 0%, transparent 70%);animation:meshBlobC 19s var(--ease,ease-in-out) infinite;}
+.studio-prompt{box-shadow:0 24px 70px rgba(0,0,0,0.22),0 0 0 1px rgba(255,255,255,0.1) inset;transition:box-shadow var(--m-med,250ms) var(--ease,ease),transform var(--m-fast,200ms) var(--ease,ease);}
+.studio-prompt:focus-within{box-shadow:0 32px 90px rgba(0,0,0,0.32),0 0 0 2px rgba(255,255,255,0.45) inset;transform:translateY(-2px);}
+.studio-chip{transition:all var(--m-fast,200ms) var(--ease,ease);cursor:pointer;}
 .studio-chip:hover{background:rgba(255,255,255,0.28)!important;transform:translateY(-1px);border-color:rgba(255,255,255,0.5)!important;}
-.quick-tile{transition:transform 0.25s cubic-bezier(0.4,0,0.2,1),box-shadow 0.25s,border-color 0.2s;cursor:pointer;}
-.quick-tile:hover{transform:translateY(-4px);box-shadow:0 18px 42px rgba(0,0,0,0.1)!important;}
-.quick-tile .qt-arrow{display:inline-block;transition:transform 0.2s;}
-.quick-tile:hover .qt-arrow{transform:translateX(4px);}
+.studio-chip:active{transform:translateY(0) scale(0.97);}
+/* Quick-launch tiles — Phase 2 redesign */
+.quick-tile{transition:transform var(--m-med,250ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)),box-shadow var(--m-med,250ms),border-color var(--m-fast,200ms);cursor:pointer;position:relative;}
+.quick-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg,0 18px 42px rgba(14,30,63,0.10))!important;border-color:var(--c-navy-300,#6B82B5)!important;}
+.quick-tile:active{transform:translateY(-1px) scale(0.99);}
+.quick-tile .qt-arrow{display:inline-block;transition:transform var(--m-fast,200ms) var(--ease,ease);}
+.quick-tile:hover .qt-arrow{transform:translateX(5px);}
+.quick-tile .qt-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:16px;box-shadow:0 8px 20px -8px rgba(14,30,63,0.42);transition:transform var(--m-med,250ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.quick-tile:hover .qt-icon{transform:scale(1.06) rotate(-3deg);}
+.quick-tile-sm .qt-icon-sm{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--c-navy-100,#E6EAF3);color:var(--c-navy,#0E1E3F);transition:transform var(--m-fast,200ms) var(--ease,ease);}
+.quick-tile-sm:hover .qt-icon-sm{transform:scale(1.06);background:var(--c-navy,#0E1E3F);color:#fff;}
+/* Phase 2: route transition (fade-up on every mode change) */
+.app-main.route-fade-in{animation:routeFadeIn var(--m-med,220ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both;}
+/* Phase 2: refined focus rings (keyboard accessibility, navy-toned) */
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--c-navy,#0E1E3F);outline-offset:2px;border-radius:6px;}
+/* Phase 2: micro-interaction — :active press */
+button:not(:disabled):active{transform:translateY(0.5px);}
+/* Phase 2: reduce motion respects user pref */
+@media (prefers-reduced-motion: reduce){
+  .hero-blob,.studio-hero-bg{animation:none!important;}
+  .app-main.route-fade-in{animation:none!important;}
+  .quick-tile,.quick-tile:hover,.quick-tile .qt-icon,.quick-tile:hover .qt-icon{transition:none!important;transform:none!important;}
+}
 .featured-rail{scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none;}
 .featured-rail::-webkit-scrollbar{display:none;}
 .featured-card{transition:transform 0.25s,box-shadow 0.25s;cursor:pointer;flex:0 0 auto;}
@@ -402,6 +434,23 @@ button.lib-search-kbd:hover{background:var(--sb-active-bg,#E6F7EF);color:var(--s
 <body>
 <div id="root"></div>
 <script>
+
+/* ── Studio Tile Icons (Phase 2) ──────────────────────────────────────────
+   Custom inline SVG icons used by Quick Launch tiles + secondary tools row.
+   All icons share viewBox 24×24, currentColor stroke 1.6, round caps. */
+const STUDIO_ICONS = {
+  /* Primary tiles (24px white) */
+  html:      '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>',
+  scorm:     '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="15" height="11" rx="2"/><path d="M5.5 7 H14 M5.5 10.5 H11"/><path d="M13 17 L16 20.5 L20.5 16"/><circle cx="16" cy="20.5" r="0.6" fill="currentColor"/></svg>',
+  journey:   '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="12" cy="14" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 6 L16.5 6 M6.6 7.6 L10.3 12.3 M14 14.4 L17 16.6"/></svg>',
+  storyline: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3 H16 L20 7 V21 H5 Z"/><path d="M16 3 V7 H20"/><path d="M8 11.5 H17 M8 14.5 H17 M8 17.5 H13"/></svg>',
+  /* Secondary row (16-18px navy) */
+  recommend: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L13.4 9 L19 10 L14.5 13.6 L16 19 L12 16 L8 19 L9.5 13.6 L5 10 L10.6 9 Z"/></svg>',
+  media:     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 4 7 20 20 12"/></svg>',
+  library:   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4 L5 20 L7.3 19 L9.6 20 L12 19 L14.3 20 L16.6 19 L19 20 L19 4 Z"/><path d="M9 9 H15 M9 12.5 H15"/></svg>',
+  brand:     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/><circle cx="15.5" cy="9" r="1" fill="currentColor"/><circle cx="17.5" cy="13.5" r="1" fill="currentColor"/><path d="M12 21 a4 9 0 0 1 0 -18"/></svg>'
+};
+function studioIcon(name){ return STUDIO_ICONS[name]||""; }
 
 /* ── Brand Tokens ──
    `pri/priDk/priLt` = brand accent (the green or custom color).
@@ -3698,7 +3747,22 @@ function renderJourney(){
   return h;
 }
 
+/* Phase 2: route-fade trigger. Replays the routeFadeIn animation on .app-main
+   whenever the user moves between top-level views (mode change or sel change),
+   without blowing away in-view interactions like typing in a field. */
+function triggerRouteFade(){
+  var el=document.querySelector(".app-main");
+  if(!el) return;
+  el.classList.remove("route-fade-in");
+  /* force reflow so the animation restarts */
+  void el.offsetWidth;
+  el.classList.add("route-fade-in");
+}
 function render() {
+  var routeKey=(state.mode||"home")+"|"+(state.sel||"");
+  var routeChanged=(window._prevRouteKey!==routeKey);
+  window._prevRouteKey=routeKey;
+  if(routeChanged) requestAnimationFrame(triggerRouteFade);
   var root=document.getElementById("root"), b=B[state.brand];
   applyBrandVars();
 
@@ -3731,33 +3795,32 @@ function render() {
     var htmlCount=HTML_COMPS.length, scormCount=SCORM_COMPS.length;
     var hm='<div>';
 
-    /* ── HERO ── animated gradient + floating shapes + prompt ── */
-    hm+='<div class="studio-hero-bg" style="background-image:'+b.grad+';padding:68px 0 52px;position:relative;overflow:hidden;">';
-    hm+='<svg style="position:absolute;top:0;right:0;width:640px;height:100%;opacity:0.13;pointer-events:none;" viewBox="0 0 640 460" fill="none">'
-      +'<circle cx="520" cy="90" r="130" fill="#fff" style="animation:studioFloat 9s ease-in-out infinite;"/>'
-      +'<circle cx="400" cy="370" r="85" fill="#fff" style="animation:studioFloat 11s ease-in-out infinite 2s;"/>'
-      +'<circle cx="590" cy="270" r="70" fill="#fff" style="animation:studioFloat 13s ease-in-out infinite 1s;"/>'
-      +'<rect x="260" y="40" width="64" height="64" rx="18" fill="#fff" transform="rotate(22 292 72)" style="animation:studioFloat 10s ease-in-out infinite 0.5s;"/>'
-      +'<rect x="370" y="180" width="46" height="46" rx="12" fill="#fff" transform="rotate(-14 393 203)" style="animation:studioFloat 12s ease-in-out infinite 3s;"/>'
-      +'</svg>';
-    hm+='<div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 40px;">';
+    /* ── HERO ── animated mesh-blob gradient + prompt ── */
+    hm+='<div class="hero-mesh" style="padding:84px 0 64px;">';
+    hm+='<div class="hero-blob a"></div><div class="hero-blob b"></div><div class="hero-blob c"></div>';
+    hm+='<div style="position:relative;z-index:2;max-width:1140px;margin:0 auto;padding:0 40px;">';
 
     /* Kicker */
-    hm+='<div class="studio-fade" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3.5px;color:rgba(255,255,255,0.72);margin-bottom:14px;">BCG U · AI Learning Design Studio</div>';
+    hm+='<div class="studio-fade" style="display:inline-flex;align-items:center;gap:9px;padding:5px 13px 5px 8px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:999px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2.4px;color:rgba(255,255,255,0.82);margin-bottom:18px;">'
+      +'<span style="width:18px;height:18px;border-radius:50%;background:'+b.grad+';display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:800;">U</span>'
+      +'BCG U · AI Learning Design Studio'
+      +'</div>';
 
-    /* Big headline prompt */
-    hm+='<div class="studio-fade d1" style="font-size:50px;font-weight:300;color:#fff;line-height:1.05;margin-bottom:14px;letter-spacing:-1.1px;">What will you design today?</div>';
-    hm+='<div class="studio-fade d2" style="font-size:15px;color:rgba(255,255,255,0.86);line-height:1.6;max-width:620px;margin-bottom:30px;">Your AI co-pilot for Learning Design. Branded components, interactive SCORM activities, and full course journeys — ready for Rise, NovoEd, Docebo, Moodle, Canvas, or any SCORM-compatible LMS.</div>';
+    /* Big headline */
+    hm+='<div class="studio-fade d1" style="font-size:clamp(38px,5.6vw,var(--t-3xl,56px));font-weight:300;color:#fff;line-height:1.04;margin-bottom:16px;letter-spacing:-1.4px;max-width:880px;">What will you <span style="font-weight:600;background:linear-gradient(120deg, #fff 0%, '+b.pri+' 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">design</span> today?</div>';
+    hm+='<div class="studio-fade d2" style="font-size:var(--t-md,16px);color:rgba(255,255,255,0.82);line-height:var(--lh-normal,1.6);max-width:640px;margin-bottom:32px;font-weight:400;">Your AI co-pilot for Learning Design. Branded components, interactive SCORM activities, and full course journeys — ready for Rise, NovoEd, Docebo, Moodle, Canvas, or any SCORM-compatible LMS.</div>';
 
     /* Prompt input */
-    hm+='<div class="studio-fade d2 studio-prompt" style="display:flex;align-items:center;gap:8px;max-width:720px;background:rgba(255,255,255,0.97);border-radius:16px;padding:7px 7px 7px 20px;margin-bottom:16px;">';
-    hm+='<span style="font-size:16px;color:'+b.pri+';margin-right:4px;">✨</span>';
-    hm+='<input id="studioPrompt" type="text" onkeydown="if(event.key===\'Enter\')studioPromptGo()" placeholder="Describe a component, scenario, or learning goal…" style="flex:1;border:none;background:transparent;font-size:15px;color:'+b.tx+';padding:13px 0;outline:none;"/>';
-    hm+='<button onclick="studioPromptGo()" style="background:'+b.grad+';color:#fff;border:none;border-radius:12px;padding:12px 22px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,0.18);">Design <span style="font-size:16px;">→</span></button>';
+    hm+='<div class="studio-fade d2 studio-prompt" style="display:flex;align-items:center;gap:8px;max-width:740px;background:rgba(255,255,255,0.97);border-radius:18px;padding:7px 7px 7px 22px;margin-bottom:18px;">';
+    hm+='<span style="display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;color:'+b.pri+';margin-right:4px;">'
+      +'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L13.4 9 L19 10 L14.5 13.6 L16 19 L12 16 L8 19 L9.5 13.6 L5 10 L10.6 9 Z"/></svg>'
+      +'</span>';
+    hm+='<input id="studioPrompt" type="text" onkeydown="if(event.key===\'Enter\')studioPromptGo()" placeholder="Describe a component, scenario, or learning goal…" style="flex:1;border:none;background:transparent;font-size:15px;color:'+b.tx+';padding:14px 0;outline:none;"/>';
+    hm+='<button onclick="studioPromptGo()" style="background:'+b.grad+';color:#fff;border:none;border-radius:14px;padding:13px 22px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(14,30,63,0.32);transition:transform var(--m-fast,150ms) var(--ease,ease),box-shadow var(--m-fast,150ms);" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 12px 28px rgba(14,30,63,0.38)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 8px 22px rgba(14,30,63,0.32)\';">Design <span style="font-size:16px;">→</span></button>';
     hm+='</div>';
 
     /* Example chips */
-    hm+='<div class="studio-fade d3" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;">';
+    hm+='<div class="studio-fade d3" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:36px;">';
     var chips=[
       '3-card summary of AI maturity phases',
       'Timeline of a product launch',
@@ -3767,18 +3830,18 @@ function render() {
     ];
     chips.forEach(function(chip){
       var safe=chip.replace(/'/g,"\\'");
-      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:7px 14px;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.22);border-radius:20px;color:#fff;font-size:11px;font-weight:500;">'+chip+'</button>';
+      hm+='<button class="studio-chip" onclick="studioPromptFill(\''+safe+'\')" style="padding:8px 14px;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;color:#fff;font-size:11.5px;font-weight:500;">'+chip+'</button>';
     });
     hm+='</div>';
 
-    /* Stat pills + brand switcher */
+    /* Stat pills (brand switcher removed — lives in Settings drawer now) */
     hm+='<div class="studio-fade d3" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
     var iconCount=(window.BCG_ICONS?Object.keys(window.BCG_ICONS).length:0);
-    var iconPill=hasBCGIcons()?[[iconCount.toLocaleString(),'BCG Icons ✦']]:[];
+    var iconPill=hasBCGIcons()?[[iconCount.toLocaleString(),'BCG Icons']]:[];
     [[''+htmlCount,'HTML'],[''+scormCount,'SCORM'],['3','Brand Themes']].concat(iconPill).forEach(function(s){
-      hm+='<div style="padding:5px 14px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);border-radius:20px;border:1px solid rgba(255,255,255,0.26);color:#fff;font-size:11px;font-weight:600;"><span style="font-size:15px;font-weight:700;margin-right:5px;">'+s[0]+'</span>'+s[1]+'</div>';
+      hm+='<div style="padding:6px 14px;background:rgba(255,255,255,0.13);backdrop-filter:blur(8px);border-radius:999px;border:1px solid rgba(255,255,255,0.22);color:#fff;font-size:11.5px;font-weight:600;"><span style="font-size:14px;font-weight:800;margin-right:6px;">'+s[0]+'</span>'+s[1]+'</div>';
     });
-    hm+='<div style="flex:1;"></div>'+brandBtns("md")+'</div>';
+    hm+='</div>';
 
     hm+='</div></div>'; /* end hero */
 
@@ -3793,21 +3856,24 @@ function render() {
       +'</div>';
 
     /* Quick launch — 4 tiles. Two browse-the-catalog tiles + two AI-drafted-deliverable tiles. */
-    hm+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';margin-bottom:12px;">Quick launch</div>';
-    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">';
+    hm+='<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;">'
+      +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:'+b.txL+';">Quick launch</div>'
+      +'<div style="font-size:13px;color:'+b.tx+';margin-top:3px;font-weight:500;">Pick a starting point — every flow ends with a paste-ready or LMS-ready file.</div></div>'
+      +'</div>';
+    hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">';
     var tiles=[
-      {icon:'▦',title:'HTML Components',desc:htmlCount+' paste-ready embeds',onclick:"setState({mode:'html',sel:null,search:'',cat:'all',goal:'all',format:'html'})",grad:b.grad,badge:null,cta:'Browse →'},
-      {icon:'✦',title:'SCORM Interactives',desc:scormCount+' animated activities',onclick:"setState({mode:'scorm',sel:null,search:'',cat:'all',goal:'all',format:'scorm'})",grad:'linear-gradient(135deg,#7C3AED,#4F46E5)',badge:null,cta:'Browse →'},
-      {icon:'◈',title:'Journey Canvas',desc:'Visual flow editor — drag modules',onclick:"enterJourney()",grad:'linear-gradient(135deg,#F59E0B,#EF4444)',badge:null,cta:'Open canvas →'},
-      {icon:'📖',title:'Storyline',desc:'Brief in chat → full course in Word',onclick:"enterStoryline()",grad:'linear-gradient(135deg,#FF7A00,#E0367C)',badge:'NEW',cta:'Generate doc →'}
+      {iconKey:'html',     title:'HTML Components',  desc:htmlCount+' paste-ready embeds',           onclick:"setState({mode:'html',sel:null,search:'',cat:'all',goal:'all',format:'html'})",      grad:b.grad,                                                  badge:null,  cta:'Browse'},
+      {iconKey:'scorm',    title:'SCORM Interactives',desc:scormCount+' animated activities',         onclick:"setState({mode:'scorm',sel:null,search:'',cat:'all',goal:'all',format:'scorm'})",   grad:'linear-gradient(135deg,#0E1E3F 0%,#5B3DBE 50%,#7C3AED 100%)', badge:null,  cta:'Browse'},
+      {iconKey:'journey',  title:'Journey Canvas',   desc:'Visual flow editor — drag modules',        onclick:"enterJourney()",                                                                     grad:'linear-gradient(135deg,#0E1E3F 0%,#A75A0E 50%,#F59E0B 100%)', badge:null,  cta:'Open canvas'},
+      {iconKey:'storyline',title:'Storyline',         desc:'Brief in chat → full course in Word',     onclick:"enterStoryline()",                                                                  grad:'linear-gradient(135deg,#0E1E3F 0%,#B23C58 50%,#FF7A00 100%)', badge:'NEW', cta:'Generate doc'}
     ];
     tiles.forEach(function(t){
-      hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid '+b.n2+';border-radius:16px;padding:22px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">';
-      if(t.badge) hm+='<div style="position:absolute;top:12px;right:12px;padding:2px 8px;background:'+b.priLt+';color:'+b.priDk+';border-radius:10px;font-size:9px;font-weight:800;letter-spacing:0.8px;border:1px solid '+b.pri+'33;">'+t.badge+'</div>';
-      hm+='<div style="width:44px;height:44px;background:'+t.grad+';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin-bottom:14px;">'+t.icon+'</div>';
-      hm+='<div style="font-size:14px;font-weight:700;color:'+b.tx+';margin-bottom:4px;">'+t.title+'</div>';
-      hm+='<div style="font-size:11px;color:'+b.txL+';line-height:1.5;margin-bottom:12px;">'+t.desc+'</div>';
-      hm+='<div style="font-size:11px;color:'+b.pri+';font-weight:700;">'+t.cta.replace('→','<span class="qt-arrow">→</span>')+'</div>';
+      hm+='<div class="quick-tile" onclick="'+t.onclick+'" style="position:relative;background:#fff;border:1.5px solid var(--c-line,#E5E7EE);border-radius:18px;padding:24px 22px;box-shadow:var(--shadow-sm,0 1px 2px rgba(14,30,63,0.06));">';
+      if(t.badge) hm+='<div style="position:absolute;top:14px;right:14px;padding:3px 9px;background:var(--c-navy,#0E1E3F);color:#fff;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:0.8px;">'+t.badge+'</div>';
+      hm+='<div class="qt-icon" style="background:'+t.grad+';">'+studioIcon(t.iconKey)+'</div>';
+      hm+='<div style="font-size:14.5px;font-weight:700;color:var(--c-ink,#0B0F1A);margin-bottom:4px;letter-spacing:-0.2px;">'+t.title+'</div>';
+      hm+='<div style="font-size:11.5px;color:var(--c-ink-3,#4A4F62);line-height:1.5;margin-bottom:14px;">'+t.desc+'</div>';
+      hm+='<div style="font-size:11px;color:var(--c-navy,#0E1E3F);font-weight:700;display:inline-flex;align-items:center;gap:5px;">'+t.cta+' <span class="qt-arrow">→</span></div>';
       hm+='</div>';
     });
     hm+='</div>';
@@ -3816,14 +3882,14 @@ function render() {
     var libCount=libGet().length;
     hm+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;">';
     [
-      {onclick:'openRecommender()',icon:'✨',title:'Pick by teaching goal',sub:'Filter the catalog by what you want learners to do'},
-      {onclick:'enterMedia()',icon:'▶',title:'Media Studio',sub:'Trim + thumbnail via ffmpeg'},
-      {onclick:'openLibrary()',icon:'★',title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
-      {onclick:'openBrandEditor()',icon:'⚙',title:'Brand Studio',sub:'Custom palette, RTL support'}
+      {onclick:'openRecommender()',  iconKey:'recommend',title:'Pick by teaching goal',sub:'Filter the catalog by what you want learners to do'},
+      {onclick:'enterMedia()',       iconKey:'media',    title:'Media Studio',          sub:'Trim + thumbnail via ffmpeg'},
+      {onclick:'openLibrary()',      iconKey:'library',  title:'My Library <span style="color:'+b.txL+';font-weight:500;">('+libCount+')</span>',sub:'Reuse saved components'},
+      {onclick:'openBrandEditor()',  iconKey:'brand',    title:'Brand Studio',          sub:'Custom palette, RTL support'}
     ].forEach(function(s){
-      hm+='<div class="quick-tile" onclick="'+s.onclick+'" style="padding:14px 18px;background:#fff;border:1.5px solid '+b.n2+';border-radius:12px;display:flex;align-items:center;gap:12px;">';
-      hm+='<div style="width:34px;height:34px;background:'+b.priLt+';border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;color:'+b.pri+';flex-shrink:0;">'+s.icon+'</div>';
-      hm+='<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:'+b.tx+';">'+s.title+'</div><div style="font-size:10px;color:'+b.txL+';margin-top:2px;">'+s.sub+'</div></div>';
+      hm+='<div class="quick-tile quick-tile-sm" onclick="'+s.onclick+'" style="padding:14px 18px;background:#fff;border:1.5px solid var(--c-line,#E5E7EE);border-radius:14px;display:flex;align-items:center;gap:13px;">';
+      hm+='<div class="qt-icon-sm">'+studioIcon(s.iconKey)+'</div>';
+      hm+='<div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:var(--c-ink,#0B0F1A);">'+s.title+'</div><div style="font-size:10.5px;color:var(--c-ink-3,#4A4F62);margin-top:2px;line-height:1.4;">'+s.sub+'</div></div>';
       hm+='</div>';
     });
     hm+='</div>';
