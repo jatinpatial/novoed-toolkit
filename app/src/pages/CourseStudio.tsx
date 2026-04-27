@@ -931,6 +931,237 @@ function estimateSeconds(s: string): number {
   return Math.round((wordCount(s) / 150) * 60);
 }
 
+interface Scene {
+  index: number;
+  spoken: string;
+  visual: string;
+}
+
+// Parse a Synthesia script into scenes. Returns null if the text doesn't
+// follow the SCENE / SPOKEN: / VISUAL: structure — caller falls back to
+// the raw textarea so the LD is never locked out.
+function parseScenes(script: string): Scene[] | null {
+  if (!script || !script.trim()) return null;
+  if (!/SCENE\s+\d+/i.test(script)) return null;
+  if (!/(SPOKEN|VISUAL):/i.test(script)) return null;
+
+  const lines = script.split(/\r?\n/);
+  const scenes: Scene[] = [];
+  let current: Scene | null = null;
+  let field: "spoken" | "visual" | null = null;
+
+  for (const line of lines) {
+    const sceneMatch = /^\s*SCENE\s+(\d+)/i.exec(line);
+    if (sceneMatch) {
+      if (current) scenes.push(current);
+      current = { index: parseInt(sceneMatch[1], 10), spoken: "", visual: "" };
+      field = null;
+      continue;
+    }
+    if (!current) continue;
+    const spokenMatch = /^\s*SPOKEN:\s*(.*)$/i.exec(line);
+    if (spokenMatch) { field = "spoken"; current.spoken = spokenMatch[1]; continue; }
+    const visualMatch = /^\s*VISUAL:\s*(.*)$/i.exec(line);
+    if (visualMatch) { field = "visual"; current.visual = visualMatch[1]; continue; }
+    // Continuation line for the current section.
+    if (field && line.trim()) {
+      current[field] = (current[field] ? current[field] + "\n" : "") + line.trim();
+    }
+  }
+  if (current) scenes.push(current);
+  return scenes.length > 0 ? scenes : null;
+}
+
+function serializeScenes(scenes: Scene[]): string {
+  return scenes.map((s) => `SCENE ${s.index}\nSPOKEN: ${s.spoken}\nVISUAL: ${s.visual}`).join("\n\n");
+}
+
+function ScriptEditor({
+  script, videoType, onSave, onWrite, onRegenerate,
+}: {
+  script: string | undefined;
+  videoType: "speaker" | "narration";
+  onSave: (next: string) => void;
+  onWrite: () => void;
+  onRegenerate: () => void;
+}) {
+  const [showRaw, setShowRaw] = useState(false);
+  const scenes = useMemo(() => (script ? parseScenes(script) : null), [script]);
+
+  // Empty state — brand-colored CTA, varies by videoType.
+  if (!script) {
+    return (
+      <button
+        onClick={onWrite}
+        className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-3 text-left flex items-start gap-2.5 group"
+      >
+        <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+          <Sparkles size={13} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-bold text-ink-900 group-hover:text-brand-700 mb-0.5">
+            Write a {videoType} script
+          </div>
+          <div className="text-[11px] text-ink-600 leading-snug">
+            ~90 sec of scenes — SPOKEN narration with &lt;break&gt; tags, plus VISUAL cues for what's on screen.
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  const canShowTable = scenes !== null && !showRaw;
+  const counter = `~${wordCount(script)} words · ~${estimateSeconds(script)} sec at 150 wpm`;
+
+  return (
+    <>
+      {canShowTable && scenes ? (
+        <SceneTable
+          scenes={scenes}
+          onSceneChange={(idx, fieldName, value) => {
+            const next = scenes.map((s, i) => (i === idx ? { ...s, [fieldName]: value } : s));
+            onSave(serializeScenes(next));
+          }}
+        />
+      ) : (
+        <>
+          {!scenes && (
+            <div className="mb-1.5 text-[10px] text-ink-500 italic flex items-start gap-1">
+              <AlertCircle size={11} className="mt-0.5 flex-shrink-0" />
+              <span>Couldn't parse as scenes — showing raw text. Regenerate to restore the table view.</span>
+            </div>
+          )}
+          <textarea
+            value={script}
+            onChange={(e) => onSave(e.target.value)}
+            rows={10}
+            className="w-full bg-white border border-ink-200 rounded-md px-2.5 py-2 text-[12px] font-mono leading-relaxed outline-none focus:border-brand-500 resize-y"
+            placeholder="Synthesia script..."
+          />
+        </>
+      )}
+
+      <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-[10px] text-ink-400">{counter}</span>
+        <div className="flex items-center gap-2">
+          {scenes && (
+            <button
+              onClick={() => setShowRaw((v) => !v)}
+              className="text-[10px] font-semibold text-ink-500 hover:text-brand-700 underline-offset-2 hover:underline"
+              title={showRaw ? "Switch back to scene table" : "Edit the raw script string (advanced)"}
+            >
+              {showRaw ? "Table view" : "Raw view"}
+            </button>
+          )}
+          <button
+            onClick={onRegenerate}
+            className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+            title="Wipe this script and regenerate from scratch"
+          >
+            <Sparkles size={10} /> Regenerate
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function SceneTable({
+  scenes, onSceneChange,
+}: {
+  scenes: Scene[];
+  onSceneChange: (idx: number, field: "spoken" | "visual", value: string) => void;
+}) {
+  const [editing, setEditing] = useState<{ idx: number; field: "spoken" | "visual" } | null>(null);
+  const [draft, setDraft] = useState("");
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  function startEdit(idx: number, field: "spoken" | "visual") {
+    setDraft(scenes[idx][field]);
+    setEditing({ idx, field });
+  }
+  function commitEdit() {
+    if (editing) onSceneChange(editing.idx, editing.field, draft);
+    setEditing(null);
+  }
+  function copySpoken(idx: number) {
+    const text = scenes[idx].spoken;
+    if (!text) return;
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1200);
+    });
+  }
+
+  return (
+    <div className="border border-ink-200 rounded-md overflow-hidden">
+      <div className="grid grid-cols-[28px_1fr_1fr_28px] bg-ink-50 text-ink-500 text-[9px] uppercase tracking-wide font-bold">
+        <div className="px-1.5 py-1">#</div>
+        <div className="px-1.5 py-1 border-l border-ink-100">Spoken</div>
+        <div className="px-1.5 py-1 border-l border-ink-100">Visual</div>
+        <div className="px-1 py-1 border-l border-ink-100"></div>
+      </div>
+      {scenes.map((s, idx) => {
+        const isEditingSpoken = editing?.idx === idx && editing.field === "spoken";
+        const isEditingVisual = editing?.idx === idx && editing.field === "visual";
+        return (
+          <div key={idx} className="grid grid-cols-[28px_1fr_1fr_28px] border-t border-ink-100">
+            <div className="px-1.5 py-1.5 text-ink-400 font-bold text-[11px]">{s.index}</div>
+            <div className="px-1 py-1 border-l border-ink-100">
+              {isEditingSpoken ? (
+                <textarea
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={commitEdit}
+                  rows={Math.max(2, draft.split("\n").length)}
+                  className="w-full text-[11px] font-mono bg-white border border-brand-500 rounded px-1.5 py-1 outline-none resize-none"
+                />
+              ) : (
+                <div
+                  onClick={() => startEdit(idx, "spoken")}
+                  className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-800 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
+                >
+                  {s.spoken || <span className="text-ink-300 italic">click to add</span>}
+                </div>
+              )}
+            </div>
+            <div className="px-1 py-1 border-l border-ink-100">
+              {isEditingVisual ? (
+                <textarea
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={commitEdit}
+                  rows={Math.max(2, draft.split("\n").length)}
+                  className="w-full text-[11px] font-mono bg-white border border-brand-500 rounded px-1.5 py-1 outline-none resize-none"
+                />
+              ) : (
+                <div
+                  onClick={() => startEdit(idx, "visual")}
+                  className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-600 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
+                >
+                  {s.visual || <span className="text-ink-300 italic">click to add</span>}
+                </div>
+              )}
+            </div>
+            <div className="px-0.5 py-1 border-l border-ink-100 flex items-start justify-center">
+              <button
+                onClick={() => copySpoken(idx)}
+                disabled={!s.spoken}
+                className="w-6 h-6 rounded text-ink-300 hover:text-brand-700 hover:bg-brand-50 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center"
+                title="Copy SPOKEN to clipboard"
+              >
+                {copiedIdx === idx ? <Check size={10} className="text-brand-600" /> : <Copy size={10} />}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
   const { setOpen: setChatOpen, prefillInput } = useAgent();
   const hasWriterBlocks = lesson.blocks.some((b: Block) => b.source === "writer");
@@ -1310,41 +1541,35 @@ function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDele
             <Field label="Caption">
               <input value={d.caption || ""} onChange={(e) => patchField("caption", e.target.value)} className="input" />
             </Field>
-            <Field label="Synthesia avatar script">
-              {!d.script ? (
-                <button
-                  onClick={() => triggerScriptWriter("write")}
-                  className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-3 text-left flex items-start gap-2.5 group"
-                >
-                  <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
-                    <Sparkles size={13} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-ink-900 group-hover:text-brand-700 mb-0.5">Write a Synthesia script</div>
-                    <div className="text-[11px] text-ink-600 leading-snug">~90 sec avatar script with [PAUSE], on-screen text, and B-roll cues.</div>
-                  </div>
-                </button>
-              ) : (
-                <>
-                  <textarea
-                    value={d.script}
-                    onChange={(e) => patchField("script", e.target.value)}
-                    rows={8}
-                    className="w-full bg-white border border-ink-200 rounded-md px-2.5 py-2 text-[12px] font-mono leading-relaxed outline-none focus:border-brand-500 resize-y"
-                    placeholder="Synthesia script..."
-                  />
-                  <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-ink-400">~{wordCount(d.script)} words · ~{estimateSeconds(d.script)} sec at 150 wpm</span>
+            <Field label="Video type">
+              <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
+                {(["speaker", "narration"] as const).map((vt) => {
+                  const active = (d.videoType ?? "speaker") === vt;
+                  return (
                     <button
-                      onClick={() => triggerScriptWriter("regenerate")}
-                      className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
-                      title="Wipe this script and regenerate from scratch"
+                      key={vt}
+                      onClick={() => patchField("videoType", vt)}
+                      className={`px-3 h-6 rounded text-[11px] font-semibold capitalize transition ${active ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
                     >
-                      <Sparkles size={10} /> Regenerate script
+                      {vt}
                     </button>
-                  </div>
-                </>
-              )}
+                  );
+                })}
+              </div>
+              <div className="mt-1.5 text-[10px] text-ink-400 leading-snug">
+                {(d.videoType ?? "speaker") === "speaker"
+                  ? "Avatar talks to camera. Sparse visuals — lower-thirds, supporting graphics."
+                  : "Voice-over narration. Rich visuals — full-screen footage, animations, b-roll."}
+              </div>
+            </Field>
+            <Field label="Synthesia avatar script">
+              <ScriptEditor
+                script={d.script}
+                videoType={(d.videoType ?? "speaker") as "speaker" | "narration"}
+                onSave={(s) => patchField("script", s)}
+                onWrite={() => triggerScriptWriter("write")}
+                onRegenerate={() => triggerScriptWriter("regenerate")}
+              />
             </Field>
           </>
         )}
