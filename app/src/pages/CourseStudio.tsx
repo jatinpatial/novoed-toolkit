@@ -608,6 +608,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
             brand={course.brand}
             mod={course.modules[am]}
             lessonIndex={al}
+            courseTitle={course.title}
             onUpdate={(fn) => patchBlock(editingBlockId, fn)}
             onClose={() => setEditingBlockId(null)}
             onDelete={() => removeBlock(editingBlockId)}
@@ -1003,13 +1004,14 @@ function ScriptTranscript({ scenes }: { scenes: Scene[] }) {
 type ScriptView = "table" | "transcript" | "raw";
 
 function ScriptEditor({
-  script, videoType, onSave, onWrite, onRegenerate,
+  script, videoType, onSave, onWrite, onRegenerate, onDownload,
 }: {
   script: string | undefined;
   videoType: "speaker" | "narration";
   onSave: (next: string) => void;
   onWrite: () => void;
   onRegenerate: () => void;
+  onDownload: () => void;
 }) {
   const [view, setView] = useState<ScriptView>("table");
   const scenes = useMemo(() => (script ? parseScenes(script) : null), [script]);
@@ -1091,6 +1093,13 @@ function ScriptEditor({
       <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
         <span className="text-[10px] text-ink-400">{counter}</span>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onDownload}
+            className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+            title="Download this script as a Word document"
+          >
+            <Download size={10} /> Download .docx
+          </button>
           <button
             onClick={onRegenerate}
             className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
@@ -1514,7 +1523,9 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
 /* ═══════════════════════════════════════════════════════════════════════════
    BLOCK DRAWER — slide-over editor for complex blocks
    ═══════════════════════════════════════════════════════════════════════════ */
-function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDelete }: { block: Block; brand: BrandKey; mod: Module | undefined; lessonIndex: number; onUpdate: (fn: (b: Block) => void) => void; onClose: () => void; onDelete: () => void }) {
+const HTTP_URL = (import.meta.env.VITE_AGENT_HTTP_URL as string | undefined) ?? "http://127.0.0.1:8766";
+
+function BlockDrawer({ block, brand, mod, lessonIndex, courseTitle, onUpdate, onClose, onDelete }: { block: Block; brand: BrandKey; mod: Module | undefined; lessonIndex: number; courseTitle: string; onUpdate: (fn: (b: Block) => void) => void; onClose: () => void; onDelete: () => void }) {
   const bt = BTYPES.find((x) => x.id === block.type);
   const d = block.data || {};
   const items = d.items || [];
@@ -1533,6 +1544,45 @@ function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDele
     const videoType = (d.videoType ?? "speaker") as "speaker" | "narration";
     setChatOpen(true);
     prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, videoType, mode));
+  }
+
+  async function downloadScriptDocx() {
+    if (!d.script) return;
+    const week = mod?.weekNumber ?? 1;
+    const lessonRef = `${week}.${lessonIndex + 1}`;
+    const videoType = (d.videoType ?? "speaker") as "speaker" | "narration";
+    const seconds = estimateSeconds(d.script);
+    const duration = seconds > 0 ? `~${seconds} sec` : "";
+    try {
+      const res = await fetch(`${HTTP_URL}/export/script-docx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          script: d.script,
+          videoType,
+          lessonRef,
+          courseName: courseTitle,
+          duration,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || `server returned ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const stem = `${courseTitle || "script"}-${lessonRef}-script`.replace(/[^\w\-_.]/g, "_");
+      a.download = `${stem}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast("Script downloaded");
+    } catch (e) {
+      toast(`Download failed: ${(e as Error).message}`, false);
+    }
   }
 
   return (
@@ -1607,6 +1657,7 @@ function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDele
                 onSave={(s) => patchField("script", s)}
                 onWrite={() => triggerScriptWriter("write")}
                 onRegenerate={() => triggerScriptWriter("regenerate")}
+                onDownload={downloadScriptDocx}
               />
             </Field>
           </>

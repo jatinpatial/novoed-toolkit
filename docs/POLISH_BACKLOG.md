@@ -22,6 +22,14 @@
 - Tool failure visibility: `write_lesson` should return an error when lesson resolution fails instead of silent-success.
 - "Regenerate lesson" button: confirmation prompt before wiping existing blocks.
 
+## Phase 2 — Scriptwriter polish
+- **Parameter wizard modal at script start.** Replace today's single chat pre-fill with a structured intake the LD fills before the agent runs:
+  - **Duration** — preset (60 / 90 / 120 / 180 sec) or custom.
+  - **Tone** — conversational / narrative / authoritative.
+  - **Pacing** — slow / standard / fast (maps to wpm: 130 / 150 / 170).
+  - **Anchor** — lesson body / materials / scratch (forces the source the agent draws from instead of letting it choose).
+  Today the agent makes these choices implicitly from the prompt; surfacing them gives the LD a steering wheel without writing a paragraph of intent each time. Wizard submits the structured params alongside the prefilled message text.
+
 ## Repo cleanup (post-pilot)
 - Port `index.html` components catalog into `app/src/generators/`, then archive `index.html`.
 - Archive `NovoEd_Component_Library.jsx`, `ARCHITECTURE.md`, `NovoEd_Toolkit_Claude_Project_Instructions.md` after extracting any reusable bits.
