@@ -1113,6 +1113,31 @@ function ScriptEditor({
   );
 }
 
+// Editor for a single scene cell. Keeps its own local state for the
+// duration of one editing session — mounts when the user clicks the
+// cell, unmounts when they blur. This avoids any cross-cell or
+// cross-render state contamination.
+function CellEditor({
+  initial, monospace, color, onCommit,
+}: {
+  initial: string;
+  monospace?: boolean;
+  color?: string;
+  onCommit: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <textarea
+      autoFocus
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onCommit(value)}
+      rows={Math.max(2, value.split("\n").length)}
+      className={`w-full text-[11px] ${monospace ? "font-mono" : ""} ${color ?? "text-ink-800"} bg-white border border-brand-500 rounded px-1.5 py-1 outline-none resize-none`}
+    />
+  );
+}
+
 function SceneTable({
   scenes, onSceneChange,
 }: {
@@ -1120,15 +1145,10 @@ function SceneTable({
   onSceneChange: (idx: number, field: "spoken" | "visual", value: string) => void;
 }) {
   const [editing, setEditing] = useState<{ idx: number; field: "spoken" | "visual" } | null>(null);
-  const [draft, setDraft] = useState("");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
-  function startEdit(idx: number, field: "spoken" | "visual") {
-    setDraft(scenes[idx][field]);
-    setEditing({ idx, field });
-  }
-  function commitEdit() {
-    if (editing) onSceneChange(editing.idx, editing.field, draft);
+  function commitCell(idx: number, field: "spoken" | "visual", value: string) {
+    if (value !== scenes[idx][field]) onSceneChange(idx, field, value);
     setEditing(null);
   }
   function copySpoken(idx: number) {
@@ -1156,17 +1176,15 @@ function SceneTable({
             <div className="px-1.5 py-1.5 text-ink-400 font-bold text-[11px]">{s.index}</div>
             <div className="px-1 py-1 border-l border-ink-100">
               {isEditingSpoken ? (
-                <textarea
-                  autoFocus
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onBlur={commitEdit}
-                  rows={Math.max(2, draft.split("\n").length)}
-                  className="w-full text-[11px] font-mono bg-white border border-brand-500 rounded px-1.5 py-1 outline-none resize-none"
+                <CellEditor
+                  initial={s.spoken}
+                  monospace
+                  color="text-ink-800"
+                  onCommit={(v) => commitCell(idx, "spoken", v)}
                 />
               ) : (
                 <div
-                  onClick={() => startEdit(idx, "spoken")}
+                  onClick={() => setEditing({ idx, field: "spoken" })}
                   className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-800 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
                 >
                   {s.spoken || <span className="text-ink-300 italic">click to add</span>}
@@ -1175,17 +1193,15 @@ function SceneTable({
             </div>
             <div className="px-1 py-1 border-l border-ink-100">
               {isEditingVisual ? (
-                <textarea
-                  autoFocus
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onBlur={commitEdit}
-                  rows={Math.max(2, draft.split("\n").length)}
-                  className="w-full text-[11px] font-mono bg-white border border-brand-500 rounded px-1.5 py-1 outline-none resize-none"
+                <CellEditor
+                  initial={s.visual}
+                  monospace
+                  color="text-ink-600"
+                  onCommit={(v) => commitCell(idx, "visual", v)}
                 />
               ) : (
                 <div
-                  onClick={() => startEdit(idx, "visual")}
+                  onClick={() => setEditing({ idx, field: "visual" })}
                   className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-600 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
                 >
                   {s.visual || <span className="text-ink-300 italic">click to add</span>}
