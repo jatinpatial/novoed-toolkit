@@ -976,6 +976,32 @@ function serializeScenes(scenes: Scene[]): string {
   return scenes.map((s) => `SCENE ${s.index}\nSPOKEN: ${s.spoken}\nVISUAL: ${s.visual}`).join("\n\n");
 }
 
+// Strip break tags (and any other XML-ish markup) from a SPOKEN line so
+// the transcript view reads as clean copy.
+function transcriptText(spoken: string): string {
+  return spoken.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function ScriptTranscript({ scenes }: { scenes: Scene[] }) {
+  return (
+    <div className="border border-ink-200 rounded-md bg-white px-3 py-3 max-h-[420px] overflow-y-auto">
+      <div className="space-y-3">
+        {scenes.map((s, i) => {
+          const text = transcriptText(s.spoken);
+          if (!text) return null;
+          return (
+            <p key={i} className="text-[12px] leading-relaxed text-ink-800">
+              {text}
+            </p>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type ScriptView = "table" | "transcript" | "raw";
+
 function ScriptEditor({
   script, videoType, onSave, onWrite, onRegenerate,
 }: {
@@ -985,7 +1011,7 @@ function ScriptEditor({
   onWrite: () => void;
   onRegenerate: () => void;
 }) {
-  const [showRaw, setShowRaw] = useState(false);
+  const [view, setView] = useState<ScriptView>("table");
   const scenes = useMemo(() => (script ? parseScenes(script) : null), [script]);
 
   // Empty state — brand-colored CTA, varies by videoType.
@@ -1010,12 +1036,31 @@ function ScriptEditor({
     );
   }
 
-  const canShowTable = scenes !== null && !showRaw;
+  // If the script doesn't parse, only Raw view is meaningful — everything
+  // else falls back to the underlying string with a small explanation.
+  const effectiveView: ScriptView = scenes ? view : "raw";
   const counter = `~${wordCount(script)} words · ~${estimateSeconds(script)} sec at 150 wpm`;
 
   return (
     <>
-      {canShowTable && scenes ? (
+      {scenes && (
+        <div className="mb-2 flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
+          {(["table", "transcript", "raw"] as const).map((v) => {
+            const active = effectiveView === v;
+            return (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-2.5 h-6 rounded text-[10px] font-semibold capitalize transition ${active ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+              >
+                {v}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {effectiveView === "table" && scenes ? (
         <SceneTable
           scenes={scenes}
           onSceneChange={(idx, fieldName, value) => {
@@ -1023,6 +1068,8 @@ function ScriptEditor({
             onSave(serializeScenes(next));
           }}
         />
+      ) : effectiveView === "transcript" && scenes ? (
+        <ScriptTranscript scenes={scenes} />
       ) : (
         <>
           {!scenes && (
@@ -1044,15 +1091,6 @@ function ScriptEditor({
       <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
         <span className="text-[10px] text-ink-400">{counter}</span>
         <div className="flex items-center gap-2">
-          {scenes && (
-            <button
-              onClick={() => setShowRaw((v) => !v)}
-              className="text-[10px] font-semibold text-ink-500 hover:text-brand-700 underline-offset-2 hover:underline"
-              title={showRaw ? "Switch back to scene table" : "Edit the raw script string (advanced)"}
-            >
-              {showRaw ? "Table view" : "Raw view"}
-            </button>
-          )}
           <button
             onClick={onRegenerate}
             className="inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
