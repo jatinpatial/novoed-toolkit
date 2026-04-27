@@ -532,6 +532,23 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       });
       return { ok, previousScriptLength };
     },
+    openBlockDrawer: (blockId) => {
+      // Walk the course tree to find the block, switch the canvas to
+      // its lesson, and pop the drawer open. Used by AgentChat's
+      // "Open script editor" button after a successful write_script.
+      for (let mi = 0; mi < course.modules.length; mi++) {
+        const m = course.modules[mi];
+        for (let li = 0; li < m.lessons.length; li++) {
+          const l = m.lessons[li];
+          if (l.blocks.some((b) => b.id === blockId)) {
+            setAm(mi);
+            setAl(li);
+            setEditingBlockId(blockId);
+            return;
+          }
+        }
+      }
+    },
   }), [course, mutate]);
 
   useRegisterAgentActions(agentActions);

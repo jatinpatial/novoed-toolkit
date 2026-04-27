@@ -24,7 +24,15 @@ export interface AgentActions {
   writeLesson: (lessonId: string, blocks: WriterBlock[]) => { replaced: number; added: number };
   writeScript: (videoBlockId: string, script: string) => { ok: boolean; previousScriptLength: number };
   setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
+  // Used by the "Open script editor" button in AgentChat after a
+  // successful write_script. Walks the course tree, finds the block,
+  // and pops its drawer open. No-op if the block isn't found.
+  openBlockDrawer?: (blockId: string) => void;
 }
+
+// What the agent just produced that the LD might want to jump to.
+// Cleared when the user sends a new message.
+export type AgentTarget = { kind: "script"; blockId: string };
 
 interface AgentContextValue {
   status: ConnectionStatus;
@@ -35,6 +43,13 @@ interface AgentContextValue {
   // tool-aware loading label ("Reading materials…", "Writing the script…")
   // instead of a generic "Thinking…".
   currentTool: string | null;
+  // Jump-to target produced by the most recent agent turn, e.g. the
+  // video block whose script was just (re)written. AgentChat renders an
+  // "Open in editor" button when this is set.
+  lastTarget: AgentTarget | null;
+  // Trigger the AgentActions handler for `lastTarget` (e.g. open the
+  // block drawer). No-op if the target page isn't registered.
+  openLastTarget: () => void;
   open: boolean;
   setOpen: (b: boolean) => void;
   sendMessage: (text: string) => void;
@@ -56,6 +71,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [currentTool, setCurrentTool] = useState<string | null>(null);
+  const [lastTarget, setLastTarget] = useState<AgentTarget | null>(null);
   const [open, setOpen] = useState(false);
   const [outlineProposal, setOutlineProposal] = useState<CourseOutlineProposal | null>(null);
   const clearOutlineProposal = useCallback(() => setOutlineProposal(null), []);
@@ -86,6 +102,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     },
     onToolCall: (name, args) => {
       setCurrentTool(name);
+      // Capture jump-to targets from outcome-shaped tool calls.
+      if (name === "write_script" && typeof args.video_block_id === "string") {
+        setLastTarget({ kind: "script", blockId: args.video_block_id });
+      }
       appendMessage({
         id: crypto.randomUUID(),
         role: "tool",
@@ -109,10 +129,21 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       appendMessage({ id: crypto.randomUUID(), role: "user", text });
       setIsThinking(true);
       setCurrentTool(null);
+      setLastTarget(null);
       sendUserMessage(text);
     },
     [appendMessage, sendUserMessage],
   );
+
+  const openLastTarget = useCallback(() => {
+    const t = lastTarget;
+    if (!t) return;
+    const actions = actionsRef.current;
+    if (!actions) return;
+    if (t.kind === "script" && actions.openBlockDrawer) {
+      actions.openBlockDrawer(t.blockId);
+    }
+  }, [lastTarget]);
 
   const registerActions = useCallback((actions: AgentActions) => {
     actionsRef.current = actions;
@@ -127,6 +158,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       messages,
       isThinking,
       currentTool,
+      lastTarget,
+      openLastTarget,
       open,
       setOpen,
       sendMessage,
@@ -138,7 +171,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       prefillInput,
       clearPendingInput,
     }),
-    [status, messages, isThinking, currentTool, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
+    [status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

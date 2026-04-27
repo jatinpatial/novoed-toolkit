@@ -26,7 +26,7 @@ function toolLabel(name: string | null): string {
 }
 
 export function AgentChat() {
-  const { status, messages, isThinking, currentTool, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
+  const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -97,6 +97,12 @@ export function AgentChat() {
           <Bubble key={m.id} role={m.role} text={m.text} />
         ))}
         {isThinking && <ProgressIndicator label={toolLabel(currentTool)} />}
+        {!isThinking && lastTarget && (
+          <JumpButton
+            label={lastTarget.kind === "script" ? "Open script editor" : "Open"}
+            onClick={openLastTarget}
+          />
+        )}
       </div>
 
       <div style={inputRow}>
@@ -147,6 +153,29 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
       >
         {prefix}{text}
       </div>
+    </div>
+  );
+}
+
+function JumpButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-start", margin: "10px 0 4px" }}>
+      <button
+        onClick={onClick}
+        style={{
+          padding: "6px 12px",
+          borderRadius: 8,
+          border: "none",
+          background: "linear-gradient(135deg,#29BA74,#1B7A4F)",
+          color: "#fff",
+          fontSize: 11,
+          fontWeight: 600,
+          cursor: "pointer",
+          boxShadow: "0 2px 8px rgba(41,186,116,0.25)",
+        }}
+      >
+        {label} →
+      </button>
     </div>
   );
 }
