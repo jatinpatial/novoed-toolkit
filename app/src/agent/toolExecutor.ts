@@ -144,10 +144,15 @@ function summarizeCourse(course: Course) {
             type: b.type,
             summary: summarizeBlock(b.type, b.data),
           };
-          // Video blocks get a hasScript flag so the Synthesia Scriptwriter
-          // can pick Write vs Regenerate without a separate lookup.
+          // Video blocks get hasScript + videoType so the Synthesia
+          // Scriptwriter can (a) pick Write vs Regenerate and (b) match
+          // the right voice for speaker (presenter) vs narration (voice-over).
           if (b.type === "video") {
-            return { ...base, hasScript: typeof b.data.script === "string" && b.data.script.trim().length > 0 };
+            return {
+              ...base,
+              hasScript: typeof b.data.script === "string" && b.data.script.trim().length > 0,
+              videoType: b.data.videoType ?? "speaker",
+            };
           }
           return base;
         }),

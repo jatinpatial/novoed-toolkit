@@ -896,28 +896,39 @@ function buildLessonWriterPrefill(mod: Module | undefined, lesson: Lesson, lesso
   return `Write lesson ${ref}: ${stripped}.\n${objectivesBlock}Target: ~${lesson.duration} min.\nFill this in.`;
 }
 
-function buildVideoScriptPrefill(mod: Module | undefined, lessonIndex: number, blockId: string, mode: "write" | "regenerate"): string {
+function buildVideoScriptPrefill(mod: Module | undefined, lessonIndex: number, blockId: string, videoType: "speaker" | "narration", mode: "write" | "regenerate"): string {
   const week = mod?.weekNumber ?? 1;
   const lessonNum = lessonIndex + 1;
   const ref = `${week}.${lessonNum}`;
 
   if (mode === "regenerate") {
-    return `Regenerate the Synthesia script for video block ${blockId} on lesson ${ref}. Same scope, fresh take.`;
+    return `Regenerate the ${videoType} Synthesia script for video block ${blockId} on lesson ${ref}. Same scope, fresh take.`;
   }
 
-  return `Write a Synthesia script for the video block on lesson ${ref}.\nVideo block id: ${blockId}\nTarget: ~90 sec.\nFill this in.`;
+  return `Write a ${videoType} Synthesia script for the video block on lesson ${ref}.\nVideo block id: ${blockId}\nTarget: ~90 sec.\nFill this in.`;
+}
+
+// Pull SPOKEN: blocks out of the script so the word count reflects only
+// what the avatar will actually say. Skips SCENE markers, VISUAL: blocks,
+// and any pause/voice tags inside the SPOKEN content.
+function extractSpoken(s: string): string {
+  const matches = s.matchAll(/SPOKEN:\s*([\s\S]*?)(?=\n\s*(?:VISUAL:|SCENE\s+\d+|$))/gi);
+  let out = "";
+  for (const m of matches) out += " " + m[1];
+  return out.replace(/<[^>]*>/g, "").trim();
 }
 
 function wordCount(s: string): number {
-  const trimmed = s.trim();
-  if (!trimmed) return 0;
-  return trimmed.split(/\s+/).length;
+  const spoken = extractSpoken(s);
+  // Fallback for unstructured scripts (e.g. legacy [PAUSE] format or a
+  // raw paragraph the LD pasted): strip bracket cues + tags, count rest.
+  const fallback = spoken || s.replace(/\[[^\]]*\]/g, "").replace(/<[^>]*>/g, "").trim();
+  if (!fallback) return 0;
+  return fallback.split(/\s+/).length;
 }
 
 function estimateSeconds(s: string): number {
-  // Strip bracket cues so [PAUSE], [ON-SCREEN: …], [B-ROLL: …] don't inflate the count.
-  const spoken = s.replace(/\[[^\]]*\]/g, "");
-  return Math.round((wordCount(spoken) / 150) * 60);
+  return Math.round((wordCount(s) / 150) * 60);
 }
 
 function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
@@ -1250,8 +1261,9 @@ function BlockDrawer({ block, brand, mod, lessonIndex, onUpdate, onClose, onDele
   }
 
   function triggerScriptWriter(mode: "write" | "regenerate") {
+    const videoType = (d.videoType ?? "speaker") as "speaker" | "narration";
     setChatOpen(true);
-    prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, mode));
+    prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, videoType, mode));
   }
 
   return (

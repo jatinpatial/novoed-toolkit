@@ -16,11 +16,21 @@ export interface BlockData {
   body?: string;
   type?: string;
   items?: BlockItem[];
-  // Synthesia script for video blocks. Plain text with inline cues:
-  // [PAUSE], [ON-SCREEN: …], [B-ROLL: …]. Authored by the Scriptwriter
-  // agent and edited by the LD in the block drawer; never rendered in
-  // the published lesson.
+  // Synthesia script for video blocks. Authored by the Scriptwriter agent
+  // and edited by the LD in the block drawer; never rendered in the
+  // published lesson.
+  //
+  // Format: a sequence of scene blocks. Each scene has SPOKEN: (the
+  // narration with <break time="X.Xs"/> tags) and VISUAL: (what's on
+  // screen). Example:
+  //   SCENE 1
+  //   SPOKEN: Hello there. <break time="0.5s"/> Today we'll cover…
+  //   VISUAL: Lower-third with speaker name and title.
   script?: string;
+  // How the avatar speaks the script: "speaker" = on-camera presenter
+  // talking head with sparse visuals; "narration" = voice-over driving
+  // rich full-screen visuals. Defaults to "speaker" when absent.
+  videoType?: "speaker" | "narration";
 }
 
 export interface Block {
