@@ -1,7 +1,20 @@
 import type { Config } from "tailwindcss";
+import { fileURLToPath } from "url";
+import path from "path";
+
+// Resolve content paths absolute so Tailwind's class scan works no
+// matter where node was launched from. Relative paths would otherwise
+// resolve against process.cwd() — which is the parent repo dir when
+// the dev server is launched via the preview MCP tool, and Tailwind
+// would silently scan zero source files and emit an empty utility
+// sheet (the page renders but with no classes applied).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  content: [
+    path.join(__dirname, "index.html"),
+    path.join(__dirname, "src/**/*.{ts,tsx}"),
+  ],
   theme: {
     extend: {
       colors: {
