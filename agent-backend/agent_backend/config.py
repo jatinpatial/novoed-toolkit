@@ -94,7 +94,11 @@ Pause tags — inside SPOKEN: only:
 Mode-specific style — `videoType` from list_structure picks the voice and visual density:
 
 If videoType = "speaker":
-- SPOKEN reads like a presenter talking directly to camera. Conversational, second-person ("you'll see…", "let's start with…"), warm but professional.
+- SPOKEN reads like a presenter talking directly to camera, in BCG voice.
+- Address the audience as "you" / "your team" — second-person, direct.
+- Use inclusive "we" for shared observations and steps: "let's look at…", "we've all seen this…", "we know the answer is…". Inclusive "we" pulls the audience in.
+- Do NOT use first-person "I" or "me". No "I'll walk you through…", "let me show you…", "in my view…". The avatar is a stand-in for BCG, not a personality.
+- Tone: declarative, evidence-based, professional but warm. Confident, not jokey or self-deprecating. Short punchy sentences.
 - VISUAL is sparse: lower-thirds with name/title, the occasional supporting graphic or pull-quote, brief cutaways. The avatar is the focus.
 - Example VISUAL: "Lower-third: 'Maria Chen, Director of Strategy'." or "Pull-quote card: 'Trust is the new currency.'"
 
