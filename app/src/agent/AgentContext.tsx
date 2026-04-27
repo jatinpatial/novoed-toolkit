@@ -30,6 +30,11 @@ interface AgentContextValue {
   status: ConnectionStatus;
   messages: ChatEntry[];
   isThinking: boolean;
+  // Name of the tool the agent is currently running, if any. Updated on
+  // each tool_call event, cleared on done/error. UI uses it to render a
+  // tool-aware loading label ("Reading materials…", "Writing the script…")
+  // instead of a generic "Thinking…".
+  currentTool: string | null;
   open: boolean;
   setOpen: (b: boolean) => void;
   sendMessage: (text: string) => void;
@@ -50,6 +55,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const actionsRef = useRef<AgentActions | null>(null);
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [currentTool, setCurrentTool] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [outlineProposal, setOutlineProposal] = useState<CourseOutlineProposal | null>(null);
   const clearOutlineProposal = useCallback(() => setOutlineProposal(null), []);
@@ -79,6 +85,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       updateLastAssistant(text);
     },
     onToolCall: (name, args) => {
+      setCurrentTool(name);
       appendMessage({
         id: crypto.randomUUID(),
         role: "tool",
@@ -87,10 +94,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     },
     onError: (message) => {
       setIsThinking(false);
+      setCurrentTool(null);
       appendMessage({ id: crypto.randomUUID(), role: "error", text: message });
     },
     onDone: () => {
       setIsThinking(false);
+      setCurrentTool(null);
     },
   });
 
@@ -99,6 +108,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       if (!text.trim()) return;
       appendMessage({ id: crypto.randomUUID(), role: "user", text });
       setIsThinking(true);
+      setCurrentTool(null);
       sendUserMessage(text);
     },
     [appendMessage, sendUserMessage],
@@ -116,6 +126,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       status,
       messages,
       isThinking,
+      currentTool,
       open,
       setOpen,
       sendMessage,
@@ -127,7 +138,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       prefillInput,
       clearPendingInput,
     }),
-    [status, messages, isThinking, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
+    [status, messages, isThinking, currentTool, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

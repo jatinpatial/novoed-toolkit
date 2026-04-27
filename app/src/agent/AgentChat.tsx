@@ -1,8 +1,32 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { useAgent } from "./AgentContext";
 
+// Friendly verbs for the loading indicator. Keys match the unprefixed
+// tool names that arrive from the agent backend (see toolExecutor.ts).
+const TOOL_LABELS: Record<string, string> = {
+  list_structure: "Reading the course structure",
+  read_materials: "Reading the source materials",
+  write_lesson: "Writing the lesson",
+  write_script: "Writing the script",
+  propose_course_outline: "Designing the course outline",
+  add_module: "Adding a module",
+  add_lesson: "Adding a lesson",
+  add_block: "Adding a block",
+  update_block: "Updating the block",
+  delete_block: "Deleting the block",
+  reorder: "Reordering",
+  navigate: "Navigating",
+  set_brand: "Switching brand",
+  export_lesson: "Exporting the lesson",
+};
+
+function toolLabel(name: string | null): string {
+  if (!name) return "Thinking";
+  return TOOL_LABELS[name] || name.replace(/_/g, " ");
+}
+
 export function AgentChat() {
-  const { status, messages, isThinking, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
+  const { status, messages, isThinking, currentTool, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -72,7 +96,7 @@ export function AgentChat() {
         {messages.map((m) => (
           <Bubble key={m.id} role={m.role} text={m.text} />
         ))}
-        {isThinking && <Bubble role="assistant" text="…" pulse />}
+        {isThinking && <ProgressIndicator label={toolLabel(currentTool)} />}
       </div>
 
       <div style={inputRow}>
@@ -123,6 +147,31 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
       >
         {prefix}{text}
       </div>
+    </div>
+  );
+}
+
+function ProgressIndicator({ label }: { label: string }) {
+  return (
+    <div style={{ margin: "8px 4px" }}>
+      <div
+        style={{
+          height: 3,
+          borderRadius: 2,
+          background: "linear-gradient(90deg, #E6F7EF 0%, #29BA74 50%, #E6F7EF 100%)",
+          backgroundSize: "200% 100%",
+          animation: "agent-shimmer 1.4s infinite linear",
+        }}
+      />
+      <div style={{ marginTop: 6, fontSize: 11, color: "#666", fontStyle: "italic" }}>
+        {label}…
+      </div>
+      <style>{`
+        @keyframes agent-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </div>
   );
 }
