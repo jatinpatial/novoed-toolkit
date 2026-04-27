@@ -3,7 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus, X, MoreHorizontal, ArrowUp, ArrowDown, Trash2, Copy, Settings2, ChevronLeft, ChevronRight,
   Save, Check, Download, FileJson, FileText, Eye, Sparkles, MessageSquare, BookOpen, PlayCircle, Home, Type,
-  Video, Image as ImageIcon, Rows3, Hash, ListChecks, Layers, Clock, HelpCircle, BarChart3, Minus, AlertCircle, LucideProps
+  Video, Image as ImageIcon, Rows3, Hash, ListChecks, Layers, Clock, HelpCircle, BarChart3, Minus, AlertCircle,
+  Maximize2, Minimize2, LucideProps
 } from "lucide-react";
 import { Sidebar } from "../shell/Sidebar";
 import { TopBar, useActiveBrand } from "../shell/TopBar";
@@ -1611,18 +1612,45 @@ function BlockDrawer({ block, brand, mod, lessonIndex, courseTitle, onUpdate, on
     }
   }
 
+  // Width modes: narrow drawer (default), wide drawer for long content,
+  // and full-screen overlay for deep editing. Cycles narrow → wide → full
+  // → narrow on each click of the toggle button.
+  const [drawerSize, setDrawerSize] = useState<"narrow" | "wide" | "full">("narrow");
+  const NEXT_SIZE: Record<typeof drawerSize, typeof drawerSize> = { narrow: "wide", wide: "full", full: "narrow" };
+  const SIZE_TITLE: Record<typeof drawerSize, string> = {
+    narrow: "Expand to wide view",
+    wide: "Expand to full screen",
+    full: "Collapse to narrow",
+  };
+  const SizeIcon = drawerSize === "full" ? Minimize2 : Maximize2;
+  const isFullscreen = drawerSize === "full";
+
+  const asideClass = isFullscreen
+    ? "fixed inset-0 z-40 bg-white flex flex-col"
+    : drawerSize === "wide"
+    ? "w-[720px] flex-shrink-0 bg-white border-l border-ink-200 flex flex-col"
+    : "w-[380px] flex-shrink-0 bg-white border-l border-ink-200 flex flex-col";
+
   return (
-    <aside className="w-[380px] flex-shrink-0 bg-white border-l border-ink-200 flex flex-col">
+    <aside className={asideClass}>
       <div className="h-11 border-b border-ink-200 px-4 flex items-center gap-2">
         <div className="w-6 h-6 rounded-md bg-ink-100 flex items-center justify-center text-ink-600">
           <BlockIcon type={block.type} size={12} />
         </div>
         <span className="text-sm font-semibold text-ink-900">{bt?.label}</span>
         <span className="text-[10px] text-ink-400 ml-auto">Block settings</span>
-        <button onClick={onClose} className="text-ink-400 hover:text-ink-700 ml-2"><X size={16} /></button>
+        <button
+          onClick={() => setDrawerSize(NEXT_SIZE[drawerSize])}
+          className="text-ink-400 hover:text-ink-700 ml-1 w-6 h-6 flex items-center justify-center rounded hover:bg-ink-100"
+          title={SIZE_TITLE[drawerSize]}
+        >
+          <SizeIcon size={13} />
+        </button>
+        <button onClick={onClose} className="text-ink-400 hover:text-ink-700"><X size={16} /></button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={`flex-1 overflow-y-auto ${isFullscreen ? "px-8 py-6" : "p-4"}`}>
+        <div className={`space-y-4 ${isFullscreen ? "max-w-3xl mx-auto" : ""}`}>
         {/* Title / body shared fields */}
         {d.title !== undefined && (
           <Field label="Title">
@@ -1774,12 +1802,15 @@ function BlockDrawer({ block, brand, mod, lessonIndex, courseTitle, onUpdate, on
             </Field>
           </>
         )}
+        </div>
       </div>
 
-      <div className="p-3 border-t border-ink-200">
-        <button onClick={() => { if (confirm("Delete this block?")) onDelete(); }} className="btn-danger btn-sm w-full">
-          <Trash2 size={13} /> Remove block
-        </button>
+      <div className={`border-t border-ink-200 ${isFullscreen ? "p-4" : "p-3"}`}>
+        <div className={isFullscreen ? "max-w-3xl mx-auto" : ""}>
+          <button onClick={() => { if (confirm("Delete this block?")) onDelete(); }} className="btn-danger btn-sm w-full">
+            <Trash2 size={13} /> Remove block
+          </button>
+        </div>
       </div>
     </aside>
   );
