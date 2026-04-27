@@ -915,7 +915,20 @@ function buildLessonWriterPrefill(mod: Module | undefined, lesson: Lesson, lesso
   return `Write lesson ${ref}: ${stripped}.\n${objectivesBlock}Target: ~${lesson.duration} min.\nFill this in.`;
 }
 
-function buildVideoScriptPrefill(mod: Module | undefined, lessonIndex: number, blockId: string, videoType: "speaker" | "narration", mode: "write" | "regenerate"): string {
+interface ScriptWriterParams {
+  duration: number;
+  audience: string;
+  tone: "conversational" | "authoritative" | "educational";
+}
+
+function buildVideoScriptPrefill(
+  mod: Module | undefined,
+  lessonIndex: number,
+  blockId: string,
+  videoType: "speaker" | "narration",
+  mode: "write" | "regenerate",
+  params?: ScriptWriterParams,
+): string {
   const week = mod?.weekNumber ?? 1;
   const lessonNum = lessonIndex + 1;
   const ref = `${week}.${lessonNum}`;
@@ -924,7 +937,19 @@ function buildVideoScriptPrefill(mod: Module | undefined, lessonIndex: number, b
     return `Regenerate the ${videoType} Synthesia script for video block ${blockId} on lesson ${ref}. Same scope, fresh take.`;
   }
 
-  return `Write a ${videoType} Synthesia script for the video block on lesson ${ref}.\nVideo block id: ${blockId}\nTarget: ~90 sec.\nFill this in.`;
+  const duration = params?.duration ?? 90;
+  const tone = params?.tone ?? "conversational";
+  const audience = params?.audience?.trim();
+
+  const lines = [
+    `Write a ${videoType} Synthesia script for the video block on lesson ${ref}.`,
+    `Video block id: ${blockId}`,
+    `Target: ~${duration} sec.`,
+    `Tone: ${tone}.`,
+  ];
+  if (audience) lines.push(`Audience: ${audience}.`);
+  lines.push("Fill this in.");
+  return lines.join("\n");
 }
 
 // Pull SPOKEN: blocks out of the script so the word count reflects only
@@ -1027,18 +1052,29 @@ function ScriptEditor({
   script: string | undefined;
   videoType: "speaker" | "narration";
   onSave: (next: string) => void;
-  onWrite: () => void;
+  onWrite: (params?: ScriptWriterParams) => void;
   onRegenerate: () => void;
   onDownload: () => void;
 }) {
   const [view, setView] = useState<ScriptView>("table");
+  const [showWriteForm, setShowWriteForm] = useState(false);
   const scenes = useMemo(() => (script ? parseScenes(script) : null), [script]);
 
-  // Empty state — brand-colored CTA, varies by videoType.
+  // Empty state — CTA expands inline into a pre-flight form so the
+  // LD can set duration / audience / tone before the agent runs.
   if (!script) {
+    if (showWriteForm) {
+      return (
+        <ScriptWriterForm
+          videoType={videoType}
+          onSubmit={(params) => { setShowWriteForm(false); onWrite(params); }}
+          onCancel={() => setShowWriteForm(false)}
+        />
+      );
+    }
     return (
       <button
-        onClick={onWrite}
+        onClick={() => setShowWriteForm(true)}
         className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-3 text-left flex items-start gap-2.5 group"
       >
         <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
@@ -1049,7 +1085,7 @@ function ScriptEditor({
             Write a {videoType} script
           </div>
           <div className="text-[11px] text-ink-600 leading-snug">
-            ~90 sec of scenes — SPOKEN narration with &lt;break&gt; tags, plus VISUAL cues for what's on screen.
+            Pick duration, audience, and tone first, then the agent drafts the scenes.
           </div>
         </div>
       </button>
@@ -1128,6 +1164,82 @@ function ScriptEditor({
         </div>
       </div>
     </>
+  );
+}
+
+function ScriptWriterForm({
+  videoType, onSubmit, onCancel,
+}: {
+  videoType: "speaker" | "narration";
+  onSubmit: (params: ScriptWriterParams) => void;
+  onCancel: () => void;
+}) {
+  const [duration, setDuration] = useState<number>(90);
+  const [audience, setAudience] = useState<string>("");
+  const [tone, setTone] = useState<ScriptWriterParams["tone"]>(videoType === "speaker" ? "conversational" : "educational");
+
+  return (
+    <div className="rounded-lg border border-brand-300 bg-brand-50/30 p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+          <Sparkles size={13} />
+        </div>
+        <div className="text-xs font-bold text-ink-900">Write a {videoType} script</div>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-bold text-ink-500 uppercase tracking-wide block mb-1">Duration</label>
+        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
+          {[60, 90, 120, 180].map((d) => {
+            const active = duration === d;
+            return (
+              <button
+                key={d}
+                onClick={() => setDuration(d)}
+                className={`px-2.5 h-6 rounded text-[10px] font-semibold transition ${active ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+              >
+                {d} sec
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-bold text-ink-500 uppercase tracking-wide block mb-1">Audience <span className="text-ink-300 normal-case font-normal">(optional)</span></label>
+        <input
+          value={audience}
+          onChange={(e) => setAudience(e.target.value)}
+          placeholder="e.g. senior managers leading change"
+          className="input"
+        />
+      </div>
+
+      <div>
+        <label className="text-[10px] font-bold text-ink-500 uppercase tracking-wide block mb-1">Tone</label>
+        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
+          {(["conversational", "authoritative", "educational"] as const).map((t) => {
+            const active = tone === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setTone(t)}
+                className={`px-2.5 h-6 rounded text-[10px] font-semibold capitalize transition ${active ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-ink-100">
+        <button onClick={onCancel} className="btn-secondary btn-sm">Cancel</button>
+        <button onClick={() => onSubmit({ duration, audience, tone })} className="btn-primary btn-sm">
+          <Sparkles size={12} /> Write
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1584,10 +1696,10 @@ function BlockDrawer({ block, brand, mod, lessonIndex, courseTitle, onUpdate, on
     onUpdate((b) => { if (b.data.items) b.data.items.splice(i, 1); });
   }
 
-  function triggerScriptWriter(mode: "write" | "regenerate") {
+  function triggerScriptWriter(mode: "write" | "regenerate", params?: ScriptWriterParams) {
     const videoType = (d.videoType ?? "speaker") as "speaker" | "narration";
     setChatOpen(true);
-    prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, videoType, mode));
+    prefillInput(buildVideoScriptPrefill(mod, lessonIndex, block.id, videoType, mode, params));
   }
 
   async function downloadScriptDocx() {
@@ -1726,7 +1838,7 @@ function BlockDrawer({ block, brand, mod, lessonIndex, courseTitle, onUpdate, on
                 script={d.script}
                 videoType={(d.videoType ?? "speaker") as "speaker" | "narration"}
                 onSave={(s) => patchField("script", s)}
-                onWrite={() => triggerScriptWriter("write")}
+                onWrite={(params) => triggerScriptWriter("write", params)}
                 onRegenerate={() => triggerScriptWriter("regenerate")}
                 onDownload={downloadScriptDocx}
               />
