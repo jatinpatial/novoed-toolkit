@@ -1117,6 +1117,14 @@ function ScriptEditor({
 // duration of one editing session — mounts when the user clicks the
 // cell, unmounts when they blur. This avoids any cross-cell or
 // cross-render state contamination.
+//
+// Focus is grabbed via ref + useEffect rather than autoFocus. autoFocus
+// races with the browser's mousedown text-selection: the selection
+// would steal focus a tick after autoFocus, causing onBlur → onCommit
+// → unmount, which read as a green flicker. The mousedown handler on
+// the non-editing cell already calls preventDefault to suppress the
+// selection start, and useEffect runs after the textarea is mounted
+// and the click event fully resolved.
 function CellEditor({
   initial, monospace, color, onCommit,
 }: {
@@ -1126,9 +1134,11 @@ function CellEditor({
   onCommit: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
   return (
     <textarea
-      autoFocus
+      ref={ref}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => onCommit(value)}
@@ -1184,8 +1194,8 @@ function SceneTable({
                 />
               ) : (
                 <div
-                  onClick={() => setEditing({ idx, field: "spoken" })}
-                  className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-800 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
+                  onMouseDown={(e) => { e.preventDefault(); setEditing({ idx, field: "spoken" }); }}
+                  className="cursor-pointer whitespace-pre-wrap break-words text-[11px] font-mono text-ink-800 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
                 >
                   {s.spoken || <span className="text-ink-300 italic">click to add</span>}
                 </div>
@@ -1201,8 +1211,8 @@ function SceneTable({
                 />
               ) : (
                 <div
-                  onClick={() => setEditing({ idx, field: "visual" })}
-                  className="cursor-text whitespace-pre-wrap break-words text-[11px] font-mono text-ink-600 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
+                  onMouseDown={(e) => { e.preventDefault(); setEditing({ idx, field: "visual" }); }}
+                  className="cursor-pointer whitespace-pre-wrap break-words text-[11px] font-mono text-ink-600 hover:bg-brand-50/40 rounded px-1.5 py-1 min-h-[28px]"
                 >
                   {s.visual || <span className="text-ink-300 italic">click to add</span>}
                 </div>
