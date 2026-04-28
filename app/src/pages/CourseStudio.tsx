@@ -199,7 +199,19 @@ function CourseStudioInner() {
    ═══════════════════════════════════════════════════════════════════════════ */
 function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen } = useAgent();
+  const [params, setParams] = useSearchParams();
+  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput } = useAgent();
+
+  // Brief handoff from the Dashboard hero composer (Phase 2 #1c).
+  // If we land on /courses?brief=…, open the chat, prefill the
+  // composer, and clear the param so back-nav doesn't re-prefill.
+  useEffect(() => {
+    const brief = params.get("brief");
+    if (!brief) return;
+    setChatOpen(true);
+    prefillInput(brief);
+    setParams((prev) => { const n = new URLSearchParams(prev); n.delete("brief"); return n; }, { replace: true });
+  }, [params, setParams, setChatOpen, prefillInput]);
 
   useEffect(() => {
     const refresh = () => setProjects(listProjects().filter((p) => p.kind === "course"));
