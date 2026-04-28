@@ -1,28 +1,27 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import ReactMarkdown from "react-markdown";
 import { useAgent } from "./AgentContext";
 
-// Friendly verbs for the loading indicator. Keys match the unprefixed
-// tool names that arrive from the agent backend (see toolExecutor.ts).
+// Friendly labels for the loading indicator. Keys match the unprefixed
+// tool names dispatched in toolExecutor.ts. Anything not in this map
+// falls through to the generic "Working" label — keeps the indicator
+// from leaking raw tool names into LD-facing copy.
 const TOOL_LABELS: Record<string, string> = {
-  list_structure: "Reading the course structure",
-  read_materials: "Reading the source materials",
-  write_lesson: "Writing the lesson",
-  write_script: "Writing the script",
-  propose_course_outline: "Designing the course outline",
-  add_module: "Adding a module",
-  add_lesson: "Adding a lesson",
-  add_block: "Adding a block",
-  update_block: "Updating the block",
-  delete_block: "Deleting the block",
-  reorder: "Reordering",
-  navigate: "Navigating",
-  set_brand: "Switching brand",
-  export_lesson: "Exporting the lesson",
+  list_structure: "Looking up the course",
+  read_materials: "Reading your source materials",
+  write_lesson: "Writing lesson content",
+  write_script: "Drafting Synthesia script",
+  write_knowledge_check: "Building the knowledge check",
+  regenerate_question: "Regenerating that question",
+  design_case_study: "Designing the case study",
+  propose_course_outline: "Building the course",
+  add_module: "Building the course",
+  add_lesson: "Building the course",
 };
 
 function toolLabel(name: string | null): string {
-  if (!name) return "Thinking";
-  return TOOL_LABELS[name] || name.replace(/_/g, " ");
+  if (!name) return "Working";
+  return TOOL_LABELS[name] || "Working";
 }
 
 export function AgentChat() {
@@ -128,6 +127,7 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
   const isUser = role === "user";
   const isTool = role === "tool";
   const isError = role === "error";
+  const isAssistant = role === "assistant";
   const bg = isUser ? "#1a1a2e" : isTool ? "#F5F5F5" : isError ? "#fef2f2" : "#E6F7EF";
   const color = isUser ? "#fff" : isError ? "#b91c1c" : isTool ? "#666" : "#1a1a2e";
   const border = isTool ? "1px dashed #d5d5d5" : "none";
@@ -146,14 +146,60 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
           border,
           fontSize: isTool ? 10 : 12,
           lineHeight: 1.55,
-          whiteSpace: "pre-wrap",
+          // Markdown renderer handles its own line breaks for assistant
+          // bubbles. Pre-wrap stays for user/tool/error so plain-text
+          // newlines render as authored.
+          whiteSpace: isAssistant ? "normal" : "pre-wrap",
           fontFamily: isTool ? "ui-monospace,SFMono-Regular,Menlo,monospace" : undefined,
           opacity: pulse ? 0.6 : 1,
+          wordBreak: "break-word",
         }}
       >
-        {prefix}{text}
+        {prefix}
+        {isAssistant ? <MarkdownText text={text} /> : text}
       </div>
     </div>
+  );
+}
+
+// Safe markdown renderer for agent replies. CommonMark-only (no tables,
+// no images, no raw HTML) — keeps the chat surface tight and avoids any
+// injection-style risk from agent output. Inline styles override the
+// browser defaults so paragraphs/lists don't bloat the bubble.
+function MarkdownText({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      skipHtml
+      disallowedElements={["img"]}
+      components={{
+        p: ({ children }) => <p style={{ margin: "0 0 6px 0" }}>{children}</p>,
+        ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ul>,
+        ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ol>,
+        li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
+        strong: ({ children }) => <strong>{children}</strong>,
+        em: ({ children }) => <em>{children}</em>,
+        h1: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
+        h2: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
+        h3: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
+        code: ({ children }) => (
+          <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3, fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: "0.92em" }}>
+            {children}
+          </code>
+        ),
+        a: ({ children, href }) => (
+          <a href={href} target="_blank" rel="noreferrer" style={{ color: "#1B7A4F", textDecoration: "underline" }}>
+            {children}
+          </a>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote style={{ borderLeft: "3px solid #29BA74", paddingLeft: 8, margin: "4px 0", color: "#444" }}>
+            {children}
+          </blockquote>
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
   );
 }
 
