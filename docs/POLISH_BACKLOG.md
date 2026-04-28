@@ -75,6 +75,11 @@ prior #5 work is polish (no planned-feature collision).
   - **Anchor** — lesson body / materials / scratch (forces the source the agent draws from instead of letting it choose).
   Today the agent makes these choices implicitly from the prompt; surfacing them gives the LD a steering wheel without writing a paragraph of intent each time. Wizard submits the structured params alongside the prefilled message text.
 
+## Brand fonts in .docx exports (Phase 2)
+- Henderson Sans is BCG's official font for documents.
+- Currently defaulting to Trebuchet MS as a Windows-built-in fallback (set via `_set_docx_default_font` in `agent-backend/agent_backend/main.py`).
+- Phase 2 upgrade path: drop the licensed Henderson Sans `.woff2` files into `agent-backend/fonts/`, swap `_DOCX_FONT = "Trebuchet MS"` → `"Henderson Sans"` in main.py, document the install step in `docs/RUN.md`.
+
 ## Repo cleanup (post-pilot)
 - Port `index.html` components catalog into `app/src/generators/`, then archive `index.html`.
 - Archive `NovoEd_Component_Library.jsx`, `ARCHITECTURE.md`, `NovoEd_Toolkit_Claude_Project_Instructions.md` after extracting any reusable bits.

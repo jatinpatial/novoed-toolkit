@@ -69,6 +69,52 @@ _BCG_GREEN = RGBColor(0x1B, 0x7A, 0x4F)
 _BCG_INK = RGBColor(0x33, 0x33, 0x33)
 _BCG_INK_LT = RGBColor(0x66, 0x66, 0x66)
 
+# Default body font for every .docx export. Trebuchet MS is the
+# Windows-built-in fallback BCG sanctions when the licensed Henderson
+# Sans typeface isn't installed. Henderson upgrade path: drop the
+# Henderson Sans .woff2 files into agent-backend/fonts/, swap this
+# constant to "Henderson Sans", and add the install step to RUN.md.
+# Out of scope for the pilot.
+_DOCX_FONT = "Trebuchet MS"
+
+
+def _set_docx_default_font(doc: Document) -> None:
+    """Set the document-wide default font to _DOCX_FONT.
+
+    Two layers needed:
+      1. Normal style's rFonts — covers paragraphs styled as Normal
+         (the default), which is most of our content.
+      2. docDefaults rPrDefault rFonts — covers runs that don't
+         inherit a style. Without this, Word's theme cascade falls
+         back to Calibri (minorHAnsi theme) for stray runs, even
+         though the style says Trebuchet.
+
+    Runs that explicitly set run.font.name (e.g. "Consolas" for
+    monospace columns) keep their override.
+    """
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    # Layer 1 — Normal style.
+    doc.styles["Normal"].font.name = _DOCX_FONT
+
+    # Layer 2 — docDefaults / rPrDefault / rFonts.
+    styles_el = doc.styles.element
+    rpr_default = styles_el.find(qn("w:docDefaults") + "/" + qn("w:rPrDefault") + "/" + qn("w:rPr"))
+    if rpr_default is None:
+        return
+    rfonts = rpr_default.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = OxmlElement("w:rFonts")
+        rpr_default.insert(0, rfonts)
+    # Override theme-based attributes with explicit font names.
+    for theme_attr in ("asciiTheme", "hAnsiTheme", "cstheme", "eastAsiaTheme"):
+        if rfonts.get(qn(f"w:{theme_attr}")) is not None:
+            del rfonts.attrib[qn(f"w:{theme_attr}")]
+    rfonts.set(qn("w:ascii"), _DOCX_FONT)
+    rfonts.set(qn("w:hAnsi"), _DOCX_FONT)
+    rfonts.set(qn("w:cs"), _DOCX_FONT)
+
 
 def _parse_scenes(script: str) -> list[dict]:
     """Mirror of the FE parser. Returns a list of {index, spoken, visual}."""
@@ -139,6 +185,7 @@ async def export_script_docx(req: ScriptExportRequest):
     seconds = round(word_count / 150 * 60) if word_count else 0
 
     doc = Document()
+    _set_docx_default_font(doc)
 
     # Title — course name
     title = doc.add_paragraph()
@@ -292,6 +339,7 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
     body_context, sources_block = _split_sources(cs.context)
 
     doc = Document()
+    _set_docx_default_font(doc)
 
     # --- Title block ---
     title = doc.add_paragraph()
@@ -307,12 +355,6 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
     sub = doc.add_paragraph()
     run = sub.add_run(" · ".join(sub_bits))
     run.font.size = Pt(11)
-    run.font.color.rgb = _BCG_INK_LT
-
-    attribution = doc.add_paragraph()
-    run = attribution.add_run("Designed by Case Study Designer · BCG U Studio")
-    run.italic = True
-    run.font.size = Pt(9)
     run.font.color.rgb = _BCG_INK_LT
 
     doc.add_paragraph()  # spacer
