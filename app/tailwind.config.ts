@@ -45,16 +45,37 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Trebuchet MS is the BCG-sanctioned Windows-built-in fallback
+        // for body copy when the licensed Henderson Sans isn't
+        // installed. Inter remains a webfont fallback for non-Windows
+        // platforms (Linux desktops, Chromebooks).
+        //
+        // Henderson upgrade path: drop the licensed Henderson Sans
+        // .woff2 files into app/public/fonts/, add @font-face rules
+        // in src/index.css, and prepend "Henderson Sans" to both
+        // sans/display stacks. Same upgrade is captured in the
+        // .docx exporter — keep them in lockstep.
+        sans: ['"Trebuchet MS"', "Trebuchet", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ['"Trebuchet MS"', "Trebuchet", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 2px rgba(16,18,24,0.04), 0 1px 3px rgba(16,18,24,0.04)",
         elevated: "0 4px 24px rgba(16,18,24,0.06), 0 1px 3px rgba(16,18,24,0.04)",
+        // Soft, polished hover shadow for hero/landing cards. Slightly
+        // wider than `elevated` with a faint brand-green tint to lift
+        // the card without dominating the page.
+        hero: "0 10px 40px rgba(16,18,24,0.06), 0 2px 8px rgba(27,122,79,0.06)",
         focus: "0 0 0 3px rgba(41,186,116,0.18)",
       },
       borderRadius: {
         xl: "0.875rem",
+        "2xl": "1.25rem",
+      },
+      // Hero gradient + brand accent gradients used by the new
+      // dashboard hero, three-card landing, and welcome modal.
+      backgroundImage: {
+        "hero-fade": "linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%)",
+        "brand-gradient": "linear-gradient(135deg, #29BA74 0%, #1B7A4F 100%)",
       },
     },
   },
