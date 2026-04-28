@@ -1,5 +1,24 @@
 # Polish Backlog (post-Phase-1)
 
+## Labeling note
+Commits tagged `Phase 1 #5a-d` (drawer width toggle, loading indicator,
+jump button, pre-flight form) are actually polish work that landed
+in-line during Phase 1 #4 — they extend the Synthesia Scriptwriter
+experience. The real **Phase 1 #5 — Quiz Builder + Case Study
+Designer agents** starts after Phase 1 #4 closes; commits tagged from
+that point use the same `Phase 1 #5x` series cleanly because the only
+prior #5 work is polish (no planned-feature collision).
+
+## Confirmation patterns
+- **Single confirmation dialog component for every destructive Regenerate.**
+  Lesson Writer "Regenerate", Scriptwriter "Regenerate", per-question
+  Quiz Regenerate, Case Study Regenerate — all of them silently wipe
+  the existing target. Build one reusable confirmation dialog that
+  fires when the target has been edited since last generation
+  (compare a `lastGeneratedAt` timestamp against the latest field
+  edit). Keeps the UI quiet on first generation and on no-edit
+  re-generation; only interrupts when there's something to lose.
+
 ## Speed / perceived speed
 - **Streaming write** — generate blocks one at a time so the LD sees progress, not a 20s blank wait. Biggest perceived-speed win. (~70% of the felt improvement.)
 - **Prompt caching** — Anthropic prompt caching for system prompt + course state. ~50% reduction in per-call setup cost.
