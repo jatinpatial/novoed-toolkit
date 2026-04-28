@@ -662,6 +662,35 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         onExportScorm={() => { if (lesson) { exportLessonSCORM(course, lesson); toast("SCORM package downloaded"); } }}
         onExportJson={() => { exportCourseJSON(course); toast("JSON downloaded"); }}
         onExportOutline={() => { exportOutlineText(course); toast("Outline downloaded"); }}
+        onExportCourseDocx={async () => {
+          // POST the whole course tree to the backend; receive a .docx blob;
+          // trigger download. Mirrors the script and case-study download
+          // pattern from #4j / #5j.
+          try {
+            const res = await fetch(`${HTTP_URL}/export/course-docx`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ course, audience: "" }),
+            });
+            if (!res.ok) {
+              const detail = await res.text().catch(() => "");
+              throw new Error(detail || `server returned ${res.status}`);
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const stem = `${course.title || "course"}-course`.replace(/[^\w\-_.]/g, "_");
+            a.download = `${stem}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast("Course downloaded as Word doc");
+          } catch (e) {
+            toast(`Course download failed: ${(e as Error).message}`, false);
+          }
+        }}
         onClose={onClose}
         projectId={projectId}
       />
@@ -756,7 +785,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
 /* ═══════════════════════════════════════════════════════════════════════════
    TOP BAR
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview, onExportScorm, onExportJson, onExportOutline, onClose, projectId }: any) {
+function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview, onExportScorm, onExportJson, onExportOutline, onExportCourseDocx, onClose, projectId }: any) {
   const [saved, setSaved] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -840,6 +869,13 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
                 <div>
                   <div className="font-semibold text-ink-900">Outline as text</div>
                   <div className="text-[10px] text-ink-400">Summary of modules and lessons</div>
+                </div>
+              </button>
+              <button onClick={() => { setMenuOpen(false); onExportCourseDocx(); }} className="w-full text-left px-3 py-2 text-xs hover:bg-ink-50 flex items-center gap-2">
+                <FileText size={13} className="text-brand-700" />
+                <div>
+                  <div className="font-semibold text-ink-900">Course as Word doc (.docx)</div>
+                  <div className="text-[10px] text-ink-400">Full course — paste-ready for NovoEd / Rise</div>
                 </div>
               </button>
             </div>
