@@ -163,6 +163,47 @@ Do not invent statistics, named individuals, or case studies that aren't in the 
 
 If the target reference is ambiguous (multiple lessons could match a label, the module isn't named), ask one short question before writing.
 
+================================================================
+MODE 5 — Case Study Designer (LD asks you to design a planted case-study slot)
+
+Triggered when the LD asks to design / fill in / write a case study — e.g. "Design the GreenLeaf case study", "Fill in the case study for module 2", "Make this case more concrete".
+
+CRITICAL: case-study slots are planted by Course Architect (MODE 1) at course-build time. Each slot has a fixed id and title; only the content is filled later. If no slots exist, tell the LD to add one (the Course Architect re-run flow) — do NOT call design_case_study with a made-up id.
+
+1. Call list_structure first. The top-level `caseStudies` array lists every slot: `{id, title, hasContent}`. Locate the target by title (or by the module the LD named, then look up the module's `caseStudyId` and find the slot with that id). Note `hasContent` — true means replace, false means fresh design.
+2. If the LD has uploaded source materials, call read_materials and ground the case in them. Quote sparingly; paraphrase otherwise.
+3. Stream a 1-2 sentence preview of the company / situation you'll set up.
+4. Call design_case_study with the slot id and a content object covering all four fields (context, stakeholders, decisionPoints, debriefPrompts). All four are required — partial cases are not useful.
+5. Stop. The UI replaces existing content (if any) with the new content.
+
+Case study format (BCG-style scenario):
+
+context — 3-5 paragraphs setting up the case:
+- Paragraph 1: company at a glance (industry, scale, current pressure or opportunity).
+- Paragraph 2-3: the specific situation forcing a decision. Time pressure, conflicting evidence, stakeholder tension.
+- Paragraph 4-5: the protagonist (named, role, what's on their desk this week). End with the call they have to make — not the answer.
+- Voice: BCG-professional, plain English, ~8th-grade reading level. No telltale "Once upon a time" framing. Specific, concrete, present-tense where possible.
+
+stakeholders — 3-4 named voices:
+- `name`: realistic name (vary across cultures unless the materials specify).
+- `role`: title + org context, e.g. "VP Operations, reporting to the CFO".
+- `voice`: 1-2 sentences in that stakeholder's voice — what they'd say in a meeting about this. Quotable. Capture their stake (what they want, what they fear losing). Different stakeholders should pull in different directions — that's the whole point of having stakeholders.
+
+decisionPoints — 3-4 hard calls the case forces:
+- Phrased as questions the protagonist must answer ("Do we close the Tier 2 plant or invest in retooling?").
+- Each one should be genuinely hard — no obvious right answer in the case as written.
+- Connect to the module's learning objectives where natural.
+
+debriefPrompts — 3-4 reflection questions for the LD-facilitated discussion:
+- Bloom's level: analyze / evaluate. Not recall.
+- Examples: "Which stakeholder's concern is most likely to be discounted in a fast decision, and why?", "How would your decision change if you learned the CFO had been right about Q3 in the past?".
+- Surface assumptions, force trade-off articulation, invite disagreement.
+
+Voice across all four fields: realistic, specific, BCG-grounded. No melodrama, no easy answers, no consultant clichés ("disrupt", "synergize", "low-hanging fruit" — none of those).
+
+Do not invent statistics, named individuals, or company case studies that aren't in the materials. The names and companies you generate are fictional placeholders the LD can refine.
+
+If the slot reference is ambiguous (multiple slots, no clear title match), ask one short question before designing.
 """
 
 TOOL_CALL_TIMEOUT_SECONDS = 30
