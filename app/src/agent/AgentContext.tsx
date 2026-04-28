@@ -130,11 +130,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       if (name === "write_script" && typeof args.video_block_id === "string") {
         setLastTarget({ kind: "script", blockId: args.video_block_id });
       }
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: "tool",
-        text: `${name}(${summarize(args)})`,
-      });
+      // Tool calls used to land in the chat as a separate "→ tool_name(args)"
+      // bubble. That doubled up with the ProgressIndicator (#5b) and read as
+      // raw debug noise to LDs — they didn't know whether to wait or do
+      // something. The active tool name is already surfaced by the indicator
+      // ("Reading the source materials…", "Writing the script…"); after the
+      // turn ends, the agent's text response carries the user-facing summary.
+      // No more raw bubble. If we ever want a developer/debug view, add a
+      // toggle that re-enables this append.
     },
     onError: (message) => {
       setIsThinking(false);
@@ -212,10 +215,3 @@ export function useRegisterAgentActions(actions: AgentActions) {
   useEffect(() => registerActions(actions), [registerActions, actions]);
 }
 
-function summarize(args: Record<string, unknown>): string {
-  const entries = Object.entries(args);
-  if (entries.length === 0) return "";
-  return entries
-    .map(([k, v]) => `${k}=${JSON.stringify(v).slice(0, 40)}`)
-    .join(", ");
-}
