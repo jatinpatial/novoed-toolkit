@@ -27,7 +27,10 @@ export default defineConfig({
   outputDir: ".results/artifacts",
 
   use: {
-    baseURL: "http://localhost:5173/novoed-toolkit",
+    // Trailing slash matters — vite serves the app under the
+    // /novoed-toolkit/ base. Without it, page.goto("courses?…") joins
+    // against the parent and lands on /courses?… (404 in vite).
+    baseURL: "http://localhost:5173/novoed-toolkit/",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
