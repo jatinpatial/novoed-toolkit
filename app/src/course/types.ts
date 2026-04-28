@@ -40,12 +40,58 @@ export interface Block {
   source?: "writer";
 }
 
+// Quiz / knowledge-check structures, owned by the Quiz Builder agent.
+// Lessons may have an optional knowledgeCheck (post-lesson recap quiz);
+// modules may have an optional knowledgeCheck (final assessment for the
+// week's learning). Distinct from the inline "quiz" block type, which
+// is a single-question content quiz authored as part of lesson body.
+export interface QuizQuestionMCQ {
+  type: "mcq";
+  stem: string;
+  options: string[];
+  correctIndex: number;
+  rationale: string;
+}
+
+export interface QuizQuestionShort {
+  type: "short";
+  stem: string;
+  expectedAnswerHints: string[];
+}
+
+export type QuizQuestion = QuizQuestionMCQ | QuizQuestionShort;
+
+export interface Quiz {
+  questions: QuizQuestion[];
+}
+
+// Course-level case studies, owned by the Case Study Designer agent.
+// Course Architect plants 2-3 empty slots per course (id + title only);
+// Case Study Designer fills the rest later when the LD asks. Modules
+// reference a slot via Module.caseStudyId.
+export interface CaseStudyStakeholder {
+  name: string;
+  role: string;
+  voice: string;
+}
+
+export interface CaseStudy {
+  id: string;
+  title: string;
+  context: string;
+  stakeholders: CaseStudyStakeholder[];
+  decisionPoints: string[];
+  debriefPrompts: string[];
+}
+
 export interface Lesson {
   id: string;
   title: string;
   duration: number;
   blocks: Block[];
   objectives?: string[];
+  // Optional post-lesson knowledge check, written by the Quiz Builder.
+  knowledgeCheck?: Quiz;
 }
 
 export interface Module {
@@ -55,6 +101,12 @@ export interface Module {
   weekNumber?: number;
   summary?: string;
   objectives?: string[];
+  // Optional module-level final assessment, written by the Quiz Builder.
+  knowledgeCheck?: Quiz;
+  // Single-ref to a Course.caseStudies entry. Single-ref by design —
+  // handles "one case study per module" and "two modules sharing the
+  // same case study" without an array.
+  caseStudyId?: string;
 }
 
 export interface Material {
@@ -72,6 +124,9 @@ export interface Course {
   brand: BrandKey;
   modules: Module[];
   materials?: Material[];
+  // 2-3 case-study slots planted by Course Architect; filled later by
+  // Case Study Designer. Empty entries (just id + title) are valid.
+  caseStudies?: CaseStudy[];
 }
 
 export interface BlockType {
