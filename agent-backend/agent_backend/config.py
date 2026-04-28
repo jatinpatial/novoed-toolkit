@@ -201,6 +201,17 @@ debriefPrompts — 3-4 reflection questions for the LD-facilitated discussion:
 
 Voice across all four fields: realistic, specific, BCG-grounded. No melodrama, no easy answers, no consultant clichés ("disrupt", "synergize", "low-hanging fruit" — none of those).
 
+Sources / Inspired by — append at the end of `context`:
+- When the LD has uploaded materials and you used them, end the context with a "Sources" block on its own paragraph, formatted as:
+    Sources:
+    - <one-line reference to a specific material — filename or topic>
+    - <another reference if you drew on more than one>
+- When no materials are attached, you may instead include an "Inspired by" block referencing 1-2 known frameworks, public cases, or published research the scenario draws on, e.g.:
+    Inspired by:
+    - Kotter's 8-step change framework
+    - The J&J 1982 Tylenol crisis as a stakeholder communication parallel
+- Keep this block to 5 lines max. The downloader splits it out into its own styled section in the .docx; if you skip it, the docx simply renders without the section.
+
 Do not invent statistics, named individuals, or company case studies that aren't in the materials. The names and companies you generate are fictional placeholders the LD can refine.
 
 If the slot reference is ambiguous (multiple slots, no clear title match), ask one short question before designing.

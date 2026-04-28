@@ -700,6 +700,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
               module={mod}
               moduleIndex={am}
               caseStudy={moduleCaseStudy}
+              courseTitle={course.title}
               onUpdateModule={(fn: (m: Module) => void) => mutate((c) => { const m = c.modules[am]; if (m) fn(m); })}
               onJumpToLesson={(li: number) => { setAl(li); setViewMode("lesson"); }}
             />
@@ -1501,11 +1502,12 @@ function QuestionCard({
 }
 
 function ModuleSummary({
-  module: mod, moduleIndex, caseStudy, onUpdateModule, onJumpToLesson,
+  module: mod, moduleIndex, caseStudy, courseTitle, onUpdateModule, onJumpToLesson,
 }: {
   module: Module;
   moduleIndex: number;
   caseStudy: CaseStudy | undefined;
+  courseTitle: string;
   onUpdateModule: (fn: (m: Module) => void) => void;
   onJumpToLesson: (li: number) => void;
 }) {
@@ -1524,6 +1526,38 @@ function ModuleSummary({
     if (!caseStudy) return;
     setChatOpen(true);
     prefillInput(buildCaseStudyDesignPrefill(caseStudy, mode));
+  }
+
+  async function downloadCaseStudyDocx() {
+    if (!caseStudy) return;
+    try {
+      const res = await fetch(`${HTTP_URL}/export/case-study-docx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseStudy,
+          courseName: courseTitle,
+          moduleTitle: mod.title,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || `server returned ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const stem = `${courseTitle || "course"}-${mod.title || "module"}-case-study`.replace(/[^\w\-_.]/g, "_");
+      a.download = `${stem}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast("Case study downloaded");
+    } catch (e) {
+      toast(`Download failed: ${(e as Error).message}`, false);
+    }
   }
 
   return (
@@ -1612,6 +1646,7 @@ function ModuleSummary({
             caseStudy={caseStudy}
             onDesign={() => triggerCaseStudy("design")}
             onRedesign={() => triggerCaseStudy("redesign")}
+            onDownload={downloadCaseStudyDocx}
           />
         </section>
       )}
@@ -1623,11 +1658,12 @@ function ModuleSummary({
 // stakeholders) → brand CTA. Filled → context paragraphs +
 // stakeholder cards + decision points + debrief prompts.
 function CaseStudySection({
-  caseStudy, onDesign, onRedesign,
+  caseStudy, onDesign, onRedesign, onDownload,
 }: {
   caseStudy: CaseStudy;
   onDesign: () => void;
   onRedesign: () => void;
+  onDownload: () => void;
 }) {
   const empty = !caseStudy.context.trim() && caseStudy.stakeholders.length === 0;
 
@@ -1663,6 +1699,13 @@ function CaseStudySection({
           <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider">Case study</div>
           <div className="text-[12px] font-semibold text-ink-900 truncate">{caseStudy.title}</div>
         </div>
+        <button
+          onClick={onDownload}
+          className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-ink-200 text-[11px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+          title="Download as a Word document for facilitator handout"
+        >
+          <Download size={12} /> Download .docx
+        </button>
         <button
           onClick={onRedesign}
           className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-ink-200 text-[11px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"

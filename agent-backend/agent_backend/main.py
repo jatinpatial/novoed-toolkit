@@ -242,6 +242,175 @@ async def export_script_docx(req: ScriptExportRequest):
     )
 
 
+class CaseStudyStakeholderModel(BaseModel):
+    name: str = ""
+    role: str = ""
+    voice: str = ""
+
+
+class CaseStudyModel(BaseModel):
+    id: str = ""
+    title: str = ""
+    context: str = ""
+    stakeholders: list[CaseStudyStakeholderModel] = []
+    decisionPoints: list[str] = []
+    debriefPrompts: list[str] = []
+
+
+class CaseStudyExportRequest(BaseModel):
+    caseStudy: CaseStudyModel
+    courseName: str = ""
+    moduleTitle: str = ""
+
+
+def _split_sources(context: str) -> tuple[str, str | None]:
+    """Pull out a trailing 'Sources' / 'Inspired by' section if present.
+
+    The Case Study Designer prompt asks the agent to append a brief
+    Sources block at the end of context when materials are attached.
+    We render that as its own styled section in the .docx instead of
+    leaving it inline at the bottom of the context paragraph.
+    """
+    pattern = re.compile(
+        r"\n\s*(?:#+\s*)?(?:Sources|Inspired by)[:\s]*\n",
+        re.I,
+    )
+    m = pattern.search(context)
+    if not m:
+        return context, None
+    body = context[: m.start()].rstrip()
+    sources = context[m.end():].strip()
+    return body, sources or None
+
+
+@app.post("/export/case-study-docx")
+async def export_case_study_docx(req: CaseStudyExportRequest):
+    cs = req.caseStudy
+    if not cs.context.strip() and not cs.stakeholders:
+        raise HTTPException(status_code=400, detail="case study has no content to export")
+
+    body_context, sources_block = _split_sources(cs.context)
+
+    doc = Document()
+
+    # --- Title block ---
+    title = doc.add_paragraph()
+    run = title.add_run(req.courseName or "Case Study")
+    run.bold = True
+    run.font.size = Pt(18)
+    run.font.color.rgb = _BCG_GREEN
+
+    sub_bits = []
+    if req.moduleTitle:
+        sub_bits.append(req.moduleTitle)
+    sub_bits.append(cs.title or "Untitled case study")
+    sub = doc.add_paragraph()
+    run = sub.add_run(" · ".join(sub_bits))
+    run.font.size = Pt(11)
+    run.font.color.rgb = _BCG_INK_LT
+
+    attribution = doc.add_paragraph()
+    run = attribution.add_run("Designed by Case Study Designer · BCG U Studio")
+    run.italic = True
+    run.font.size = Pt(9)
+    run.font.color.rgb = _BCG_INK_LT
+
+    doc.add_paragraph()  # spacer
+
+    def section_heading(text: str) -> None:
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        run.bold = True
+        run.font.size = Pt(11)
+        run.font.color.rgb = _BCG_GREEN
+
+    def body_paragraph(text: str) -> None:
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        run.font.size = Pt(11)
+        run.font.color.rgb = _BCG_INK
+
+    # --- Context ---
+    if body_context.strip():
+        section_heading("Context")
+        for para in [p for p in body_context.split("\n\n") if p.strip()]:
+            body_paragraph(para.strip())
+
+    # --- Stakeholders ---
+    if cs.stakeholders:
+        section_heading("Stakeholders")
+        for s in cs.stakeholders:
+            p = doc.add_paragraph()
+            r = p.add_run(s.name)
+            r.bold = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK
+            if s.role:
+                r2 = p.add_run(f" — {s.role}")
+                r2.font.size = Pt(11)
+                r2.font.color.rgb = _BCG_INK_LT
+            if s.voice:
+                quote = doc.add_paragraph()
+                rq = quote.add_run(f"“{s.voice}”")
+                rq.italic = True
+                rq.font.size = Pt(10)
+                rq.font.color.rgb = _BCG_INK
+                quote.paragraph_format.left_indent = Cm(0.6)
+
+    # --- Decision points ---
+    if cs.decisionPoints:
+        section_heading("Decision points")
+        for i, dp in enumerate(cs.decisionPoints, start=1):
+            p = doc.add_paragraph()
+            r = p.add_run(f"{i}. ")
+            r.bold = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_GREEN
+            r2 = p.add_run(dp)
+            r2.font.size = Pt(11)
+            r2.font.color.rgb = _BCG_INK
+
+    # --- Debrief prompts ---
+    if cs.debriefPrompts:
+        section_heading("Debrief prompts (for facilitation)")
+        for i, dp in enumerate(cs.debriefPrompts, start=1):
+            p = doc.add_paragraph()
+            r = p.add_run(f"{i}. ")
+            r.bold = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_GREEN
+            r2 = p.add_run(dp)
+            r2.font.size = Pt(11)
+            r2.font.color.rgb = _BCG_INK
+
+    # --- Sources ---
+    if sources_block:
+        section_heading("Sources / Inspired by")
+        for line in [l for l in sources_block.split("\n") if l.strip()]:
+            cleaned = re.sub(r"^[\-\*•]\s*", "", line.strip())
+            p = doc.add_paragraph()
+            r = p.add_run(f"• {cleaned}")
+            r.font.size = Pt(10)
+            r.font.color.rgb = _BCG_INK_LT
+
+    # --- Stream out ---
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    stem = _safe_filename(
+        f"{req.courseName}-{req.moduleTitle}-case-study"
+        if req.courseName or req.moduleTitle
+        else f"{cs.title}-case-study"
+    )
+    filename = f"{stem}.docx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
