@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { HeroComposer } from "../shell/HeroComposer";
+import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { listProjects, subscribeProjects, type Project } from "../store/projects";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
@@ -36,6 +37,10 @@ function relTime(ts: number): string {
  */
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
+  // Brief state lives at the Dashboard level so the try-a-prompt pills
+  // can fill the composer with example briefs (Q8a — fill, don't
+  // auto-submit; user reviews and presses Enter).
+  const [brief, setBrief] = useState("");
 
   useEffect(() => {
     const refresh = () => setProjects(listProjects());
@@ -61,7 +66,8 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <HeroComposer />
+        <HeroComposer brief={brief} setBrief={setBrief} />
+        <TryAPromptPills onPick={setBrief} />
 
         {/* Recent work */}
         {projects.length > 0 && (

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -13,6 +13,9 @@ import { ArrowRight, Sparkles } from "lucide-react";
  * the composer, and clears the param so back-navigation doesn't
  * re-prefill.
  *
+ * Controlled — Dashboard owns the brief state so try-a-prompt pills
+ * (#1d) can fill the composer with example briefs.
+ *
  * "Start blank" is intentionally NOT here — the hero is committed
  * to the agent-led story. Power users who want an empty skeleton
  * can type "give me an empty course skeleton" or click through
@@ -20,9 +23,13 @@ import { ArrowRight, Sparkles } from "lucide-react";
  */
 const PLACEHOLDER = "e.g. 4-week course on change management for senior managers leading restructurings";
 
-export function HeroComposer() {
+interface HeroComposerProps {
+  brief: string;
+  setBrief: (text: string) => void;
+}
+
+export function HeroComposer({ brief, setBrief }: HeroComposerProps) {
   const navigate = useNavigate();
-  const [brief, setBrief] = useState("");
 
   function submit() {
     const text = brief.trim();
