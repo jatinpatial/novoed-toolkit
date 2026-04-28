@@ -965,6 +965,22 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 onClick={(e) => e.stopPropagation()}
                 className={`flex-1 text-xs font-bold bg-transparent border-none outline-none min-w-0 ${moduleActive ? "text-brand-800" : "text-ink-900"}`}
               />
+              {m.caseStudyId && (() => {
+                const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
+                const designed = !!cs && (cs.context.trim().length > 0 || cs.stakeholders.length > 0);
+                const tip = cs
+                  ? `Case study${designed ? "" : " (planted, not yet designed)"}: ${cs.title}`
+                  : "Case study slot";
+                return (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectModule(mi); }}
+                    title={tip}
+                    className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition ${designed ? "text-brand-700 hover:bg-brand-50" : "text-ink-400 hover:text-brand-700 hover:bg-brand-50"}`}
+                  >
+                    <BookOpen size={11} />
+                  </button>
+                );
+              })()}
               {course.modules.length > 1 && (
                 <button
                   onClick={() => { if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
