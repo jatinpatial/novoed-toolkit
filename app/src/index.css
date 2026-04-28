@@ -4,6 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS variables — values that need to be referenced from custom CSS
+   (not Tailwind utilities). Surface-warm is sparingly used for nested
+   cards inside a section card where pure-white-on-pure-white loses
+   depth (hence the subtly cream tint). */
+:root {
+  --surface-warm: #FAFAF7;
+}
+
+/* Animation keyframes for the Tailwind animation utilities defined in
+   tailwind.config.ts. Each is paired with the ease-sana curve in the
+   matching `animate-*` class. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 @layer base {
   html, body, #root {
     height: 100%;
@@ -25,6 +49,28 @@
 }
 
 @layer components {
+  /* ── Surface elevation (Phase 2 #2 foundation) ───────────────────────
+     Three semantic surface classes for the layered card pattern:
+       - surface-1   page bg, default cards (pure white)
+       - surface-2   nested cards inside surface-1 (warm-tinted)
+       - surface-overlay  modals + popovers (white + modal shadow)
+
+     Use case: <div class="surface-1 rounded-card-lg shadow-resting"> as
+     a top-level card; nest <div class="surface-2 rounded-card"> inside
+     when you want depth without losing breathing room. */
+  .surface-1 { background-color: #ffffff; }
+  .surface-2 { background-color: var(--surface-warm); }
+  .surface-overlay { background-color: #ffffff; box-shadow: 0 24px 80px rgba(16,18,24,0.16), 0 4px 16px rgba(16,18,24,0.06); }
+
+  /* ── Semantic radii aliases (Phase 2 #2 foundation) ──────────────────
+     Surface code reads by intent, not pixel. The Tailwind tokens stay
+     too — these are layered on top so both styles work. */
+  .rounded-input    { @apply rounded-md;  }   /* 6px  text inputs / textareas */
+  .rounded-button   { @apply rounded-lg;  }   /* 8px  buttons */
+  .rounded-card     { @apply rounded-xl;  }   /* 12px small cards / list items */
+  .rounded-card-lg  { @apply rounded-2xl; }   /* 16px large cards (entry, course) */
+  .rounded-hero     { @apply rounded-3xl; }   /* 24px hero composer / modal corners */
+
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all select-none; }
   .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 shadow-sm px-3.5 h-9; }
   .btn-secondary { @apply btn bg-white text-ink-800 border border-ink-200 hover:border-ink-300 hover:bg-ink-50 px-3.5 h-9; }
