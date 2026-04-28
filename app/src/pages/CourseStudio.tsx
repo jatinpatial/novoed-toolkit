@@ -15,7 +15,7 @@ import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock } from "../course/previewBlock";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
-import type { Block, BlockData, BlockItem, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
+import type { Block, BlockData, BlockItem, CaseStudy, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat } from "../agent/AgentChat";
@@ -371,6 +371,10 @@ interface CanvasProps {
 function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   const [am, setAm] = useState(0);
   const [al, setAl] = useState(0);
+  // Canvas mode. "lesson" shows the lesson editor; "module" shows the
+  // module summary page (week/objectives/final assessment/case study).
+  // Switched by clicking the module row vs a lesson row in the outline.
+  const [viewMode, setViewMode] = useState<"lesson" | "module">("lesson");
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [leftPane, setLeftPane] = useState<"outline" | "materials">("outline");
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
@@ -379,6 +383,9 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
 
   const mod = course.modules[am] || course.modules[0];
   const lesson = mod?.lessons[al] || mod?.lessons[0];
+  const moduleCaseStudy = mod?.caseStudyId
+    ? (course.caseStudies ?? []).find((cs) => cs.id === mod.caseStudyId)
+    : undefined;
 
   /* ── mutations ─────────────────────────────────────────────────────────── */
   const mutate = useCallback((fn: (draft: Course) => void) => {
@@ -665,9 +672,11 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           <LeftSidebar
             course={course}
             am={am} al={al}
+            viewMode={viewMode}
             leftPane={leftPane}
             setLeftPane={setLeftPane}
-            onSelect={(mi: number, li: number) => { setAm(mi); setAl(li); setEditingBlockId(null); }}
+            onSelect={(mi: number, li: number) => { setAm(mi); setAl(li); setViewMode("lesson"); setEditingBlockId(null); }}
+            onSelectModule={(mi: number) => { setAm(mi); setViewMode("module"); setEditingBlockId(null); }}
             onUpdate={mutate}
             onCollapse={() => setOutlineOpen(false)}
             onAddMaterial={addMaterial}
@@ -686,7 +695,15 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
 
         {/* Canvas */}
         <div className="flex-1 min-w-0 overflow-y-auto">
-          {lesson ? (
+          {viewMode === "module" && mod ? (
+            <ModuleSummary
+              module={mod}
+              moduleIndex={am}
+              caseStudy={moduleCaseStudy}
+              onUpdateModule={(fn: (m: Module) => void) => mutate((c) => { const m = c.modules[am]; if (m) fn(m); })}
+              onJumpToLesson={(li: number) => { setAl(li); setViewMode("lesson"); }}
+            />
+          ) : lesson ? (
             <LessonCanvas
               lesson={lesson}
               module={course.modules[am]}
@@ -839,16 +856,18 @@ interface LeftSidebarProps {
   course: Course;
   am: number;
   al: number;
+  viewMode: "lesson" | "module";
   leftPane: "outline" | "materials";
   setLeftPane: (v: "outline" | "materials") => void;
   onSelect: (mi: number, li: number) => void;
+  onSelectModule: (mi: number) => void;
   onUpdate: (fn: (c: Course) => void) => void;
   onCollapse: () => void;
   onAddMaterial: (m: Material) => void;
   onRemoveMaterial: (id: string) => void;
 }
 
-function LeftSidebar({ course, am, al, leftPane, setLeftPane, onSelect, onUpdate, onCollapse, onAddMaterial, onRemoveMaterial }: LeftSidebarProps) {
+function LeftSidebar({ course, am, al, viewMode, leftPane, setLeftPane, onSelect, onSelectModule, onUpdate, onCollapse, onAddMaterial, onRemoveMaterial }: LeftSidebarProps) {
   const matCount = course.materials?.length ?? 0;
   return (
     <aside className="w-64 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
@@ -878,7 +897,7 @@ function LeftSidebar({ course, am, al, leftPane, setLeftPane, onSelect, onUpdate
       </div>
 
       {leftPane === "outline" ? (
-        <CourseOutlineBody course={course} am={am} al={al} onSelect={onSelect} onUpdate={onUpdate} />
+        <CourseOutlineBody course={course} am={am} al={al} viewMode={viewMode} onSelect={onSelect} onSelectModule={onSelectModule} onUpdate={onUpdate} />
       ) : (
         <MaterialsShelf
           materials={course.materials ?? []}
@@ -893,7 +912,7 @@ function LeftSidebar({ course, am, al, leftPane, setLeftPane, onSelect, onUpdate
 /* ═══════════════════════════════════════════════════════════════════════════
    OUTLINE BODY — modules & lessons list (rendered inside LeftSidebar)
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
+function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule, onUpdate }: any) {
   function addModule() {
     onUpdate((c: Course) => {
       const mi = c.modules.length + 1;
@@ -928,14 +947,23 @@ function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
   return (
     <>
       <div className="flex-1 overflow-y-auto py-2">
-        {course.modules.map((m: any, mi: number) => (
+        {course.modules.map((m: any, mi: number) => {
+          const moduleActive = viewMode === "module" && am === mi;
+          return (
           <div key={m.id} className="mb-1">
-            <div className="px-3 pt-2 pb-1 flex items-center gap-1.5 group">
-              <span className="w-5 h-5 flex-shrink-0 rounded bg-ink-900 text-white text-[9px] font-bold flex items-center justify-center">{mi + 1}</span>
+            <div className={`px-3 pt-2 pb-1 flex items-center gap-1.5 group ${moduleActive ? "bg-brand-50/60 rounded-md mx-2" : ""}`}>
+              <button
+                onClick={() => onSelectModule(mi)}
+                className={`w-5 h-5 flex-shrink-0 rounded text-[9px] font-bold flex items-center justify-center transition ${moduleActive ? "bg-brand-600 text-white" : "bg-ink-900 text-white hover:bg-brand-700"}`}
+                title="Open module summary"
+              >
+                {mi + 1}
+              </button>
               <input
                 value={m.title}
                 onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
-                className="flex-1 text-xs font-bold text-ink-900 bg-transparent border-none outline-none min-w-0"
+                onClick={(e) => e.stopPropagation()}
+                className={`flex-1 text-xs font-bold bg-transparent border-none outline-none min-w-0 ${moduleActive ? "text-brand-800" : "text-ink-900"}`}
               />
               {course.modules.length > 1 && (
                 <button
@@ -974,7 +1002,8 @@ function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
               + lesson
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <button onClick={addModule} className="mx-3 my-3 py-2 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
@@ -987,6 +1016,35 @@ function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
 /* ═══════════════════════════════════════════════════════════════════════════
    LESSON CANVAS
    ═══════════════════════════════════════════════════════════════════════════ */
+function buildModuleKnowledgeCheckPrefill(
+  mod: Module,
+  mode: "write" | "regenerate",
+): string {
+  const week = mod.weekNumber ?? 1;
+  if (mode === "regenerate") {
+    return `Regenerate the final assessment for module ${week}: ${mod.title}. Same scope, fresh take.`;
+  }
+  return `Add the final assessment to module ${week}: ${mod.title}.\nModule id: ${mod.id}\n5 questions, all MCQ unless I say otherwise. Cover the module's objectives across Bloom's levels.`;
+}
+
+function buildModuleQuestionRegenPrefill(
+  mod: Module,
+  questionIndex: number,
+): string {
+  const week = mod.weekNumber ?? 1;
+  return `Regenerate question ${questionIndex + 1} on the module ${week} final assessment. Same topic, fresh angle.`;
+}
+
+function buildCaseStudyDesignPrefill(
+  caseStudy: CaseStudy,
+  mode: "design" | "redesign",
+): string {
+  if (mode === "redesign") {
+    return `Redesign the case study "${caseStudy.title}". Same title, fresh angle.`;
+  }
+  return `Design the case study "${caseStudy.title}".\nCase study id: ${caseStudy.id}\nFill in context, stakeholders, decision points, and debrief prompts.`;
+}
+
 function buildLessonKnowledgeCheckPrefill(
   mod: Module | undefined,
   lesson: Lesson,
@@ -1423,6 +1481,237 @@ function QuestionCard({
         </div>
       )}
     </div>
+  );
+}
+
+function ModuleSummary({
+  module: mod, moduleIndex, caseStudy, onUpdateModule, onJumpToLesson,
+}: {
+  module: Module;
+  moduleIndex: number;
+  caseStudy: CaseStudy | undefined;
+  onUpdateModule: (fn: (m: Module) => void) => void;
+  onJumpToLesson: (li: number) => void;
+}) {
+  const { setOpen: setChatOpen, prefillInput } = useAgent();
+  const week = mod.weekNumber ?? moduleIndex + 1;
+
+  function triggerKnowledgeCheck(mode: "write" | "regenerate") {
+    setChatOpen(true);
+    prefillInput(buildModuleKnowledgeCheckPrefill(mod, mode));
+  }
+  function triggerModuleQuestionRegen(questionIndex: number) {
+    setChatOpen(true);
+    prefillInput(buildModuleQuestionRegenPrefill(mod, questionIndex));
+  }
+  function triggerCaseStudy(mode: "design" | "redesign") {
+    if (!caseStudy) return;
+    setChatOpen(true);
+    prefillInput(buildCaseStudyDesignPrefill(caseStudy, mode));
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-8 py-10">
+      {/* Module header */}
+      <div className="mb-8">
+        <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider mb-1">
+          Week {week} · Module
+        </div>
+        <input
+          value={mod.title}
+          onChange={(e) => onUpdateModule((m) => { m.title = e.target.value; })}
+          placeholder="Module title"
+          className="w-full text-3xl font-bold text-ink-900 bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+        />
+        {mod.summary && (
+          <textarea
+            value={mod.summary}
+            onChange={(e) => onUpdateModule((m) => { m.summary = e.target.value; })}
+            rows={2}
+            className="w-full text-sm text-ink-600 bg-transparent border-none outline-none resize-none mb-3 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+          />
+        )}
+        <div className="text-xs text-ink-500">
+          {mod.lessons.length} lesson{mod.lessons.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* Objectives */}
+      {mod.objectives && mod.objectives.length > 0 && (
+        <section className="mb-10">
+          <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">Learning objectives</div>
+          <ul className="space-y-1.5">
+            {mod.objectives.map((o, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-ink-700">
+                <span className="w-4 h-4 mt-0.5 flex-shrink-0 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <span className="leading-snug">{o}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Lessons jump-list */}
+      <section className="mb-10">
+        <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">Lessons</div>
+        <ol className="space-y-1">
+          {mod.lessons.map((l, li) => (
+            <li key={l.id}>
+              <button
+                onClick={() => onJumpToLesson(li)}
+                className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-ink-50 transition group"
+              >
+                <span className="text-[10px] font-bold text-ink-400 group-hover:text-brand-700 flex-shrink-0">
+                  {moduleIndex + 1}.{li + 1}
+                </span>
+                <span className="text-sm text-ink-800 flex-1 truncate">
+                  {l.title.replace(/^\d+\.\d+\s*/, "")}
+                </span>
+                <span className="text-[10px] text-ink-400">
+                  {l.duration} min · {l.blocks.length} block{l.blocks.length !== 1 ? "s" : ""}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Module final assessment */}
+      <section className="mb-10">
+        <KnowledgeCheckSection
+          quiz={mod.knowledgeCheck}
+          onWrite={() => triggerKnowledgeCheck("write")}
+          onRegenerateAll={() => triggerKnowledgeCheck("regenerate")}
+          onRegenerateQuestion={triggerModuleQuestionRegen}
+          scopeLabel="module"
+        />
+      </section>
+
+      {/* Case study slot */}
+      {caseStudy && (
+        <section>
+          <CaseStudySection
+            caseStudy={caseStudy}
+            onDesign={() => triggerCaseStudy("design")}
+            onRedesign={() => triggerCaseStudy("redesign")}
+          />
+        </section>
+      )}
+    </div>
+  );
+}
+
+// Renders a planted case-study slot. Empty (no context, no
+// stakeholders) → brand CTA. Filled → context paragraphs +
+// stakeholder cards + decision points + debrief prompts.
+function CaseStudySection({
+  caseStudy, onDesign, onRedesign,
+}: {
+  caseStudy: CaseStudy;
+  onDesign: () => void;
+  onRedesign: () => void;
+}) {
+  const empty = !caseStudy.context.trim() && caseStudy.stakeholders.length === 0;
+
+  if (empty) {
+    return (
+      <button
+        onClick={onDesign}
+        className="w-full rounded-xl border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-5 text-left flex items-start gap-3 group"
+      >
+        <div className="w-9 h-9 rounded-lg bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+          <BookOpen size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">Case study slot</div>
+          <div className="text-sm font-bold text-ink-900 mb-0.5 group-hover:text-brand-700">
+            Design "{caseStudy.title}"
+          </div>
+          <div className="text-xs text-ink-600 leading-snug">
+            Course Architect planted this slot. Click to ask the Case Study Designer to write the BCG-style scenario, stakeholder voices, decision points, and debrief prompts.
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <article className="rounded-xl border border-ink-200 bg-white">
+      <header className="flex items-center gap-2 px-5 h-12 border-b border-ink-100">
+        <div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center text-brand-700">
+          <BookOpen size={13} />
+        </div>
+        <div className="flex-1">
+          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider">Case study</div>
+          <div className="text-[12px] font-semibold text-ink-900 truncate">{caseStudy.title}</div>
+        </div>
+        <button
+          onClick={onRedesign}
+          className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-ink-200 text-[11px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+          title="Regenerate the case study"
+        >
+          <Sparkles size={12} /> Redesign
+        </button>
+      </header>
+
+      <div className="p-5 space-y-6">
+        {caseStudy.context.trim() && (
+          <div>
+            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wide mb-2">Context</div>
+            <div className="text-[13px] text-ink-800 leading-relaxed whitespace-pre-wrap">
+              {caseStudy.context}
+            </div>
+          </div>
+        )}
+
+        {caseStudy.stakeholders.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wide mb-2">Stakeholders</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {caseStudy.stakeholders.map((s, i) => (
+                <div key={i} className="rounded-lg border border-ink-200 bg-ink-50/40 p-3">
+                  <div className="text-sm font-semibold text-ink-900">{s.name}</div>
+                  <div className="text-[11px] text-ink-500 mb-2">{s.role}</div>
+                  <div className="text-[12px] text-ink-700 italic leading-relaxed">"{s.voice}"</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {caseStudy.decisionPoints.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wide mb-2">Decision points</div>
+            <ol className="space-y-1.5">
+              {caseStudy.decisionPoints.map((d, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] text-ink-800">
+                  <span className="w-5 h-5 mt-0.5 flex-shrink-0 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="leading-snug">{d}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {caseStudy.debriefPrompts.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wide mb-2">Debrief prompts <span className="text-ink-300 normal-case font-normal">(for LD facilitation)</span></div>
+            <ul className="space-y-1.5">
+              {caseStudy.debriefPrompts.map((p, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] text-ink-700">
+                  <HelpCircle size={11} className="mt-1 text-ink-400 flex-shrink-0" />
+                  <span className="leading-snug">{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
