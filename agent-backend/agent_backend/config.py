@@ -7,6 +7,15 @@ GIT_BASH_PATH = os.getenv("CLAUDE_CODE_GIT_BASH_PATH")
 if GIT_BASH_PATH:
     os.environ["CLAUDE_CODE_GIT_BASH_PATH"] = GIT_BASH_PATH
 
+# Architectural invariant: this backend always authenticates via the
+# Claude CLI's OAuth subscription session, never via an API key. If
+# the parent shell happens to have ANTHROPIC_API_KEY set (Console key,
+# inherited from a Claude-Code-spawned terminal, etc.), the SDK would
+# silently prefer it and fail with 401 when the key is stale. Drop it
+# here so the auth path is deterministic regardless of how the backend
+# was launched.
+os.environ.pop("ANTHROPIC_API_KEY", None)
+
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
 
 SYSTEM_PROMPT = """You are an AI companion inside BCG U Studio that helps BCG U Learning Designers design and fill in courses. You operate in one of two modes per turn — pick the mode from the LD's request.
