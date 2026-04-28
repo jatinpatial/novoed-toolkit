@@ -58,10 +58,10 @@ const SECTIONS: NavSection[] = [
 
 export function SidebarNav() {
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+    <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
       {SECTIONS.map((section) => (
         <div key={section.label}>
-          <div className="px-3 mb-1.5 text-[10px] font-bold text-ink-400 uppercase tracking-wider">
+          <div className="px-3 mb-2 text-eyebrow uppercase text-ink-400">
             {section.label}
           </div>
           <div className="space-y-0.5">
@@ -80,13 +80,13 @@ function NavRow({ item }: { item: NavItem }) {
   if (!item.to) {
     return (
       <div
-        className="flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm font-medium text-ink-400 cursor-not-allowed select-none"
+        className="flex items-center gap-3 px-3 h-10 rounded-button text-body font-medium text-ink-400 cursor-not-allowed select-none"
         title="Coming soon"
       >
         <Icon size={16} strokeWidth={2} />
         <span className="flex-1">{item.label}</span>
         {item.badge && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-300 bg-ink-100 px-1.5 py-0.5 rounded">
+          <span className="text-eyebrow uppercase text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
             {item.badge}
           </span>
         )}
@@ -98,9 +98,13 @@ function NavRow({ item }: { item: NavItem }) {
       to={item.to}
       end={item.to === "/"}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm font-medium transition-colors ${
+        // Active state uses a 2px left accent bar (brand-500) plus the
+        // brand-50 fill — keeps the green deliberate (per the
+        // shadow-active discipline rule). Hover is neutral.
+        // ease-sana via duration-fast on bg + colour transitions.
+        `relative flex items-center gap-3 px-3 h-10 rounded-button text-body font-medium transition-colors duration-fast ease-sana ${
           isActive
-            ? "bg-brand-50 text-brand-700"
+            ? "bg-brand-50 text-brand-700 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-brand-500 before:rounded-full"
             : "text-ink-600 hover:bg-ink-100 hover:text-ink-900"
         }`
       }
@@ -108,7 +112,7 @@ function NavRow({ item }: { item: NavItem }) {
       <Icon size={16} strokeWidth={2} />
       <span className="flex-1">{item.label}</span>
       {item.badge && (
-        <span className="text-[9px] font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">
+        <span className="text-eyebrow uppercase text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">
           {item.badge}
         </span>
       )}

@@ -23,14 +23,14 @@ interface SidebarProps {
 
 export function Sidebar({ onShowWelcome }: SidebarProps = {}) {
   return (
-    <aside className="w-60 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
-      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-ink-200">
-        <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white">
-          <Sparkles size={16} strokeWidth={2.5} />
+    <aside className="w-60 flex-shrink-0 surface-1 border-r border-ink-200 flex flex-col">
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-ink-200">
+        <div className="w-9 h-9 rounded-card bg-brand-gradient flex items-center justify-center text-white shadow-resting">
+          <Sparkles size={17} strokeWidth={2.5} />
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-bold text-ink-900 leading-tight">BCG U Studio</div>
-          <div className="text-[10px] text-ink-500 leading-tight">Learning design platform</div>
+          <div className="text-h3 text-ink-900 leading-tight tracking-tight">BCG U Studio</div>
+          <div className="text-caption text-ink-500 leading-tight">Learning design platform</div>
         </div>
       </div>
 

@@ -13,31 +13,30 @@ interface SidebarFooterProps {
 }
 
 export function SidebarFooter({ onShowWelcome }: SidebarFooterProps) {
+  const rowClasses =
+    "flex items-center gap-3 px-3 h-9 rounded-button text-caption font-medium text-ink-500 hover:text-ink-800 hover:bg-ink-100 transition-colors duration-fast ease-sana";
   return (
     <div className="px-3 py-3 border-t border-ink-200 space-y-0.5">
       <button
         onClick={onShowWelcome}
         disabled={!onShowWelcome}
-        className="w-full flex items-center gap-2.5 px-3 h-8 rounded-lg text-xs font-medium text-ink-500 hover:text-ink-800 hover:bg-ink-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        className={`w-full ${rowClasses} disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
       >
         <HelpCircle size={14} strokeWidth={2} />
-        <span>Help & how it works</span>
+        <span>Help &amp; how it works</span>
       </button>
 
       <a
         href="https://claude.ai/download"
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2.5 px-3 h-8 rounded-lg text-xs font-medium text-ink-500 hover:text-ink-800 hover:bg-ink-100 transition-colors"
+        className={rowClasses}
       >
         <Download size={14} strokeWidth={2} />
         <span>Install Claude Desktop</span>
       </a>
 
-      <a
-        href="mailto:patial.jatin@bcg.com"
-        className="flex items-center gap-2.5 px-3 h-8 rounded-lg text-xs font-medium text-ink-500 hover:text-ink-800 hover:bg-ink-100 transition-colors"
-      >
+      <a href="mailto:patial.jatin@bcg.com" className={rowClasses}>
         <Mail size={14} strokeWidth={2} />
         <span>Feedback &amp; requests</span>
       </a>
