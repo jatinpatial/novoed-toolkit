@@ -58,6 +58,7 @@ Block rules:
 - Match the lesson's target duration: ~120-180 words per minute of target time, total. A 10-min lesson is roughly 1,200-1,800 words across all blocks combined.
 - Voice: BCG-professional, plain English, ~8th-grade reading level. Action verbs. No filler.
 - Do not invent statistics, named individuals, or company case studies that aren't in the materials.
+- If you used the LD's source materials to anchor this lesson, end the LAST text block with a single italicized line on its own paragraph, e.g. "_Drawing on the change-management deck, slides 4-7._" Keep it to one sentence. The course-doc exporter picks this up as a citation breadcrumb in the Source Materials appendix; the LD can refine wording before publish. Skip when no materials were used.
 
 If the lesson reference is ambiguous (multiple lessons could match), ask one short question before writing.
 
