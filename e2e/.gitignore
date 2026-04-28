@@ -1,0 +1,9 @@
+# Playwright artifacts — traces, screenshots, videos, test results.
+# Regenerated on every run. Never committed.
+.results/
+playwright-report/
+test-results/
+
+# Local-only Playwright cache + node modules (none expected here, but
+# guard against accidental installs).
+node_modules/

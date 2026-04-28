@@ -1,0 +1,12 @@
+{
+  "name": "novoed-toolkit-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root package — exists only to host husky and the pre-push hook. Application code lives in app/, agent backend in agent-backend/.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.0"
+  }
+}
