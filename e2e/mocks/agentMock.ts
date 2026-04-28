@@ -29,6 +29,12 @@ export interface AgentTurnSpec {
   userMessage?: RegExp | string;
   /** Tool calls fired in order; each waits for the FE's tool_result. */
   toolCalls?: MockedToolCall[];
+  /**
+   * Delay (ms) between the last tool_result and the assistant_text /
+   * done frames. Used by loading-label tests so the indicator stays
+   * on its last-tool friendly label long enough to assert. Default 0.
+   */
+  pauseAfterToolsMs?: number;
   /** Final assistant_text frame, sent after all toolCalls land. */
   assistantText?: string;
 }
@@ -106,6 +112,9 @@ async function runScript(
     // tool_result before firing the next tool_call. Mirrors the real
     // backend's serial behavior.
     await ackPromise;
+  }
+  if (script.pauseAfterToolsMs && script.pauseAfterToolsMs > 0) {
+    await new Promise((r) => setTimeout(r, script.pauseAfterToolsMs));
   }
   if (script.assistantText) {
     ws.send(JSON.stringify({ type: "assistant_text", text: script.assistantText }));
