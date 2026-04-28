@@ -437,3 +437,733 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ─── Course .docx exporter (Phase 1 #6) ───────────────────────────────────────
+
+# Block-type adapters for Word doc rendering
+# ──────────────────────────────────────────
+# text         → paragraph
+# banner       → styled section header + body paragraph
+# callout      → bordered tinted block (label + body)
+# cards        → bulleted list of card titles + descriptions
+# accordion    → expanded headings + body (collapsible-equivalent)
+# flipcard     → "Front: X / Back: Y" pairs
+# timeline     → numbered ordered list (each item: title + description)
+# quiz         → question + options with correct marker + rationale
+# poll         → question + options with % values
+# stats        → number + label list (KPI-style)
+# image        → caption + alt text only (no embed for v1)
+# video        → embedded script in 3-col table (reuses script renderer)
+# divider      → SKIPPED (genuinely contentless)
+# ──────────────────────────────────────────
+# If you add a new block type and don't add an adapter here, the export
+# will fall back to a generic placeholder line. Don't let that happen
+# — add the row.
+
+
+class BlockItemModel(BaseModel):
+    title: str = ""
+    desc: str | None = None
+    img: str | None = None
+    alt: str | None = None
+
+
+class BlockDataModel(BaseModel):
+    content: str | None = None
+    url: str | None = None
+    caption: str | None = None
+    alt: str | None = None
+    title: str | None = None
+    body: str | None = None
+    type: str | None = None
+    items: list[BlockItemModel] | None = None
+    script: str | None = None
+    videoType: str | None = None
+
+
+class BlockModel(BaseModel):
+    id: str
+    type: str
+    data: BlockDataModel = BlockDataModel()
+
+
+class QuizQuestionModel(BaseModel):
+    type: str  # "mcq" | "short"
+    stem: str = ""
+    options: list[str] | None = None
+    correctIndex: int | None = None
+    rationale: str | None = None
+    expectedAnswerHints: list[str] | None = None
+
+
+class QuizModel(BaseModel):
+    questions: list[QuizQuestionModel] = []
+
+
+class LessonModel(BaseModel):
+    id: str
+    title: str = ""
+    duration: int = 10
+    blocks: list[BlockModel] = []
+    objectives: list[str] | None = None
+    knowledgeCheck: QuizModel | None = None
+
+
+class CourseModuleModel(BaseModel):
+    id: str
+    title: str = ""
+    weekNumber: int | None = None
+    summary: str | None = None
+    objectives: list[str] | None = None
+    knowledgeCheck: QuizModel | None = None
+    caseStudyId: str | None = None
+    lessons: list[LessonModel] = []
+
+
+class MaterialModel(BaseModel):
+    id: str = ""
+    filename: str = ""
+    charCount: int = 0
+
+
+class CourseModel(BaseModel):
+    id: str
+    title: str = ""
+    client: str = ""
+    brand: str = "bcgu"
+    modules: list[CourseModuleModel] = []
+    materials: list[MaterialModel] | None = None
+    caseStudies: list[CaseStudyModel] | None = None
+
+
+class CourseExportRequest(BaseModel):
+    course: CourseModel
+    audience: str = ""
+
+
+# ─── Section helpers ──────────────────────────────────────────────────────────
+
+
+def _h1(doc: Document, text: str) -> None:
+    p = doc.add_paragraph()
+    r = p.add_run(text)
+    r.bold = True
+    r.font.size = Pt(20)
+    r.font.color.rgb = _BCG_GREEN
+
+
+def _h2(doc: Document, text: str) -> None:
+    p = doc.add_paragraph()
+    r = p.add_run(text)
+    r.bold = True
+    r.font.size = Pt(15)
+    r.font.color.rgb = _BCG_GREEN
+
+
+def _h3(doc: Document, text: str) -> None:
+    p = doc.add_paragraph()
+    r = p.add_run(text)
+    r.bold = True
+    r.font.size = Pt(12)
+    r.font.color.rgb = _BCG_GREEN
+
+
+def _body(doc: Document, text: str, italic: bool = False, light: bool = False) -> None:
+    p = doc.add_paragraph()
+    r = p.add_run(text)
+    r.font.size = Pt(11)
+    r.italic = italic
+    r.font.color.rgb = _BCG_INK_LT if light else _BCG_INK
+
+
+def _bullet(doc: Document, text: str) -> None:
+    p = doc.add_paragraph()
+    r = p.add_run(f"• {text}")
+    r.font.size = Pt(11)
+    r.font.color.rgb = _BCG_INK
+
+
+def _numbered(doc: Document, idx: int, text: str) -> None:
+    p = doc.add_paragraph()
+    r1 = p.add_run(f"{idx}. ")
+    r1.bold = True
+    r1.font.size = Pt(11)
+    r1.font.color.rgb = _BCG_GREEN
+    r2 = p.add_run(text)
+    r2.font.size = Pt(11)
+    r2.font.color.rgb = _BCG_INK
+
+
+def _page_break(doc: Document) -> None:
+    doc.add_page_break()
+
+
+# ─── Block-type adapters ──────────────────────────────────────────────────────
+
+
+def _render_text_block(doc: Document, block: BlockModel) -> None:
+    content = (block.data.content or "").strip()
+    if not content:
+        return
+    for para in [p.strip() for p in content.split("\n\n") if p.strip()]:
+        _body(doc, para)
+
+
+def _render_banner_block(doc: Document, block: BlockModel) -> None:
+    title = (block.data.title or "").strip()
+    body = (block.data.body or "").strip()
+    if title:
+        _h3(doc, title)
+    if body:
+        _body(doc, body)
+
+
+def _render_callout_block(doc: Document, block: BlockModel) -> None:
+    callout_kind = (block.data.type or "tip").upper()
+    body = (block.data.body or "").strip()
+    if not body:
+        return
+    p = doc.add_paragraph()
+    r1 = p.add_run(f"[{callout_kind}] ")
+    r1.bold = True
+    r1.font.size = Pt(11)
+    r1.font.color.rgb = _BCG_GREEN
+    r2 = p.add_run(body)
+    r2.font.size = Pt(11)
+    r2.font.color.rgb = _BCG_INK
+
+
+def _render_cards_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    for item in items:
+        title = (item.title or "").strip()
+        desc = (item.desc or "").strip()
+        if not title and not desc:
+            continue
+        p = doc.add_paragraph()
+        if title:
+            r = p.add_run(f"• {title}")
+            r.bold = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK
+        if desc:
+            r2 = p.add_run(f"  — {desc}" if title else f"• {desc}")
+            r2.font.size = Pt(11)
+            r2.font.color.rgb = _BCG_INK_LT
+
+
+def _render_accordion_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    for item in items:
+        title = (item.title or "").strip()
+        desc = (item.desc or "").strip()
+        if title:
+            _h3(doc, title)
+        if desc:
+            _body(doc, desc)
+
+
+def _render_flipcard_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    for item in items:
+        front = (item.title or "").strip()
+        back = (item.desc or "").strip()
+        if not front and not back:
+            continue
+        p = doc.add_paragraph()
+        r1 = p.add_run("Front: ")
+        r1.bold = True
+        r1.font.size = Pt(11)
+        r1.font.color.rgb = _BCG_GREEN
+        r2 = p.add_run(front)
+        r2.font.size = Pt(11)
+        r2.font.color.rgb = _BCG_INK
+        if back:
+            p2 = doc.add_paragraph()
+            r3 = p2.add_run("Back: ")
+            r3.bold = True
+            r3.font.size = Pt(11)
+            r3.font.color.rgb = _BCG_GREEN
+            r4 = p2.add_run(back)
+            r4.font.size = Pt(11)
+            r4.font.color.rgb = _BCG_INK
+
+
+def _render_timeline_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    for i, item in enumerate(items, start=1):
+        title = (item.title or "").strip()
+        desc = (item.desc or "").strip()
+        text = title if not desc else f"{title} — {desc}" if title else desc
+        if text:
+            _numbered(doc, i, text)
+
+
+def _render_quiz_block(doc: Document, block: BlockModel) -> None:
+    """Inline single-question quiz block (lesson body, not knowledge check)."""
+    items = block.data.items or []
+    if not items:
+        return
+    question = (items[0].title or "").strip()
+    if question:
+        _h3(doc, f"Q: {question}")
+    for opt in items[1:]:
+        title = (opt.title or "").strip()
+        is_correct = (opt.desc or "") == "1"
+        if not title:
+            continue
+        prefix = "✓ " if is_correct else "○ "
+        p = doc.add_paragraph()
+        r = p.add_run(prefix + title)
+        r.font.size = Pt(11)
+        r.font.color.rgb = _BCG_GREEN if is_correct else _BCG_INK
+        r.bold = is_correct
+
+
+def _render_poll_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    if not items:
+        return
+    question = (items[0].title or "").strip()
+    if question:
+        _h3(doc, f"Poll: {question}")
+    for opt in items[1:]:
+        title = (opt.title or "").strip()
+        pct = (opt.desc or "").strip()
+        if not title:
+            continue
+        suffix = f" — {pct}%" if pct else ""
+        _bullet(doc, f"{title}{suffix}")
+
+
+def _render_stats_block(doc: Document, block: BlockModel) -> None:
+    items = block.data.items or []
+    for item in items:
+        number = (item.title or "").strip()
+        label = (item.desc or "").strip()
+        if not number and not label:
+            continue
+        p = doc.add_paragraph()
+        if number:
+            r = p.add_run(number)
+            r.bold = True
+            r.font.size = Pt(14)
+            r.font.color.rgb = _BCG_GREEN
+        if label:
+            r2 = p.add_run(f"  {label}")
+            r2.font.size = Pt(11)
+            r2.font.color.rgb = _BCG_INK_LT
+
+
+def _render_image_block(doc: Document, block: BlockModel) -> None:
+    """v1: caption + alt only. Embedding the actual image is Phase 2."""
+    caption = (block.data.caption or "").strip()
+    alt = (block.data.alt or "").strip()
+    url = (block.data.url or "").strip()
+    p = doc.add_paragraph()
+    r1 = p.add_run("[Image] ")
+    r1.bold = True
+    r1.font.size = Pt(11)
+    r1.font.color.rgb = _BCG_GREEN
+    r2 = p.add_run(caption or alt or url or "(no caption / alt / url)")
+    r2.font.size = Pt(11)
+    r2.font.color.rgb = _BCG_INK_LT
+    r2.italic = True
+
+
+def _render_video_block(doc: Document, block: BlockModel) -> None:
+    """Reuses the script-table layout from /export/script-docx."""
+    caption = (block.data.caption or "").strip()
+    url = (block.data.url or "").strip()
+    script = (block.data.script or "").strip()
+
+    if caption or url:
+        p = doc.add_paragraph()
+        r1 = p.add_run("[Video] ")
+        r1.bold = True
+        r1.font.size = Pt(11)
+        r1.font.color.rgb = _BCG_GREEN
+        r2 = p.add_run(caption or url)
+        r2.font.size = Pt(11)
+        r2.font.color.rgb = _BCG_INK_LT
+        r2.italic = True
+
+    if not script:
+        _body(doc, "(No Synthesia script attached.)", italic=True, light=True)
+        return
+
+    scenes = _parse_scenes(script)
+    if not scenes:
+        # Raw script fallback
+        _body(doc, "Script (raw):", italic=True, light=True)
+        body = doc.add_paragraph()
+        r = body.add_run(script)
+        r.font.name = "Consolas"
+        r.font.size = Pt(10)
+        return
+
+    table = doc.add_table(rows=1, cols=3)
+    table.style = "Light Grid Accent 1"
+    hdr = table.rows[0].cells
+    for i, label in enumerate(["#", "Spoken", "Visual"]):
+        p = hdr[i].paragraphs[0]
+        r = p.add_run(label)
+        r.bold = True
+        r.font.size = Pt(10)
+        r.font.color.rgb = _BCG_GREEN
+
+    widths_cm = (1.0, 9.0, 6.0)
+    for col_idx, w in enumerate(widths_cm):
+        for cell in table.columns[col_idx].cells:
+            cell.width = Cm(w)
+
+    for s in scenes:
+        row = table.add_row().cells
+        p = row[0].paragraphs[0]
+        r = p.add_run(str(s["index"]))
+        r.bold = True
+        r.font.size = Pt(10)
+        r.font.color.rgb = _BCG_INK
+        p = row[1].paragraphs[0]
+        r = p.add_run(s["spoken"])
+        r.font.name = "Consolas"
+        r.font.size = Pt(10)
+        r.font.color.rgb = _BCG_INK
+        p = row[2].paragraphs[0]
+        r = p.add_run(s["visual"])
+        r.font.size = Pt(10)
+        r.font.color.rgb = _BCG_INK_LT
+
+
+_BLOCK_ADAPTERS: dict[str, callable] = {
+    "text": _render_text_block,
+    "banner": _render_banner_block,
+    "callout": _render_callout_block,
+    "cards": _render_cards_block,
+    "accordion": _render_accordion_block,
+    "flipcard": _render_flipcard_block,
+    "timeline": _render_timeline_block,
+    "quiz": _render_quiz_block,
+    "poll": _render_poll_block,
+    "stats": _render_stats_block,
+    "image": _render_image_block,
+    "video": _render_video_block,
+    # divider: intentionally absent — skipped as genuinely contentless.
+}
+
+
+def _render_block(doc: Document, block: BlockModel) -> None:
+    if block.type == "divider":
+        return  # skip
+    adapter = _BLOCK_ADAPTERS.get(block.type)
+    if adapter is None:
+        # Unknown block type — placeholder so the LD knows something
+        # exists in the source course but didn't render. Add an
+        # adapter to _BLOCK_ADAPTERS to remove the placeholder.
+        p = doc.add_paragraph()
+        r = p.add_run(f"[Block: {block.type} — content not yet rendered for print]")
+        r.italic = True
+        r.font.size = Pt(10)
+        r.font.color.rgb = _BCG_INK_LT
+        return
+    adapter(doc, block)
+
+
+# ─── Section sub-functions ────────────────────────────────────────────────────
+
+
+def _render_cover(doc: Document, course: CourseModel, audience: str) -> None:
+    # Eyebrow
+    p = doc.add_paragraph()
+    r = p.add_run("BCG U · COURSE")
+    r.bold = True
+    r.font.size = Pt(10)
+    r.font.color.rgb = _BCG_GREEN
+
+    _h1(doc, course.title or "Untitled Course")
+
+    if audience:
+        _body(doc, f"For: {audience}", italic=True, light=True)
+
+    # Module / lesson totals
+    module_count = len(course.modules)
+    lesson_count = sum(len(m.lessons) for m in course.modules)
+    _body(
+        doc,
+        f"{module_count} module{'s' if module_count != 1 else ''} · "
+        f"{lesson_count} lesson{'s' if lesson_count != 1 else ''}",
+        italic=True,
+        light=True,
+    )
+
+    # Learning outcomes — accumulate every module's objectives.
+    all_objectives: list[str] = []
+    for m in course.modules:
+        if m.objectives:
+            all_objectives.extend(m.objectives)
+    if all_objectives:
+        doc.add_paragraph()  # spacer
+        _h2(doc, "Learning outcomes")
+        for o in all_objectives:
+            _bullet(doc, o)
+
+
+def _render_toc(doc: Document, course: CourseModel) -> None:
+    _h2(doc, "Contents")
+    for mi, m in enumerate(course.modules, start=1):
+        # Module row
+        p = doc.add_paragraph()
+        r1 = p.add_run(f"Module {mi}. ")
+        r1.bold = True
+        r1.font.size = Pt(11)
+        r1.font.color.rgb = _BCG_GREEN
+        r2 = p.add_run(m.title or "Untitled module")
+        r2.bold = True
+        r2.font.size = Pt(11)
+        r2.font.color.rgb = _BCG_INK
+        # Lesson rows
+        for li, lesson in enumerate(m.lessons, start=1):
+            p2 = doc.add_paragraph()
+            r1 = p2.add_run(f"        {mi}.{li}  ")
+            r1.font.size = Pt(11)
+            r1.font.color.rgb = _BCG_INK_LT
+            r2 = p2.add_run(lesson.title or "Untitled lesson")
+            r2.font.size = Pt(11)
+            r2.font.color.rgb = _BCG_INK
+
+
+def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) -> None:
+    _h3(doc, f"{scope_label} — {len(quiz.questions)} question{'s' if len(quiz.questions) != 1 else ''}")
+    for i, q in enumerate(quiz.questions, start=1):
+        # Question stem
+        p = doc.add_paragraph()
+        r1 = p.add_run(f"{i}. ")
+        r1.bold = True
+        r1.font.size = Pt(11)
+        r1.font.color.rgb = _BCG_GREEN
+        r2 = p.add_run(q.stem)
+        r2.font.size = Pt(11)
+        r2.font.color.rgb = _BCG_INK
+        # Type tag
+        type_label = "MCQ" if q.type == "mcq" else "Short answer"
+        r3 = p.add_run(f"   ({type_label})")
+        r3.italic = True
+        r3.font.size = Pt(9)
+        r3.font.color.rgb = _BCG_INK_LT
+
+        if q.type == "mcq":
+            for oi, option in enumerate(q.options or []):
+                is_correct = oi == (q.correctIndex if q.correctIndex is not None else -1)
+                marker = "✓ " if is_correct else "○ "
+                p2 = doc.add_paragraph()
+                r = p2.add_run(f"   {marker}{option}")
+                r.font.size = Pt(11)
+                r.font.color.rgb = _BCG_GREEN if is_correct else _BCG_INK
+                r.bold = is_correct
+            if q.rationale:
+                p3 = doc.add_paragraph()
+                r1 = p3.add_run("Rationale: ")
+                r1.bold = True
+                r1.italic = True
+                r1.font.size = Pt(10)
+                r1.font.color.rgb = _BCG_INK_LT
+                r2 = p3.add_run(q.rationale)
+                r2.italic = True
+                r2.font.size = Pt(10)
+                r2.font.color.rgb = _BCG_INK_LT
+        else:
+            # Short answer — show expected hints (rubric).
+            if q.expectedAnswerHints:
+                p2 = doc.add_paragraph()
+                r = p2.add_run("Expected answer hints (rubric):")
+                r.bold = True
+                r.italic = True
+                r.font.size = Pt(10)
+                r.font.color.rgb = _BCG_INK_LT
+                for hint in q.expectedAnswerHints:
+                    _bullet(doc, hint)
+
+
+def _render_lesson(doc: Document, lesson: LessonModel, mi: int, li: int) -> None:
+    _h2(doc, f"{mi}.{li}  {lesson.title or 'Untitled lesson'}")
+    _body(doc, f"{lesson.duration} min · {len(lesson.blocks)} block{'s' if len(lesson.blocks) != 1 else ''}", italic=True, light=True)
+
+    if lesson.objectives:
+        _h3(doc, "Lesson objectives")
+        for o in lesson.objectives:
+            _bullet(doc, o)
+        doc.add_paragraph()  # spacer
+
+    # Blocks in order, via per-type adapters.
+    for block in lesson.blocks:
+        _render_block(doc, block)
+
+    # Lesson knowledge check (if any).
+    if lesson.knowledgeCheck and lesson.knowledgeCheck.questions:
+        doc.add_paragraph()
+        _render_knowledge_check(doc, lesson.knowledgeCheck, "Knowledge check")
+
+
+def _render_module(doc: Document, module: CourseModuleModel, mi: int, course: CourseModel) -> None:
+    _page_break(doc)
+    week_label = f"Week {module.weekNumber}" if module.weekNumber else f"Module {mi}"
+    p = doc.add_paragraph()
+    r = p.add_run(f"{week_label.upper()} · MODULE")
+    r.bold = True
+    r.font.size = Pt(10)
+    r.font.color.rgb = _BCG_GREEN
+
+    _h1(doc, module.title or "Untitled module")
+
+    if module.summary:
+        _body(doc, module.summary, italic=True, light=True)
+
+    if module.objectives:
+        doc.add_paragraph()
+        _h3(doc, "Module objectives")
+        for o in module.objectives:
+            _bullet(doc, o)
+
+    # Lessons.
+    for li, lesson in enumerate(module.lessons, start=1):
+        doc.add_paragraph()
+        _render_lesson(doc, lesson, mi, li)
+
+    # Module final assessment.
+    if module.knowledgeCheck and module.knowledgeCheck.questions:
+        doc.add_paragraph()
+        _render_knowledge_check(doc, module.knowledgeCheck, "Final assessment")
+
+    # Case study reference.
+    if module.caseStudyId and course.caseStudies:
+        cs = next((c for c in course.caseStudies if c.id == module.caseStudyId), None)
+        if cs:
+            doc.add_paragraph()
+            _h3(doc, f"Case study: {cs.title}")
+            _body(doc, "(See case study section below.)", italic=True, light=True)
+
+
+def _render_case_study(doc: Document, cs: CaseStudyModel, course_title: str) -> None:
+    _page_break(doc)
+    p = doc.add_paragraph()
+    r = p.add_run("CASE STUDY")
+    r.bold = True
+    r.font.size = Pt(10)
+    r.font.color.rgb = _BCG_GREEN
+
+    _h1(doc, cs.title or "Untitled case study")
+
+    body_context, sources_block = _split_sources(cs.context)
+
+    if body_context.strip():
+        _h3(doc, "Context")
+        for para in [p for p in body_context.split("\n\n") if p.strip()]:
+            _body(doc, para.strip())
+
+    if cs.stakeholders:
+        _h3(doc, "Stakeholders")
+        for s in cs.stakeholders:
+            p = doc.add_paragraph()
+            r = p.add_run(s.name)
+            r.bold = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK
+            if s.role:
+                r2 = p.add_run(f" — {s.role}")
+                r2.font.size = Pt(11)
+                r2.font.color.rgb = _BCG_INK_LT
+            if s.voice:
+                quote = doc.add_paragraph()
+                rq = quote.add_run(f"“{s.voice}”")
+                rq.italic = True
+                rq.font.size = Pt(10)
+                rq.font.color.rgb = _BCG_INK
+                quote.paragraph_format.left_indent = Cm(0.6)
+
+    if cs.decisionPoints:
+        _h3(doc, "Decision points")
+        for i, dp in enumerate(cs.decisionPoints, start=1):
+            _numbered(doc, i, dp)
+
+    if cs.debriefPrompts:
+        _h3(doc, "Debrief prompts (for facilitation)")
+        for i, dp in enumerate(cs.debriefPrompts, start=1):
+            _numbered(doc, i, dp)
+
+    if sources_block:
+        _h3(doc, "Sources / Inspired by")
+        for line in [l for l in sources_block.split("\n") if l.strip()]:
+            cleaned = re.sub(r"^[\-\*•]\s*", "", line.strip())
+            _body(doc, f"• {cleaned}", light=True)
+
+
+def _render_appendix(doc: Document, course: CourseModel) -> None:
+    materials = course.materials or []
+    if not materials:
+        return
+    _page_break(doc)
+    _h1(doc, "Source materials")
+    _body(
+        doc,
+        "Files the LD ingested while authoring this course. Lesson "
+        "writers and the case study designer may have drawn on these "
+        "as source material.",
+        italic=True,
+        light=True,
+    )
+    doc.add_paragraph()
+    for m in materials:
+        p = doc.add_paragraph()
+        r1 = p.add_run("• ")
+        r1.font.size = Pt(11)
+        r1.font.color.rgb = _BCG_GREEN
+        r2 = p.add_run(m.filename or "(unnamed file)")
+        r2.bold = True
+        r2.font.size = Pt(11)
+        r2.font.color.rgb = _BCG_INK
+        if m.charCount:
+            r3 = p.add_run(f"   ({m.charCount:,} chars)")
+            r3.font.size = Pt(10)
+            r3.font.color.rgb = _BCG_INK_LT
+
+
+# ─── Endpoint ─────────────────────────────────────────────────────────────────
+
+
+@router.post("/course-docx")
+async def export_course_docx(req: CourseExportRequest):
+    course = req.course
+    if not course.modules:
+        raise HTTPException(status_code=400, detail="course has no modules to export")
+
+    doc = Document()
+    _set_docx_default_font(doc)
+
+    _render_cover(doc, course, req.audience)
+    _page_break(doc)
+    _render_toc(doc, course)
+
+    for mi, m in enumerate(course.modules, start=1):
+        _render_module(doc, m, mi, course)
+
+    # Case studies as their own end-of-doc section. Each gets its own page.
+    for cs in course.caseStudies or []:
+        # Skip empty slots (planted but never designed).
+        if not cs.context.strip() and not cs.stakeholders:
+            continue
+        _render_case_study(doc, cs, course.title)
+
+    _render_appendix(doc, course)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    stem = _safe_filename(f"{course.title or 'course'}-course")
+    filename = f"{stem}.docx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
