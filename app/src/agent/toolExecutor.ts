@@ -1,6 +1,6 @@
-import type { AgentActions, WriterBlock } from "./AgentContext";
+import type { AgentActions, CaseStudyContent, WriterBlock } from "./AgentContext";
 import type { BrandKey } from "../brand/tokens";
-import type { BlockData, Course } from "../course/types";
+import type { BlockData, CaseStudy, Course, QuizQuestion } from "../course/types";
 import type { CourseOutlineProposal, ProposedModule, ProposedLesson } from "./types";
 
 export async function dispatchToolCall(
@@ -49,6 +49,46 @@ export async function dispatchToolCall(
         message: result.ok
           ? `Script ${result.previousScriptLength > 0 ? "regenerated" : "written"} — ${script.length} chars on video block ${videoBlockId}.`
           : `No video block found with id ${videoBlockId}.`,
+      };
+    }
+    case "write_knowledge_check": {
+      const targetKind = asString(args.target_kind, "target_kind") as "lesson" | "module";
+      const targetId = asString(args.target_id, "target_id");
+      const questions = parseQuizQuestions(args.questions);
+      const result = actions.writeKnowledgeCheck(targetKind, targetId, questions);
+      return {
+        ok: result.ok,
+        replaced: result.replaced,
+        message: result.ok
+          ? `Knowledge check ${result.replaced ? "replaced" : "written"} — ${questions.length} question(s) on ${targetKind} ${targetId}.`
+          : `No ${targetKind} found with id ${targetId}.`,
+      };
+    }
+    case "regenerate_question": {
+      const targetKind = asString(args.target_kind, "target_kind") as "lesson" | "module";
+      const targetId = asString(args.target_id, "target_id");
+      const questionIndex = Number(args.question_index ?? -1);
+      if (!Number.isInteger(questionIndex) || questionIndex < 0) {
+        throw new Error("question_index must be a non-negative integer");
+      }
+      const question = parseQuizQuestion(args.question, "question");
+      const result = actions.regenerateQuestion(targetKind, targetId, questionIndex, question);
+      return {
+        ok: result.ok,
+        message: result.ok
+          ? `Question ${questionIndex + 1} regenerated on ${targetKind} ${targetId}.`
+          : `Couldn't find question ${questionIndex + 1} on ${targetKind} ${targetId}.`,
+      };
+    }
+    case "design_case_study": {
+      const caseStudyId = asString(args.case_study_id, "case_study_id");
+      const content = parseCaseStudyContent(args.content);
+      const result = actions.designCaseStudy(caseStudyId, content);
+      return {
+        ok: result.ok,
+        message: result.ok
+          ? `Case study ${caseStudyId} filled — ${content.stakeholders.length} stakeholder(s), ${content.decisionPoints.length} decision point(s), ${content.debriefPrompts.length} debrief prompt(s).`
+          : `No case study slot found with id ${caseStudyId}. (Course Architect plants slots; if none exist, ask the LD to add one.)`,
       };
     }
     case "read_materials": {
@@ -134,10 +174,19 @@ function summarizeCourse(course: Course) {
     modules: course.modules.map((m) => ({
       id: m.id,
       title: m.title,
+      // Module-level knowledge check shape so Quiz Builder picks Write vs Replace.
+      knowledgeCheck: m.knowledgeCheck
+        ? { questionCount: m.knowledgeCheck.questions.length }
+        : null,
+      // Single-ref to a case-study slot, if Course Architect planted one.
+      caseStudyId: m.caseStudyId ?? null,
       lessons: m.lessons.map((l) => ({
         id: l.id,
         title: l.title,
         duration: l.duration,
+        knowledgeCheck: l.knowledgeCheck
+          ? { questionCount: l.knowledgeCheck.questions.length }
+          : null,
         blocks: l.blocks.map((b) => {
           const base = {
             id: b.id,
@@ -157,6 +206,14 @@ function summarizeCourse(course: Course) {
           return base;
         }),
       })),
+    })),
+    // Case-study slots planted by Course Architect. hasContent tells the
+    // Case Study Designer whether to fill a fresh slot or replace existing
+    // content. titles come from Course Architect; ids are stable.
+    caseStudies: (course.caseStudies ?? []).map((cs) => ({
+      id: cs.id,
+      title: cs.title,
+      hasContent: cs.context.trim().length > 0 || cs.stakeholders.length > 0,
     })),
   };
 }
@@ -238,4 +295,68 @@ function parseStringArray(v: unknown): string[] | undefined {
   if (!Array.isArray(v)) return undefined;
   const filtered = v.filter((x): x is string => typeof x === "string");
   return filtered.length > 0 ? filtered : undefined;
+}
+
+function parseQuizQuestion(raw: unknown, label: string): QuizQuestion {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error(`${label} must be an object`);
+  }
+  const q = raw as Record<string, unknown>;
+  const type = asString(q.type, `${label}.type`);
+  const stem = asString(q.stem, `${label}.stem`);
+  if (type === "mcq") {
+    const optionsRaw = q.options;
+    if (!Array.isArray(optionsRaw) || optionsRaw.length < 2) {
+      throw new Error(`${label}.options must be an array of at least 2 strings`);
+    }
+    const options = optionsRaw.map((o, i) => asString(o, `${label}.options[${i}]`));
+    const correctIndex = Number(q.correctIndex ?? -1);
+    if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) {
+      throw new Error(`${label}.correctIndex must be a valid index into options`);
+    }
+    const rationale = asString(q.rationale, `${label}.rationale`);
+    return { type: "mcq", stem, options, correctIndex, rationale };
+  }
+  if (type === "short") {
+    const hintsRaw = q.expectedAnswerHints;
+    if (!Array.isArray(hintsRaw) || hintsRaw.length === 0) {
+      throw new Error(`${label}.expectedAnswerHints must be a non-empty array`);
+    }
+    const expectedAnswerHints = hintsRaw.map((h, i) => asString(h, `${label}.expectedAnswerHints[${i}]`));
+    return { type: "short", stem, expectedAnswerHints };
+  }
+  throw new Error(`${label}.type must be "mcq" or "short" (got ${JSON.stringify(type)})`);
+}
+
+function parseQuizQuestions(raw: unknown): QuizQuestion[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error("questions must be a non-empty array");
+  }
+  return raw.map((q, i) => parseQuizQuestion(q, `questions[${i}]`));
+}
+
+function parseCaseStudyContent(raw: unknown): CaseStudyContent {
+  const obj = asObject(raw, true);
+  const context = asString(obj.context, "content.context");
+  const stakeholdersRaw = obj.stakeholders;
+  if (!Array.isArray(stakeholdersRaw) || stakeholdersRaw.length === 0) {
+    throw new Error("content.stakeholders must be a non-empty array");
+  }
+  const stakeholders: CaseStudy["stakeholders"] = stakeholdersRaw.map((s, i) => {
+    const sObj = asObject(s, true);
+    return {
+      name: asString(sObj.name, `content.stakeholders[${i}].name`),
+      role: asString(sObj.role, `content.stakeholders[${i}].role`),
+      voice: asString(sObj.voice, `content.stakeholders[${i}].voice`),
+    };
+  });
+  const decisionPoints = (parseStringArray(obj.decisionPoints) ?? []).filter((s) => s.trim().length > 0);
+  if (decisionPoints.length === 0) {
+    throw new Error("content.decisionPoints must be a non-empty array of strings");
+  }
+  const debriefPrompts = (parseStringArray(obj.debriefPrompts) ?? []).filter((s) => s.trim().length > 0);
+  if (debriefPrompts.length === 0) {
+    throw new Error("content.debriefPrompts must be a non-empty array of strings");
+  }
+  return { context, stakeholders, decisionPoints, debriefPrompts };
 }

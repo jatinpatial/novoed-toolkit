@@ -266,6 +266,177 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def reorder(args):
         return await _forward("reorder", args)
 
+    # --- quiz builder ---
+
+    # Reusable schema for one quiz question. Two shapes (mcq / short-answer)
+    # via oneOf, both keyed on the `type` discriminator. Mirrors the
+    # QuizQuestion union in app/src/course/types.ts.
+    quiz_question_schema = {
+        "type": "object",
+        "oneOf": [
+            {
+                "properties": {
+                    "type": {"const": "mcq"},
+                    "stem": {"type": "string", "description": "The question text."},
+                    "options": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 2,
+                        "maxItems": 6,
+                        "description": "Answer options. Plausible distractors, not joke wrong answers.",
+                    },
+                    "correctIndex": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Zero-based index into options.",
+                    },
+                    "rationale": {
+                        "type": "string",
+                        "description": "Short paragraph explaining why the correct answer is correct AND why the distractors are tempting but wrong.",
+                    },
+                },
+                "required": ["type", "stem", "options", "correctIndex", "rationale"],
+            },
+            {
+                "properties": {
+                    "type": {"const": "short"},
+                    "stem": {"type": "string"},
+                    "expectedAnswerHints": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 2,
+                        "maxItems": 5,
+                        "description": "Concepts a complete answer should cover. Used as a grading rubric, not shown to the learner.",
+                    },
+                },
+                "required": ["type", "stem", "expectedAnswerHints"],
+            },
+        ],
+    }
+
+    @tool(
+        "write_knowledge_check",
+        (
+            "Write or replace a knowledge check on a lesson or module. Replaces any prior "
+            "knowledge check at the target. Provide 5 questions covering the key learning "
+            "objectives, mixing Bloom's-aware difficulty (recall → apply → analyze) across "
+            "the set."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "target_kind": {
+                    "type": "string",
+                    "enum": ["lesson", "module"],
+                    "description": "lesson = post-lesson recap; module = week's final assessment.",
+                },
+                "target_id": {
+                    "type": "string",
+                    "description": "Real lesson_id or module_id from list_structure (NOT a display label like '1.1').",
+                },
+                "questions": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 8,
+                    "items": quiz_question_schema,
+                },
+            },
+            "required": ["target_kind", "target_id", "questions"],
+        },
+    )
+    async def write_knowledge_check(args):
+        return await _forward("write_knowledge_check", args)
+
+    @tool(
+        "regenerate_question",
+        (
+            "Regenerate a single question in an existing knowledge check, in place. The other "
+            "questions are preserved. Use when the LD says 'rewrite question 3' or 'make Q2 a "
+            "short-answer' — generate the replacement and call this tool once."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "target_kind": {"type": "string", "enum": ["lesson", "module"]},
+                "target_id": {"type": "string"},
+                "question_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Zero-based index of the question to swap.",
+                },
+                "question": quiz_question_schema,
+            },
+            "required": ["target_kind", "target_id", "question_index", "question"],
+        },
+    )
+    async def regenerate_question(args):
+        return await _forward("regenerate_question", args)
+
+    # --- case study designer ---
+
+    @tool(
+        "design_case_study",
+        (
+            "Fill in an empty case-study slot that Course Architect planted in the course outline. "
+            "Provide a realistic BCG-style scenario with 3-4 named stakeholders (each with role and "
+            "voice), 3-4 decision points the case forces, and 3-4 debrief prompts for the "
+            "LD-facilitated discussion. Replaces any prior content at the slot."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "case_study_id": {
+                    "type": "string",
+                    "description": "Real id of a Course.caseStudies entry from list_structure.",
+                },
+                "content": {
+                    "type": "object",
+                    "properties": {
+                        "context": {
+                            "type": "string",
+                            "description": "3-5 paragraphs setting up the scenario — company, situation, the call the protagonist faces. BCG-professional voice, plain English.",
+                        },
+                        "stakeholders": {
+                            "type": "array",
+                            "minItems": 3,
+                            "maxItems": 6,
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "role": {"type": "string", "description": "Title and org context."},
+                                    "voice": {
+                                        "type": "string",
+                                        "description": "1-2 sentences in that stakeholder's voice — what they'd say in a meeting about this. Quotable.",
+                                    },
+                                },
+                                "required": ["name", "role", "voice"],
+                            },
+                        },
+                        "decisionPoints": {
+                            "type": "array",
+                            "minItems": 3,
+                            "maxItems": 5,
+                            "items": {"type": "string"},
+                            "description": "Hard calls the case forces. Phrased as questions the protagonist must answer.",
+                        },
+                        "debriefPrompts": {
+                            "type": "array",
+                            "minItems": 3,
+                            "maxItems": 5,
+                            "items": {"type": "string"},
+                            "description": "Reflection questions the LD asks the cohort after the case is run. Bloom's: analyze / evaluate.",
+                        },
+                    },
+                    "required": ["context", "stakeholders", "decisionPoints", "debriefPrompts"],
+                },
+            },
+            "required": ["case_study_id", "content"],
+        },
+    )
+    async def design_case_study(args):
+        return await _forward("design_case_study", args)
+
     # --- export ---
 
     @tool("export_lesson", "Trigger a lesson export. Confirm with the user first.", {
@@ -289,6 +460,9 @@ def build_ui_mcp_server(bridge: ToolBridge):
             write_lesson,
             read_materials,
             write_script,
+            write_knowledge_check,
+            regenerate_question,
+            design_case_study,
             list_structure,
             add_module,
             add_lesson,
@@ -308,6 +482,9 @@ ALLOWED_TOOL_NAMES = [
     "mcp__ui__write_lesson",
     "mcp__ui__read_materials",
     "mcp__ui__write_script",
+    "mcp__ui__write_knowledge_check",
+    "mcp__ui__regenerate_question",
+    "mcp__ui__design_case_study",
     "mcp__ui__list_structure",
     "mcp__ui__add_module",
     "mcp__ui__add_lesson",

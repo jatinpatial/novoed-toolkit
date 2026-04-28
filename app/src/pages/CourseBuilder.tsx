@@ -362,6 +362,67 @@ function CourseBuilderInner() {
       });
       return { ok, previousScriptLength };
     },
+    writeKnowledgeCheck: (targetKind, targetId, questions) => {
+      let ok = false;
+      let replaced = false;
+      updateCourse((c) => {
+        if (targetKind === "lesson") {
+          for (const m of c.modules) {
+            for (const l of m.lessons) {
+              if (l.id === targetId) {
+                replaced = !!l.knowledgeCheck;
+                l.knowledgeCheck = { questions };
+                ok = true;
+                return;
+              }
+            }
+          }
+        } else {
+          for (const m of c.modules) {
+            if (m.id === targetId) {
+              replaced = !!m.knowledgeCheck;
+              m.knowledgeCheck = { questions };
+              ok = true;
+              return;
+            }
+          }
+        }
+      });
+      return { ok, replaced };
+    },
+    regenerateQuestion: (targetKind, targetId, questionIndex, question) => {
+      let ok = false;
+      updateCourse((c) => {
+        const target = (() => {
+          if (targetKind === "lesson") {
+            for (const m of c.modules) {
+              for (const l of m.lessons) if (l.id === targetId) return l;
+            }
+            return undefined;
+          }
+          return c.modules.find((m) => m.id === targetId);
+        })();
+        if (!target?.knowledgeCheck) return;
+        const qs = target.knowledgeCheck.questions;
+        if (questionIndex < 0 || questionIndex >= qs.length) return;
+        qs[questionIndex] = question;
+        ok = true;
+      });
+      return { ok };
+    },
+    designCaseStudy: (caseStudyId, content) => {
+      let ok = false;
+      updateCourse((c) => {
+        const slot = (c.caseStudies ?? []).find((cs) => cs.id === caseStudyId);
+        if (!slot) return;
+        slot.context = content.context;
+        slot.stakeholders = content.stakeholders;
+        slot.decisionPoints = content.decisionPoints;
+        slot.debriefPrompts = content.debriefPrompts;
+        ok = true;
+      });
+      return { ok };
+    },
   };
   useRegisterAgentActions(agentActions);
 

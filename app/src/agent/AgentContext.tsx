@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Course } from "../course/types";
+import type { CaseStudy, Course, QuizQuestion } from "../course/types";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
 import type { ChatEntry, ConnectionStatus, CourseOutlineProposal } from "./types";
@@ -9,6 +9,11 @@ export interface WriterBlock {
   type: string;
   content: string;
 }
+
+// Subset of CaseStudy supplied by the agent — the slot's id is fixed
+// when Course Architect plants the placeholder, so design_case_study
+// only sends the content.
+export type CaseStudyContent = Omit<CaseStudy, "id" | "title">;
 
 export interface AgentActions {
   getCourse: () => Course | null;
@@ -23,6 +28,25 @@ export interface AgentActions {
   exportLesson: (lessonId: string, format: "scorm" | "json") => void;
   writeLesson: (lessonId: string, blocks: WriterBlock[]) => { replaced: number; added: number };
   writeScript: (videoBlockId: string, script: string) => { ok: boolean; previousScriptLength: number };
+  // Quiz Builder: write or replace a knowledge check on a lesson or module.
+  // Returns whether the target was found and whether existing content was
+  // replaced (vs first write).
+  writeKnowledgeCheck: (
+    targetKind: "lesson" | "module",
+    targetId: string,
+    questions: QuizQuestion[],
+  ) => { ok: boolean; replaced: boolean };
+  // Quiz Builder: replace one question in place. Used for per-question
+  // regeneration. ok=false if the target or the index is missing.
+  regenerateQuestion: (
+    targetKind: "lesson" | "module",
+    targetId: string,
+    questionIndex: number,
+    question: QuizQuestion,
+  ) => { ok: boolean };
+  // Case Study Designer: fill content into a slot Course Architect planted.
+  // ok=false if the case_study_id doesn't match a known slot.
+  designCaseStudy: (caseStudyId: string, content: CaseStudyContent) => { ok: boolean };
   setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
   // Used by the "Open script editor" button in AgentChat after a
   // successful write_script. Walks the course tree, finds the block,

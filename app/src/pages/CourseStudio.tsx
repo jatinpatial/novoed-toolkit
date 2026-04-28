@@ -194,6 +194,9 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     exportLesson: () => {},
     writeLesson: () => { throw new Error("No course is open. Open a course before asking for a lesson to be written."); },
     writeScript: () => { throw new Error("No course is open. Open a course and add a video block before asking for a script."); },
+    writeKnowledgeCheck: () => { throw new Error("No course is open. Open a course before asking for a knowledge check."); },
+    regenerateQuestion: () => { throw new Error("No course is open. Open a course before regenerating questions."); },
+    designCaseStudy: () => { throw new Error("No course is open. Open a course (Course Architect plants the case-study slots) before asking to design one."); },
     setOutlineProposal: (proposal) => {
       setOutlineProposal(proposal);
       setChatOpen(true);
@@ -548,6 +551,67 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           }
         }
       }
+    },
+    writeKnowledgeCheck: (targetKind, targetId, questions) => {
+      let ok = false;
+      let replaced = false;
+      mutate((c) => {
+        if (targetKind === "lesson") {
+          for (const m of c.modules) {
+            for (const l of m.lessons) {
+              if (l.id === targetId) {
+                replaced = !!l.knowledgeCheck;
+                l.knowledgeCheck = { questions };
+                ok = true;
+                return;
+              }
+            }
+          }
+        } else {
+          for (const m of c.modules) {
+            if (m.id === targetId) {
+              replaced = !!m.knowledgeCheck;
+              m.knowledgeCheck = { questions };
+              ok = true;
+              return;
+            }
+          }
+        }
+      });
+      return { ok, replaced };
+    },
+    regenerateQuestion: (targetKind, targetId, questionIndex, question) => {
+      let ok = false;
+      mutate((c) => {
+        const target = (() => {
+          if (targetKind === "lesson") {
+            for (const m of c.modules) {
+              for (const l of m.lessons) if (l.id === targetId) return l;
+            }
+            return undefined;
+          }
+          return c.modules.find((m) => m.id === targetId);
+        })();
+        if (!target?.knowledgeCheck) return;
+        const qs = target.knowledgeCheck.questions;
+        if (questionIndex < 0 || questionIndex >= qs.length) return;
+        qs[questionIndex] = question;
+        ok = true;
+      });
+      return { ok };
+    },
+    designCaseStudy: (caseStudyId, content) => {
+      let ok = false;
+      mutate((c) => {
+        const slot = (c.caseStudies ?? []).find((cs) => cs.id === caseStudyId);
+        if (!slot) return;
+        slot.context = content.context;
+        slot.stakeholders = content.stakeholders;
+        slot.decisionPoints = content.decisionPoints;
+        slot.debriefPrompts = content.debriefPrompts;
+        ok = true;
+      });
+      return { ok };
     },
   }), [course, mutate]);
 
