@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# Pre-push hook — runs the mocked e2e suite before every push.
+#
+# Catches wiring / rendering / loading-label regressions without
+# manual cycles. The mocked suite has zero backend dependencies
+# (vite is auto-spun by Playwright) and finishes in ~2 minutes.
+#
+# Bypass for emergencies (broken harness, urgent revert, hook
+# itself misbehaving):
+#   git push --no-verify
+#
+# Document the bypass in the commit message so it doesn't become
+# the new normal. The smoke suite (real LLM) is intentionally NOT
+# here — it costs subscription quota and requires a healthy BE;
+# run npm run test:smoke ad-hoc before milestones.
+
+cd app && npm run test:e2e
