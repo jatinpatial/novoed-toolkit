@@ -15,7 +15,7 @@ import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock } from "../course/previewBlock";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
-import type { Block, BlockData, BlockItem, Course, Lesson, Material, Module } from "../course/types";
+import type { Block, BlockData, BlockItem, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat } from "../agent/AgentChat";
@@ -987,6 +987,32 @@ function CourseOutlineBody({ course, am, al, onSelect, onUpdate }: any) {
 /* ═══════════════════════════════════════════════════════════════════════════
    LESSON CANVAS
    ═══════════════════════════════════════════════════════════════════════════ */
+function buildLessonKnowledgeCheckPrefill(
+  mod: Module | undefined,
+  lesson: Lesson,
+  lessonIndex: number,
+  mode: "write" | "regenerate",
+): string {
+  const week = mod?.weekNumber ?? 1;
+  const lessonNum = lessonIndex + 1;
+  const ref = `${week}.${lessonNum}`;
+  if (mode === "regenerate") {
+    return `Regenerate the knowledge check for lesson ${ref}. Same scope, fresh take.`;
+  }
+  return `Add a knowledge check to lesson ${ref}.\nLesson id: ${lesson.id}\n5 questions, all MCQ unless I say otherwise. Mix Bloom's levels across the set.`;
+}
+
+function buildRegenerateQuestionPrefill(
+  mod: Module | undefined,
+  lessonIndex: number,
+  questionIndex: number,
+): string {
+  const week = mod?.weekNumber ?? 1;
+  const lessonNum = lessonIndex + 1;
+  const ref = `${week}.${lessonNum}`;
+  return `Regenerate question ${questionIndex + 1} on lesson ${ref}. Same topic, fresh angle.`;
+}
+
 function buildLessonWriterPrefill(mod: Module | undefined, lesson: Lesson, lessonIndex: number, mode: "write" | "regenerate"): string {
   const week = mod?.weekNumber ?? 1;
   const lessonNum = lessonIndex + 1;
@@ -1257,6 +1283,149 @@ function ScriptEditor({
   );
 }
 
+// Knowledge check renderer. Reads from lesson.knowledgeCheck (or
+// module.knowledgeCheck — same shape). Empty: brand CTA. Filled:
+// numbered question list with type tag, options/hints, correct
+// answer highlight, rationale, per-question Regenerate.
+function KnowledgeCheckSection({
+  quiz, onWrite, onRegenerateAll, onRegenerateQuestion, scopeLabel = "lesson",
+}: {
+  quiz: Quiz | undefined;
+  onWrite: () => void;
+  onRegenerateAll: () => void;
+  onRegenerateQuestion: (index: number) => void;
+  scopeLabel?: "lesson" | "module";
+}) {
+  if (!quiz || quiz.questions.length === 0) {
+    return (
+      <button
+        onClick={onWrite}
+        className="w-full rounded-xl border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-5 text-left flex items-start gap-3 group"
+      >
+        <div className="w-9 h-9 rounded-lg bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
+          <ListChecks size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-ink-900 mb-0.5 group-hover:text-brand-700">
+            Add {scopeLabel === "module" ? "the module final assessment" : "a knowledge check"}
+          </div>
+          <div className="text-xs text-ink-600 leading-snug">
+            5 MCQs by default, mixing recall / apply / analyze across the set. You can ask the agent for short-answer in chat.
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-ink-200 bg-white">
+      <header className="flex items-center gap-2 px-5 h-12 border-b border-ink-100">
+        <div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center text-brand-700">
+          <ListChecks size={13} />
+        </div>
+        <div className="flex-1">
+          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider">
+            {scopeLabel === "module" ? "Module final assessment" : "Knowledge check"}
+          </div>
+          <div className="text-[10px] text-ink-500">
+            {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}
+          </div>
+        </div>
+        <button
+          onClick={onRegenerateAll}
+          className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-ink-200 text-[11px] font-semibold text-ink-600 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+          title="Regenerate the whole knowledge check"
+        >
+          <Sparkles size={12} /> Regenerate all
+        </button>
+      </header>
+
+      <div className="divide-y divide-ink-100">
+        {quiz.questions.map((q, i) => (
+          <QuestionCard
+            key={i}
+            index={i}
+            question={q}
+            onRegenerate={() => onRegenerateQuestion(i)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function QuestionCard({
+  index, question, onRegenerate,
+}: {
+  index: number;
+  question: QuizQuestion;
+  onRegenerate: () => void;
+}) {
+  const typeLabel = question.type === "mcq" ? "MCQ" : "Short answer";
+  return (
+    <div className="px-5 py-4">
+      <div className="flex items-start gap-3 mb-2">
+        <span className="w-6 h-6 flex-shrink-0 rounded-md bg-ink-900 text-white text-[10px] font-bold flex items-center justify-center">
+          {index + 1}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-ink-100 text-ink-600">
+              {typeLabel}
+            </span>
+          </div>
+          <div className="text-sm font-semibold text-ink-900 leading-snug whitespace-pre-wrap">
+            {question.stem}
+          </div>
+        </div>
+        <button
+          onClick={onRegenerate}
+          className="flex-shrink-0 inline-flex items-center gap-1 px-2 h-6 rounded-md border border-ink-200 text-[10px] font-semibold text-ink-500 hover:text-brand-700 hover:border-brand-500 hover:bg-brand-50 transition"
+          title="Regenerate this question"
+        >
+          <Sparkles size={10} /> Regenerate
+        </button>
+      </div>
+
+      {question.type === "mcq" ? (
+        <>
+          <ol className="mt-2 space-y-1.5 ml-9">
+            {question.options.map((opt, oi) => {
+              const correct = oi === question.correctIndex;
+              return (
+                <li
+                  key={oi}
+                  className={`flex items-start gap-2 text-[13px] rounded-md px-2 py-1.5 ${correct ? "bg-brand-50 text-ink-900" : "text-ink-700"}`}
+                >
+                  <span className={`w-5 h-5 flex-shrink-0 rounded-full text-[10px] font-bold flex items-center justify-center ${correct ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-500"}`}>
+                    {correct ? <Check size={11} /> : String.fromCharCode(65 + oi)}
+                  </span>
+                  <span className="leading-snug whitespace-pre-wrap">{opt}</span>
+                </li>
+              );
+            })}
+          </ol>
+          <div className="ml-9 mt-3 px-3 py-2 rounded-md bg-ink-50 border-l-2 border-brand-500">
+            <div className="text-[9px] font-bold uppercase tracking-wide text-ink-500 mb-1">Rationale</div>
+            <div className="text-[12px] text-ink-700 leading-relaxed whitespace-pre-wrap">
+              {question.rationale}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="ml-9 mt-2 px-3 py-2 rounded-md bg-ink-50 border-l-2 border-brand-500">
+          <div className="text-[9px] font-bold uppercase tracking-wide text-ink-500 mb-1">Expected answer hints (rubric for grading)</div>
+          <ul className="text-[12px] text-ink-700 leading-relaxed list-disc pl-4 space-y-0.5">
+            {question.expectedAnswerHints.map((h, hi) => (
+              <li key={hi} className="whitespace-pre-wrap">{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScriptWriterForm({
   videoType, onSubmit, onCancel,
 }: {
@@ -1464,6 +1633,16 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
     prefillInput(buildLessonWriterPrefill(mod, lesson, al, mode));
   }
 
+  function triggerKnowledgeCheck(mode: "write" | "regenerate") {
+    setChatOpen(true);
+    prefillInput(buildLessonKnowledgeCheckPrefill(mod, lesson, al, mode));
+  }
+
+  function triggerQuestionRegen(questionIndex: number) {
+    setChatOpen(true);
+    prefillInput(buildRegenerateQuestionPrefill(mod, al, questionIndex));
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
       {/* Lesson header */}
@@ -1543,6 +1722,18 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
           ))}
         </>
       )}
+
+      {/* Knowledge check section — separate from blocks. Lives below the
+          lesson body. Empty state shows a CTA; filled state shows the
+          questions with per-question regen affordance. */}
+      <div className="mt-12">
+        <KnowledgeCheckSection
+          quiz={lesson.knowledgeCheck}
+          onWrite={() => triggerKnowledgeCheck("write")}
+          onRegenerateAll={() => triggerKnowledgeCheck("regenerate")}
+          onRegenerateQuestion={triggerQuestionRegen}
+        />
+      </div>
     </div>
   );
 }
