@@ -29,6 +29,10 @@ export interface ProposedModule {
   summary?: string;
   objectives?: string[];
   lessons: ProposedLesson[];
+  // Title for a case-study slot Course Architect wants this module to
+  // anchor on (typically 2-3 modules per course get a slot). Slot is
+  // planted empty — Case Study Designer fills the content later.
+  caseStudyTitle?: string;
 }
 
 export interface CourseOutlineProposal {

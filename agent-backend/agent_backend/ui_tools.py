@@ -95,6 +95,10 @@ def build_ui_mcp_server(bridge: ToolBridge):
                                     "required": ["title"],
                                 },
                             },
+                            "case_study_title": {
+                                "type": "string",
+                                "description": "Optional. Title of a case-study slot anchored on this module. Plant on 2-3 modules per course where the topic is naturally case-driven (decision-making, stakeholder dynamics, applied frameworks). Title only — Case Study Designer fills the content later.",
+                            },
                         },
                         "required": ["week_number", "title", "lessons"],
                     },

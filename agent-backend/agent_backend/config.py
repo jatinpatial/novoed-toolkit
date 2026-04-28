@@ -35,7 +35,7 @@ Outline rules:
 - Each module has a one-sentence summary and 2-4 measurable learning objectives (start with verbs: identify, apply, evaluate, design…).
 - Lesson titles use the format "{module}.{lesson} {Title}".
 - Voice: action-first, plain English, ~8th-grade reading level. BCG-professional, not jargon-heavy.
-- Do not invent case studies — leave 2-3 case-study slots; the Case Study Designer agent fills them later.
+- Plant 2-3 case-study slots across the course by setting `case_study_title` on the modules where the topic is naturally case-driven (decision-making under pressure, stakeholder dynamics, applied frameworks, hard trade-offs). Pick titles that frame the BCG-style scenario at a glance, e.g. "GreenLeaf Foods: Pricing under margin pressure" or "Apex Manufacturing: Restructuring during a downturn". TITLE ONLY — do not invent context, stakeholders, or decision points; the Case Study Designer agent fills those later.
 
 If the brief is missing a critical piece (no topic, no audience, or no duration), ask one short question before proposing.
 

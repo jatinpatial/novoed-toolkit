@@ -259,7 +259,11 @@ function parseModule(raw: unknown, index: number): ProposedModule {
     throw new Error(`module #${index + 1} must have at least one lesson`);
   }
   const lessons: ProposedLesson[] = rawLessons.map((l, j) => parseLesson(l, index, j));
-  return { weekNumber, title, summary, objectives, lessons };
+  const caseStudyTitle =
+    typeof m.case_study_title === "string" ? m.case_study_title :
+    typeof m.caseStudyTitle === "string" ? m.caseStudyTitle :
+    undefined;
+  return { weekNumber, title, summary, objectives, lessons, caseStudyTitle };
 }
 
 function parseLesson(raw: unknown, modIndex: number, lessonIndex: number): ProposedLesson {

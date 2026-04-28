@@ -50,21 +50,47 @@ function makeCourse(brand: BrandKey): Course {
 }
 
 function buildCourseFromProposal(proposal: CourseOutlineProposal, brand: BrandKey): Course {
-  const modules: Module[] = proposal.modules.map((m) => ({
-    id: rid(),
-    title: m.title,
-    weekNumber: m.weekNumber,
-    summary: m.summary,
-    objectives: m.objectives,
-    lessons: m.lessons.map((l) => ({
+  // First pass: build modules + collect case-study slots.
+  // Case Study Designer fills content later; the slot just needs id+title
+  // here so Course Architect's "leave 2-3 slots" promise is structurally
+  // visible from the moment the course is built.
+  const caseStudies: { id: string; title: string }[] = [];
+  const modules: Module[] = proposal.modules.map((m) => {
+    let caseStudyId: string | undefined;
+    if (m.caseStudyTitle && m.caseStudyTitle.trim()) {
+      caseStudyId = rid();
+      caseStudies.push({ id: caseStudyId, title: m.caseStudyTitle.trim() });
+    }
+    return {
       id: rid(),
-      title: l.title,
-      duration: l.durationMin ?? 10,
-      blocks: [],
-      objectives: l.objectives,
+      title: m.title,
+      weekNumber: m.weekNumber,
+      summary: m.summary,
+      objectives: m.objectives,
+      caseStudyId,
+      lessons: m.lessons.map((l) => ({
+        id: rid(),
+        title: l.title,
+        duration: l.durationMin ?? 10,
+        blocks: [],
+        objectives: l.objectives,
+      })),
+    };
+  });
+  return {
+    id: rid(),
+    title: proposal.title,
+    client: "",
+    brand,
+    modules,
+    caseStudies: caseStudies.map((cs) => ({
+      ...cs,
+      context: "",
+      stakeholders: [],
+      decisionPoints: [],
+      debriefPrompts: [],
     })),
-  }));
-  return { id: rid(), title: proposal.title, client: "", brand, modules };
+  };
 }
 
 function newItem(type: string): BlockItem {
