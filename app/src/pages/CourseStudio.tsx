@@ -293,12 +293,12 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
         <main className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
           <PageHeader
             eyebrow="Course Studio"
-            title="Design full learning journeys."
-            subtitle="Tell the Copilot what course you want to build, or start from scratch and import existing work."
+            title="Your courses."
+            subtitle="Open a course to keep working, or start a new one from the dashboard brief composer."
             actions={
               <>
                 <button onClick={handleImport} className="btn-secondary btn-sm"><FileJson size={14} /> Import JSON</button>
-                <button onClick={handleNew} className="btn-primary btn-sm"><Plus size={14} /> New course</button>
+                <Link to="/" className="btn-primary btn-sm"><Sparkles size={14} /> New course</Link>
               </>
             }
           />
@@ -317,12 +317,19 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
             <EmptyState
               icon={<BookOpen size={24} />}
               title="No courses yet"
-              description="Open the Copilot and describe a course — topic, audience, duration in weeks. The Course Architect proposes a weekly outline you can build with one click."
+              description="Type your brief on the dashboard — topic, audience, duration. Course Architect proposes a weekly outline you can build with one click."
               action={
-                <div className="flex gap-2">
-                  <button onClick={() => setChatOpen(true)} className="btn-primary btn-sm"><Sparkles size={14} /> Open Copilot</button>
-                  <button onClick={handleImport} className="btn-secondary btn-sm">Import JSON</button>
-                  <button onClick={handleNew} className="btn-secondary btn-sm">Start blank</button>
+                <div className="flex flex-col items-center gap-3">
+                  <Link to="/" className="btn-primary btn-sm"><Sparkles size={14} /> Open dashboard</Link>
+                  <div className="flex gap-3 text-[11px] text-ink-400">
+                    <button onClick={handleImport} className="hover:text-brand-700 underline-offset-2 hover:underline">
+                      Import JSON
+                    </button>
+                    <span>·</span>
+                    <button onClick={handleNew} className="hover:text-brand-700 underline-offset-2 hover:underline">
+                      Start blank
+                    </button>
+                  </div>
                 </div>
               }
             />
