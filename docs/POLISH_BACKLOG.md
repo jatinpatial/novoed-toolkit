@@ -41,6 +41,32 @@ prior #5 work is polish (no planned-feature collision).
 - Tool failure visibility: `write_lesson` should return an error when lesson resolution fails instead of silent-success.
 - "Regenerate lesson" button: confirmation prompt before wiping existing blocks.
 
+## Quiz polish (Phase 2)
+- **Per-question inline editing.** Click any MCQ stem, option, or rationale → CellEditor textarea swap. Same pattern as Synthesia script cells in #4g. Removes the "regenerate to fix a typo" anti-pattern.
+- **Pre-flight form for Quiz Builder.** Mirror the Synthesia Scriptwriter pre-flight (#5d). Fields: count (3 / 5 / 7 / 10), difficulty (easy / medium / mixed / hard), type (mix / MCQ-only / true-false / random). Defaults: mix, 3 per lesson, 5 per module.
+- **True/false question type.** Small data model + prompt extension. MCQ + short-answer + true/false covers ~90% of corporate L&D quizzes without H5P weight.
+- **Drag-and-drop, matching, hotspot.** H5P territory — Phase 3 if ever.
+
+## Editability audit (Phase 2)
+- Every render-only display in the app should be editable. Audit all components: lesson titles, module titles, knowledge check questions, case study fields. Apply the CellEditor pattern uniformly. The current "regenerate to fix one word" friction is the symptom; this audit is the root cause.
+
+## Case study discoverability v2 (Phase 2)
+- Beyond the outline badge (#5i), consider a "Case studies" tab in the left sidebar alongside Outline / Materials. Lists every case study in the course with status (planted / designed). Click → jumps to the module summary page.
+
+## Citations system (Phase 2 — bigger feature)
+- When Lesson Writer / Case Study Designer / Quiz Builder use Materials shelf content, automatically track which sources informed which generated content.
+- Surface as footnotes in lesson body / case study text / quiz rationales.
+- Include in all .docx exports.
+- Requires:
+  - source-tracking field on Block / Quiz / CaseStudy types
+  - prompt updates across all writer modes (emit citation markers inline)
+  - footnote rendering UI on every surface that displays generated content
+  - footnote support in the .docx export pipeline
+- The Sources / Inspired by block in the Case Study Designer (#5j) is a one-section ad-hoc ancestor of this; the full system unifies the pattern across every mode.
+
+## Preview feature broken (existing bug, predates Phase 1 #5)
+- The "Preview" button at the top right of CourseStudio doesn't render the lesson correctly. Investigate as a separate ticket — broken before Phase 1 #5, not caused by it.
+
 ## Phase 2 — Scriptwriter polish
 - **Parameter wizard modal at script start.** Replace today's single chat pre-fill with a structured intake the LD fills before the agent runs:
   - **Duration** — preset (60 / 90 / 120 / 180 sec) or custom.
