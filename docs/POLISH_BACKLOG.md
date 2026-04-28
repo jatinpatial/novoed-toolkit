@@ -75,6 +75,33 @@ prior #5 work is polish (no planned-feature collision).
   - **Anchor** — lesson body / materials / scratch (forces the source the agent draws from instead of letting it choose).
   Today the agent makes these choices implicitly from the prompt; surfacing them gives the LD a steering wheel without writing a paragraph of intent each time. Wizard submits the structured params alongside the prefilled message text.
 
+## Deck-drop entry flow (Phase 2 follow-up)
+The "Drop a deck" card on the Dashboard currently renders disabled
+("soon" badge). The materials-shelf infrastructure exists from Phase
+1 #3 (`/parse` endpoint, `read_materials` tool, `Course.materials`
+field), but the drop-zone-to-course wiring opens enough scope to
+deserve its own commit:
+
+- **Pre-course materials home.** A dropped deck has no course yet to
+  attach to. Stash the parsed text in localStorage as a "pending
+  materials" slot keyed by a fresh course-id stub, then attach during
+  the buildCourseFromProposal step.
+- **Agent-aware build.** Course Architect today proposes a course from
+  scratch; needs to know "draw structure from these materials" when
+  the pending-materials stash is non-empty. Prompt update + a flag
+  passed through the propose_course_outline call.
+- **Parse error states.** `/parse` returns 415 (unsupported type) and
+  413 (file too large); the drop card needs in-line error messaging
+  matched to the existing MaterialsShelf toasts.
+- **Multi-file handling.** Decision: single file at a time for v1, or
+  multi-drop with sequential parse + concat? Single is cheaper.
+- **Drop-zone UX.** Visual feedback during drag-over, parse-in-flight,
+  parse-complete-but-pre-navigate states. ~50 lines.
+
+When all four pieces land, the card flips from disabled to active
+and the "Coming in Phase 3" badge comes off. ~150-200 lines total
+across one or two commits.
+
 ## Brand fonts in .docx exports (Phase 2)
 - Henderson Sans is BCG's official font for documents.
 - Currently defaulting to Trebuchet MS as a Windows-built-in fallback (set via `_set_docx_default_font` in `agent-backend/agent_backend/main.py`).

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { HeroComposer } from "../shell/HeroComposer";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
+import { EntryCards } from "../shell/EntryCards";
 import { listProjects, subscribeProjects, type Project } from "../store/projects";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
@@ -41,6 +42,14 @@ export default function Dashboard() {
   // can fill the composer with example briefs (Q8a — fill, don't
   // auto-submit; user reviews and presses Enter).
   const [brief, setBrief] = useState("");
+  // Ref to the hero composer's textarea — EntryCards' "Brief in chat"
+  // card scrolls back up and focuses the composer when clicked.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  function focusComposer() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    composerRef.current?.focus();
+  }
 
   useEffect(() => {
     const refresh = () => setProjects(listProjects());
@@ -66,8 +75,10 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <HeroComposer brief={brief} setBrief={setBrief} />
+        <HeroComposer ref={composerRef} brief={brief} setBrief={setBrief} />
         <TryAPromptPills onPick={setBrief} />
+
+        <EntryCards onFocusComposer={focusComposer} />
 
         {/* Recent work */}
         {projects.length > 0 && (

@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import { forwardRef, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -28,7 +28,8 @@ interface HeroComposerProps {
   setBrief: (text: string) => void;
 }
 
-export function HeroComposer({ brief, setBrief }: HeroComposerProps) {
+export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
+  function HeroComposer({ brief, setBrief }, textareaRef) {
   const navigate = useNavigate();
 
   function submit() {
@@ -54,6 +55,7 @@ export function HeroComposer({ brief, setBrief }: HeroComposerProps) {
         </div>
         <div className="flex-1 min-w-0">
           <textarea
+            ref={textareaRef}
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
             onKeyDown={onKey}
@@ -77,4 +79,5 @@ export function HeroComposer({ brief, setBrief }: HeroComposerProps) {
       </div>
     </div>
   );
-}
+  },
+);
