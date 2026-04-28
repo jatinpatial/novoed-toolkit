@@ -14,15 +14,16 @@ import type { SeededProject } from "../fixtures/courseSeedBasic";
 const STORAGE_KEY = "bcgu_studio_projects_v1";
 
 /**
- * Visit the app's home so we have a same-origin context, then write the
- * seeded project into localStorage. Existing entries with the same id
- * are replaced.
+ * Inject the seeded project so it lands in localStorage BEFORE any
+ * navigation. This matters because the AgentProvider opens a WebSocket
+ * on mount — if a WS-mocking test seeded via a goto-then-evaluate path,
+ * the first navigation would start the WS before the mock route was
+ * installed and the connection would miss it. addInitScript runs in
+ * each new page context before any script executes, so the seed is
+ * always in place by the time React boots.
  */
 export async function seedCourseInStorage(page: Page, project: SeededProject): Promise<void> {
-  // Relative path — joins against baseURL (which ends in /novoed-toolkit/).
-  // A leading slash would strip the base path and 404.
-  await page.goto("");
-  await page.evaluate(({ key, project: p }) => {
+  await page.addInitScript(({ key, project: p }) => {
     const all = JSON.parse(localStorage.getItem(key) || "[]") as Array<{ id: string }>;
     const idx = all.findIndex((entry) => entry.id === p.id);
     if (idx >= 0) all[idx] = p as never;
@@ -31,8 +32,13 @@ export async function seedCourseInStorage(page: Page, project: SeededProject): P
   }, { key: STORAGE_KEY, project });
 }
 
-/** Wipe every persisted project. Run in afterEach. */
+/**
+ * Wipe every persisted project. afterEach hook so tests don't leak.
+ * Tolerates "no page yet" state — first beforeEach in a clean context
+ * doesn't have a navigated page to evaluate against.
+ */
 export async function clearStorage(page: Page): Promise<void> {
+  if (page.url() === "about:blank") return;
   await page.evaluate((key) => {
     localStorage.removeItem(key);
   }, STORAGE_KEY);
