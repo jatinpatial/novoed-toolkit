@@ -5,6 +5,9 @@ import { AppShell } from "../shell/AppShell";
 import { HeroComposer } from "../shell/HeroComposer";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
+import {
+  WelcomeModal, hasSeenWelcome, markWelcomeSeen, clearWelcomeSeen,
+} from "../shell/WelcomeModal";
 import { listProjects, subscribeProjects, type Project } from "../store/projects";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
@@ -45,10 +48,27 @@ export default function Dashboard() {
   // Ref to the hero composer's textarea — EntryCards' "Brief in chat"
   // card scrolls back up and focuses the composer when clicked.
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Welcome modal: open on first-load (no localStorage flag yet);
+  // re-opens when the SidebarFooter Help button is clicked.
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+
+  useEffect(() => {
+    if (!hasSeenWelcome()) setWelcomeOpen(true);
+  }, []);
 
   function focusComposer() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     composerRef.current?.focus();
+  }
+
+  function dismissWelcome() {
+    setWelcomeOpen(false);
+    markWelcomeSeen();
+  }
+
+  function reopenWelcome() {
+    clearWelcomeSeen();
+    setWelcomeOpen(true);
   }
 
   useEffect(() => {
@@ -60,7 +80,8 @@ export default function Dashboard() {
   const recent = projects.slice(0, 6);
 
   return (
-    <AppShell>
+    <AppShell onShowWelcome={reopenWelcome}>
+      <WelcomeModal open={welcomeOpen} onClose={dismissWelcome} />
       <div className="max-w-4xl mx-auto pt-6 pb-12">
         {/* Hero */}
         <div className="text-center mb-6">
