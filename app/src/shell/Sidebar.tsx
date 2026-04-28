@@ -1,19 +1,31 @@
-import { NavLink } from "react-router-dom";
-import { LayoutGrid, Shapes, BookOpen, PlayCircle, FolderOpen, Sparkles, Mail } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { SidebarNav } from "./SidebarNav";
+import { SidebarFooter } from "./SidebarFooter";
 
-const nav = [
-  { to: "/",            label: "Dashboard",       icon: LayoutGrid },
-  { to: "/infographics", label: "Infographic Studio", icon: Shapes },
-  { to: "/courses",     label: "Course Studio",   icon: BookOpen },
-  { to: "/player",      label: "SCORM Player",    icon: PlayCircle },
-  { to: "/projects",    label: "My Projects",     icon: FolderOpen },
-];
+/**
+ * Global app sidebar — persists across the Workspace / Start a course /
+ * Build pieces / Saved surfaces. The course-canvas LeftSidebar
+ * (Outline / Materials tabs) is a separate concern, lives inside
+ * CourseStudio.tsx, and is not affected by this shell.
+ *
+ * Composition:
+ *   - Logo block (BCG U Studio brand mark + tagline)
+ *   - SidebarNav   (section blocks: Workspace / Start a course / etc.)
+ *   - SidebarFooter (Help, Install Claude Desktop, Feedback)
+ *
+ * Phase 2 #1f wires the welcome-modal trigger via onShowWelcome from
+ * the page that mounts this component. Today the prop is undefined,
+ * so the Help button renders disabled.
+ */
+interface SidebarProps {
+  onShowWelcome?: () => void;
+}
 
-export function Sidebar() {
+export function Sidebar({ onShowWelcome }: SidebarProps = {}) {
   return (
     <aside className="w-60 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
       <div className="h-14 flex items-center gap-2.5 px-4 border-b border-ink-200">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white">
+        <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white">
           <Sparkles size={16} strokeWidth={2.5} />
         </div>
         <div className="min-w-0">
@@ -22,29 +34,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {nav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className={({ isActive }) => `nav-item ${isActive ? "nav-item-active" : ""}`}
-          >
-            <item.icon size={16} strokeWidth={2} />
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="p-3 border-t border-ink-200">
-        <a
-          href="mailto:jatin.patial@bcg.com"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-ink-500 hover:text-ink-800 hover:bg-ink-100 transition-colors"
-        >
-          <Mail size={14} />
-          <span>Feedback & requests</span>
-        </a>
-      </div>
+      <SidebarNav />
+      <SidebarFooter onShowWelcome={onShowWelcome} />
     </aside>
   );
 }
