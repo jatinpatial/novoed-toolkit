@@ -10,18 +10,44 @@
    utilities). Component CSS in mockup-style code uses these directly;
    Tailwind classes (ease-sana, duration-fast, etc.) keep working too.
 
+   Surface tokens
      --surface-warm    nested-card tint (sparingly used)
+
+   Motion tokens (A3)
      --ease-sana       Sana motion curve, sharper than default ease-out
-     --duration-fast   hover, micro-interaction
-     --duration-base   entry, panel reveal
-     --duration-slow   page transition, modal entry
+     --duration-fast   hover, micro-interaction (150ms)
+     --duration-base   entry, panel reveal (250ms)
+     --duration-slow   page transition, modal entry (350ms)
+
+   Bright color tokens (A4) — explicit-bright BCG green + BCG-aligned
+   teal for hero / mesh / accent gradients. Distinct from Tailwind's
+   `brand` palette (#29BA74 family from A1) which stays the canonical
+   scale for non-hero surfaces. Teal values are BCG-aligned, not
+   Tailwind's generic teal.
+
+   Shadow tokens (A4) — lifted out of Tailwind's theme.boxShadow so
+   component CSS can reference them directly without inline fallback
+   noise. Three tiers match Tailwind's shadow-resting / shadow-hover /
+   shadow-active utilities.
 */
 :root {
   --surface-warm: #FAFAF7;
+
   --ease-sana: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-slow: 350ms;
+
+  --green-500: #00A651;       /* BCG official bright green */
+  --green-700: #006B3F;
+  --teal-400:  #2BAFA3;       /* BCG-aligned teal — lighter accent */
+  --teal-500:  #00857C;       /* BCG-aligned teal — primary accent */
+  --teal-700:  #005C56;       /* BCG-aligned teal — deep accent */
+  --card-accent: linear-gradient(90deg, var(--green-500), var(--teal-500));
+
+  --shadow-resting: 0 1px 3px rgba(14,17,22,0.04), 0 1px 2px rgba(14,17,22,0.04);
+  --shadow-hover:   0 12px 32px rgba(14,17,22,0.08), 0 4px 12px rgba(14,17,22,0.05);
+  --shadow-active:  0 18px 50px rgba(0,166,81,0.15), 0 6px 18px rgba(0,166,81,0.10);
 }
 
 /* ─── Animation keyframes ─────────────────────────────────────────────────────
@@ -164,6 +190,122 @@
   .stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
   .stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
   .stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+
+  /* ── Card depth language (Phase 2 #2 A4) ─────────────────────────────
+     Four single-purpose classes that compose. Surface code combines
+     them rather than reaching for the legacy .card / .card-hover.
+
+       .card-base          baseline card (white + 1px ink-100 border
+                            + rounded-card-lg + shadow-resting)
+       .card-hoverable     adds hover lift + brand-tinted border +
+                            mouse-follow radial glow (via --mx/--my
+                            CSS vars; B2-tilt's JS updates them on
+                            mousemove for the 3D tilt effect)
+       .card-accent-top    3px gradient top bar that scales-in on
+                            parent hover. Compose with .card-hoverable
+                            so :hover triggers the bar
+       .card-premium       hero/composer treatment — gradient border
+                            (mask trick), shadow-active, larger radius.
+                            Standalone — don't combine with .card-hoverable
+
+     Mockup anchors: lines 50, 457–500 (.composer for premium),
+     714–808 (.entry-card), 825–838 (.course-card). */
+
+  .card-base {
+    @apply surface-1 rounded-card-lg;
+    border: 1px solid theme("colors.ink.100");
+    box-shadow: var(--shadow-resting);
+    transition:
+      transform var(--duration-base) var(--ease-sana),
+      box-shadow var(--duration-base) var(--ease-sana),
+      border-color var(--duration-base) var(--ease-sana);
+  }
+
+  .card-hoverable {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Mouse-follow radial glow — opacity 0 by default, fades in on
+     hover. --mx/--my default to 50% 50% (centered glow); B2-tilt's
+     mousemove handler will update them per-cursor for the 3D tilt
+     surfaces. Static usage works fine without the JS. */
+  .card-hoverable::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at var(--mx, 50%) var(--my, 50%),
+      rgba(0, 166, 81, 0.08),
+      transparent 50%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-sana);
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+  }
+  .card-hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(0, 166, 81, 0.2);
+  }
+  .card-hoverable:hover::before {
+    opacity: 1;
+  }
+
+  .card-accent-top {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-accent-top::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-base) var(--ease-sana);
+    z-index: 1;
+  }
+  .card-accent-top:hover::after {
+    transform: scaleX(1);
+  }
+
+  .card-premium {
+    @apply surface-1 rounded-hero;
+    position: relative;
+    box-shadow: var(--shadow-active);
+    overflow: hidden;
+  }
+  .card-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(
+      120deg,
+      var(--green-500),
+      var(--teal-500),
+      #FFC72C, /* yellow-500 from A1 */
+      var(--green-500)
+    );
+    background-size: 300% 300%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+            mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    animation: gradient-shift 8s linear infinite;
+    opacity: 0.6;
+    z-index: 0;
+  }
 
   /* ── Surface elevation (Phase 2 #2 foundation) ───────────────────────
      Three semantic surface classes for the layered card pattern:
