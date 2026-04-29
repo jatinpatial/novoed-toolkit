@@ -3,15 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 /**
- * Brief-entry composer on the Dashboard hero. Type a brief, press
- * Design → (or Enter), and the LD lands on /courses with the brief
- * pre-filled in the Copilot chat. Course Architect picks up from
- * there.
+ * HeroComposer — brief-entry composer on the Dashboard hero.
  *
- * Implementation: passes the brief via the `?brief=` URL param.
- * CoursesHome reads the param on mount, opens the Copilot, prefills
- * the composer, and clears the param so back-navigation doesn't
- * re-prefill.
+ * Phase 2 #2 B2b rebuilt the visual shell:
+ *   - Gradient border via mask trick (green-500 -> teal-500 ->
+ *     yellow #FFC72C -> green-500), animated with gradient-shift
+ *   - Diagonal shine sweep travels left -> right every 5s
+ *   - 48px Sparkles AI orb with --orb-gradient + --shadow-orb,
+ *     breathing + halo-pulse animations
+ *   - Two-path CTA row in the actions strip:
+ *       Detailed brief  ->  C0 intake form (disabled-with-soon
+ *                            until /courses/new ships)
+ *       Design          ->  current submit path (navigate to
+ *                            /courses?brief=...)
+ *
+ * Behavior unchanged from Phase 2 #1: type a brief, press Enter (or
+ * click Design), the LD lands on /courses with the brief pre-filled
+ * in the Copilot chat. Course Architect picks up from there.
  *
  * Controlled — Dashboard owns the brief state so try-a-prompt pills
  * (#1d) can fill the composer with example briefs.
@@ -20,8 +28,12 @@ import { ArrowRight, Sparkles } from "lucide-react";
  * to the agent-led story. Power users who want an empty skeleton
  * can type "give me an empty course skeleton" or click through
  * the Course Studio empty state.
+ *
+ * Mockup anchors: docs/vision-mockup.html lines 457-578 (CSS),
+ * 1457-1477 (DOM).
  */
-const PLACEHOLDER = "e.g. 4-week course on change management for senior managers leading restructurings";
+const PLACEHOLDER =
+  "e.g. 6-week change management course for senior managers in pharma";
 
 interface HeroComposerProps {
   brief: string;
@@ -30,54 +42,76 @@ interface HeroComposerProps {
 
 export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
   function HeroComposer({ brief, setBrief }, textareaRef) {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  function submit() {
-    const text = brief.trim();
-    if (!text) return;
-    navigate(`/courses?brief=${encodeURIComponent(text)}`);
-  }
-
-  function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter submits, Shift+Enter inserts a newline (matches the chat
-    // composer convention so the muscle memory transfers).
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submit();
+    function submit() {
+      const text = brief.trim();
+      if (!text) return;
+      navigate(`/courses?brief=${encodeURIComponent(text)}`);
     }
-  }
 
-  return (
-    <div className="rounded-2xl border border-ink-200 bg-white shadow-hero p-4 md:p-5">
-      <div className="flex items-start gap-3">
-        <div className="hidden md:flex w-9 h-9 rounded-lg bg-brand-gradient text-white items-center justify-center flex-shrink-0">
-          <Sparkles size={16} strokeWidth={2.5} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <textarea
-            ref={textareaRef}
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            onKeyDown={onKey}
-            placeholder={PLACEHOLDER}
-            rows={3}
-            className="w-full bg-transparent border-none outline-none resize-none text-base text-ink-900 placeholder:text-ink-400 leading-relaxed"
-          />
-          <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-ink-100">
-            <div className="text-[11px] text-ink-400">
-              Topic, audience, duration. The agent drafts the course outline; you click Build.
+    function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
+      // Enter submits, Shift+Enter inserts a newline (matches the
+      // chat composer convention so the muscle memory transfers).
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submit();
+      }
+    }
+
+    return (
+      <div className="composer">
+        <div className="composer-inner">
+          <div className="composer-input">
+            <div className="composer-orb" aria-hidden="true">
+              <Sparkles size={20} strokeWidth={2} />
             </div>
-            <button
-              onClick={submit}
-              disabled={!brief.trim()}
-              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-brand-gradient text-white text-sm font-semibold shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              Design <ArrowRight size={14} strokeWidth={2.5} />
-            </button>
+            <textarea
+              ref={textareaRef}
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              onKeyDown={onKey}
+              placeholder={PLACEHOLDER}
+              rows={2}
+              className="composer-textarea"
+            />
+          </div>
+          <div className="composer-actions">
+            <div className="composer-helper">
+              <span>Press</span>
+              <kbd>↵</kbd>
+              <span>to design with Studio Copilot</span>
+            </div>
+            <div className="composer-cta-row">
+              {/*
+                Detailed brief  -  disabled-with-soon until C0 lands.
+                Per Q1 confirmation: opacity 0.55, no hover lift /
+                shine / border-color change, native title tooltip,
+                inline "Soon" pill matching EntryCards soonLabel style.
+                TODO(C0): re-enable + wire to navigate("/courses/new")
+                when the intake form ships.
+              */}
+              <button
+                type="button"
+                className="btn-cta-secondary"
+                disabled
+                title="Detailed brief intake — coming with the next release"
+              >
+                Detailed brief <ArrowRight size={14} strokeWidth={2.5} />
+                <span className="composer-soon">Soon</span>
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!brief.trim()}
+                className="btn-cta-primary"
+              >
+                Design <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
   },
 );

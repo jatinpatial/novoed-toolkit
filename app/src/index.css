@@ -48,6 +48,13 @@
   --shadow-resting: 0 1px 3px rgba(14,17,22,0.04), 0 1px 2px rgba(14,17,22,0.04);
   --shadow-hover:   0 12px 32px rgba(14,17,22,0.08), 0 4px 12px rgba(14,17,22,0.05);
   --shadow-active:  0 18px 50px rgba(0,166,81,0.15), 0 6px 18px rgba(0,166,81,0.10);
+
+  /* AI-identity tokens (B2b) — the orb gradient + glow used by the
+     hero composer's Sparkles orb. Also reused for the Studio Copilot
+     avatar in B4 (when that surface lands). Lifted to :root so both
+     components reach for the same values. */
+  --orb-gradient: radial-gradient(circle at 30% 30%, #6FD49A, #00A651 40%, #006B3F 80%);
+  --shadow-orb:   0 0 80px rgba(0,166,81,0.45), 0 0 28px rgba(0,166,81,0.3);
 }
 
 /* ─── Animation keyframes ─────────────────────────────────────────────────────
@@ -437,6 +444,269 @@
     animation: fade-up 800ms var(--ease-sana) 200ms both;
   }
 
+  /* ── Hero composer (Phase 2 #2 B2b) ──────────────────────────────────
+     The Dashboard's brief-entry composer. Gradient-border via mask
+     trick + diagonal shine sweep + Sparkles AI orb + two-path CTA
+     (Detailed brief — disabled-with-soon until C0 / Design — primary).
+     Styled to be the visual centerpiece of the hero: alive without
+     being noisy, branded without being a billboard.
+
+     Mockup anchors: docs/vision-mockup.html lines 457-578 (CSS),
+     1457-1477 (DOM). */
+  .composer {
+    position: relative;
+    background: white;
+    border-radius: theme("borderRadius.3xl"); /* 24px = rounded-hero */
+    box-shadow: var(--shadow-active);
+    padding: 8px;
+    max-width: 880px;
+    animation: fade-up 900ms var(--ease-sana) 300ms both;
+    overflow: hidden;
+  }
+  /* Gradient border via mask trick — same approach as .card-premium.
+     Hardcoding #FFC72C (yellow-500) inline since we don't have a CSS
+     var for it; the value lives in the Tailwind config and the mockup
+     CSS, so no source-of-truth drift. */
+  .composer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: theme("borderRadius.3xl");
+    padding: 2px;
+    background: linear-gradient(
+      120deg,
+      var(--green-500),
+      var(--teal-500),
+      #FFC72C,
+      var(--green-500)
+    );
+    background-size: 300% 300%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+            mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    animation: gradient-shift 8s linear infinite;
+    z-index: 0;
+  }
+  /* Shine sweep — 80px-wide green band travels left -> right every
+     5s. Reuses the existing shine-sweep keyframe (A3). */
+  .composer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -10%;
+    width: 80px;
+    background: linear-gradient(
+      110deg,
+      transparent,
+      rgba(0, 166, 81, 0.18),
+      transparent
+    );
+    animation: shine-sweep 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .composer-inner {
+    position: relative;
+    z-index: 1;
+    background: white;
+    border-radius: 28px; /* slightly less than outer 24px so the gradient border peeks */
+    padding: 24px 28px 20px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .composer-input {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  /* AI orb — Sparkles icon in a 48px gradient square with a blurred
+     glow halo behind it. Three layers stacked:
+       1. ::before — blurred halo (large, soft)
+       2. main element — gradient square + Sparkles icon
+       3. ::after — top-left highlight gloss
+     The orb breathes (scale 1 -> 1.06 + 2deg rotate) every 4s; the
+     halo pulses (scale 1 -> 1.2 + opacity 0.5 -> 0.7) on the same
+     cadence offset. Subtle, alive, not jittery. */
+  .composer-orb {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--orb-gradient);
+    box-shadow: var(--shadow-orb);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    position: relative;
+    animation: orb-breathe 4s ease-in-out infinite;
+  }
+  .composer-orb::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 18px;
+    background: var(--orb-gradient);
+    filter: blur(14px);
+    opacity: 0.5;
+    z-index: -1;
+    animation: orb-glow 4s ease-in-out infinite;
+  }
+  .composer-orb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4),
+      transparent 40%
+    );
+    pointer-events: none;
+  }
+  .composer-orb svg {
+    color: white;
+    position: relative;
+    z-index: 1;
+  }
+
+  .composer-textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 17px;
+    line-height: 1.55;
+    color: theme("colors.ink.900");
+    min-height: 64px;
+    padding: 8px 0;
+    background: transparent;
+    width: 100%;
+  }
+  .composer-textarea::placeholder {
+    color: theme("colors.ink.300");
+  }
+
+  .composer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid theme("colors.ink.100");
+  }
+  .composer-helper {
+    font-size: 12px;
+    color: theme("colors.ink.500");
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .composer-helper kbd {
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: theme("colors.ink.50");
+    border: 1px solid theme("colors.ink.200");
+    font-size: 10px;
+    font-family: inherit;
+    font-weight: 700;
+    color: theme("colors.ink.700");
+  }
+
+  .composer-cta-row {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Composer CTA buttons — separate selectors from the global .btn
+     so the composer treatment doesn't bleed onto every button in the
+     app. Same shape (11px / 20px padding, 8px radius) but explicit. */
+  .btn-cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--green-500) 0%, var(--green-700) 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(0, 166, 81, 0.25);
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana);
+    border: none;
+  }
+  .btn-cta-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 166, 81, 0.35);
+  }
+  .btn-cta-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    background: white;
+    color: var(--green-700);
+    border: 1.5px solid theme("colors.brand.200");
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana),
+                background var(--duration-fast) var(--ease-sana),
+                border-color var(--duration-fast) var(--ease-sana);
+  }
+  .btn-cta-secondary:hover:not(:disabled) {
+    background: theme("colors.brand.50");
+    border-color: var(--green-500);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 166, 81, 0.15);
+  }
+  /* Disabled-with-soon variant for "Detailed brief" until C0 lands.
+     Per Q1: opacity 0.55, no hover lift / shine / border change.
+     The composer-soon pill renders inline next to the label. */
+  .btn-cta-secondary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-cta-secondary:disabled:hover {
+    background: white;
+    border-color: theme("colors.brand.200");
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* "Soon" pill matching the EntryCards soonLabel style (vocabulary
+     consistency — same look across the app for unreleased CTAs). */
+  .composer-soon {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: theme("colors.ink.400");
+    background: theme("colors.ink.100");
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+  }
+
   /* ── Course card with photo cover (Phase 2 #2 A6) ────────────────────
      Used by <CourseCardPhoto> in app/src/components/CourseCardPhoto.tsx.
      Two visual branches off the same shape:
@@ -586,4 +856,16 @@
 @keyframes shape-rotate-r {
   from { transform: rotate(0deg); }
   to   { transform: rotate(-360deg); }
+}
+
+/* Composer orb breathing — paired with .composer-orb / .composer-orb::before
+   in @layer components above. orb-breathe scales + lightly rotates the
+   orb body; orb-glow pulses the blurred halo behind it. Both 4s. */
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1)    rotate(0deg); }
+  50%      { transform: scale(1.06) rotate(2deg); }
+}
+@keyframes orb-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.2); }
 }
