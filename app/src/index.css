@@ -6,28 +6,103 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CSS variables — values that need to be referenced from custom CSS
-   (not Tailwind utilities). Surface-warm is sparingly used for nested
-   cards inside a section card where pure-white-on-pure-white loses
-   depth (hence the subtly cream tint). */
+/* CSS variables — values referenced from custom CSS (not Tailwind
+   utilities). Component CSS in mockup-style code uses these directly;
+   Tailwind classes (ease-sana, duration-fast, etc.) keep working too.
+
+     --surface-warm    nested-card tint (sparingly used)
+     --ease-sana       Sana motion curve, sharper than default ease-out
+     --duration-fast   hover, micro-interaction
+     --duration-base   entry, panel reveal
+     --duration-slow   page transition, modal entry
+*/
 :root {
   --surface-warm: #FAFAF7;
+  --ease-sana: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 350ms;
 }
 
-/* Animation keyframes for the Tailwind animation utilities defined in
-   tailwind.config.ts. Each is paired with the ease-sana curve in the
-   matching `animate-*` class. */
+/* ─── Animation keyframes ─────────────────────────────────────────────────────
+   Paired with the Tailwind `animate-*` utilities in tailwind.config.ts.
+   General motion vocabulary; mesh-hero / course-cover / studio-copilot
+   specific keyframes land with their respective components (A5+).
+*/
+
+/* fade-in — opacity only. (A1) */
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
+
+/* fade-up — opacity + 16px translate (mockup line 451).
+   Replaces A1's slide-up keyframe content; A1's `slide-up` name
+   aliases to fade-up via the Tailwind animation registry so existing
+   call sites pick up the 16px displacement automatically. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* scale-in — gentle pop (A1) */
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.96); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+/* shine-sweep — light band that travels left → right.
+   Used by the hero composer and other "alive surface" treatments
+   (mockup line 495). 5s ease-in-out infinite. */
+@keyframes shine-sweep {
+  0%   { left: -10%; opacity: 0; }
+  30%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+
+/* gradient-shift — accent text + composer border gradient drift
+   (mockup line 436). 6s ease-in-out infinite. */
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* pulse-dot — eyebrow indicator dot scaling up + ring fading out
+   (mockup line 411). 2s ease-in-out infinite. */
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 3px rgba(0,166,81,0.2);
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+    box-shadow: 0 0 0 6px rgba(0,166,81,0);
+  }
+}
+
+/* agent-pulse — Studio Copilot avatar (B4). Calmer than pulse-dot
+   since the Copilot is a persistent presence, not a status ping. */
+@keyframes agent-pulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.06); opacity: 0.85; }
+}
+
+/* breathing — ambient hero gradient layer scaling 8s. Very subtle. */
+@keyframes breathing {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
+}
+
+/* page-enter — route-level transition. Wired up in B2 when the
+   Dashboard becomes the first surface to use it (route-keyed
+   remount). 350ms ease-sana. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @layer base {
@@ -58,6 +133,38 @@
 }
 
 @layer components {
+  /* ── Motion utilities (Phase 2 #2 A3) ────────────────────────────────
+     Hover lift, active press, and list-stagger helper. A4's card
+     classes compose .lift-on-hover for the hoverable variant; raw
+     usage is fine on any surface element. */
+  .lift-on-hover {
+    transition: transform 200ms var(--ease-sana), box-shadow 200ms var(--ease-sana);
+  }
+  .lift-on-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16,18,24,0.06), 0 2px 6px rgba(16,18,24,0.04); /* matches Tailwind shadow-hover */
+  }
+
+  .press-on-active {
+    transition: transform 100ms ease-out;
+  }
+  .press-on-active:active {
+    transform: translateY(1px);
+  }
+
+  /* List-stagger helper — fade-up applied to direct children with
+     incrementing delay. Up to 8 children covered; beyond that wrap
+     in a <StaggerList delay={N}> component (defer until needed). */
+  .stagger-children > *               { animation: fade-up 700ms var(--ease-sana) both; }
+  .stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+  .stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+  .stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+
   /* ── Surface elevation (Phase 2 #2 foundation) ───────────────────────
      Three semantic surface classes for the layered card pattern:
        - surface-1   page bg, default cards (pure white)

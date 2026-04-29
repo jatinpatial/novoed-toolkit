@@ -153,11 +153,24 @@ export default {
       },
       // Animation utilities — keyframes defined in src/index.css.
       // Each is wired up here so Tailwind generates the matching
-      // `animate-*` class.
+      // `animate-*` class. Mesh-hero / course-cover / studio-copilot
+      // specific animations land with their respective components
+      // (A5+) so they're colocated with usage.
+      //
+      // animate-slide-up aliases to the fade-up keyframe — A1's
+      // 8px translation upgrades to mockup's 16px automatically
+      // for existing call sites.
       animation: {
-        "fade-in":  "fade-in 250ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "slide-up": "slide-up 350ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "scale-in": "scale-in 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-in":          "fade-in 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-up":         "fade-up 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "scale-in":         "scale-in 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-up":          "fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "shine-sweep":      "shine-sweep 5s ease-in-out infinite",
+        "gradient-shift":   "gradient-shift 6s ease-in-out infinite",
+        "pulse-dot":        "pulse-dot 2s ease-in-out infinite",
+        "agent-pulse":      "agent-pulse 1.6s ease-in-out infinite",
+        "breathing":        "breathing 8s ease-in-out infinite",
+        "page-enter":       "page-enter 350ms cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },
