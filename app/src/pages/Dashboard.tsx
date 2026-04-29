@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
+import { MeshHero } from "../shell/MeshHero";
 import { HeroComposer } from "../shell/HeroComposer";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
@@ -29,12 +30,28 @@ function relTime(ts: number): string {
 }
 
 /**
- * Dashboard — chat-first home (Phase 2 #1).
+ * Dashboard — chat-first home (Phase 2 #1, redesigned in #2 B2).
  *
  * The hero composer is the primary entry point: type a brief, the
- * agent picks it up on /courses and runs Course Architect. Three-card
- * landing (#1e), try-a-prompt pills (#1d), and welcome modal (#1f)
- * compose around the hero in subsequent commits.
+ * agent picks it up on /courses and runs Course Architect.
+ *
+ * B2a (this commit) wraps the hero block in <MeshHero> for the
+ * animated mesh-blob backdrop, swaps the eyebrow / title / subtitle
+ * to the mockup's left-aligned hero-content layout (glass-pill
+ * eyebrow with pulse dot, display-sized title with gradient italic
+ * "design" accent, 19px ink-700 subtitle), and switches AppShell to
+ * fullBleed so the mesh runs edge-to-edge. Below-hero content
+ * (entry cards + recent work) lives in a 1208px max-width section
+ * wrapper.
+ *
+ * The composer (HeroComposer), pills (TryAPromptPills), entry cards
+ * (EntryCards), and recent-work strip stay structurally unchanged in
+ * B2a — they still render but with their Phase 2 #1 visuals. Each
+ * gets rebuilt in its own sub-commit:
+ *   B2b — composer redesign (gradient border + shine + Sparkles orb
+ *         + two-path CTA: Detailed brief + Design)
+ *   B2c — entry cards with tilt + 3D mouse-follow glow
+ *   B2d — recent-courses strip via <CourseCardPhoto> + pills polish
  *
  * Recent work survives below the hero — useful for returning users
  * who just want to jump back in.
@@ -80,25 +97,27 @@ export default function Dashboard() {
   const recent = projects.slice(0, 6);
 
   return (
-    <AppShell onShowWelcome={reopenWelcome}>
+    <AppShell fullBleed onShowWelcome={reopenWelcome}>
       <WelcomeModal open={welcomeOpen} onClose={dismissWelcome} />
-      <div className="max-w-4xl mx-auto pt-6 pb-12">
-        {/* Hero */}
-        <div className="text-center mb-6">
-          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-3">
-            BCG U · AI Learning Design Studio
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-ink-900 mb-3">
-            What will you <span className="text-brand-700">design</span> today?
-          </h1>
-          <p className="text-sm text-ink-500 max-w-2xl mx-auto">
-            Three ways to start. Pick the one that matches what you have.
-          </p>
-        </div>
+
+      <MeshHero>
+        <div className="hero-eyebrow">BCG U · AI Learning Design Studio</div>
+        <h1 className="hero-title">
+          What will you <span className="hero-title-accent">design</span> today?
+        </h1>
+        <p className="hero-subtitle">
+          Start from a brief, drop a deck, or browse the catalog. Studio Copilot
+          drafts the structure; you refine and ship.
+        </p>
 
         <HeroComposer ref={composerRef} brief={brief} setBrief={setBrief} />
         <TryAPromptPills onPick={setBrief} />
+      </MeshHero>
 
+      {/* Below-hero sections — 1208px max-width per mockup section
+          shape. Entry cards + recent work stay on their Phase 2 #1
+          visuals here; each gets rebuilt in B2c / B2d. */}
+      <div className="max-w-[1208px] mx-auto px-8 md:px-16 py-12">
         <EntryCards onFocusComposer={focusComposer} />
 
         {/* Recent work */}

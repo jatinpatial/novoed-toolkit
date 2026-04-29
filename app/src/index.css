@@ -354,6 +354,89 @@
   .nav-item { @apply flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm font-medium text-ink-600 hover:bg-ink-100 hover:text-ink-900 transition-colors; }
   .nav-item-active { @apply bg-brand-50 text-brand-700 hover:bg-brand-50 hover:text-brand-700; }
 
+  /* ── Hero typography (Phase 2 #2 B2a) ────────────────────────────────
+     Slotted into <MeshHero> on the Dashboard. The mesh-blob backdrop
+     reads through these elements; a glass-pill eyebrow + display-
+     sized title + 19px subtitle compose the hero copy block, all
+     left-aligned within the 1080px .mesh-hero-content centered slot.
+
+     Animations: each element fades up from 16px with a stagger
+     (eyebrow 0ms, title 100ms, subtitle 200ms) so the hero reveals
+     line-by-line on first paint.
+
+     Mockup anchors: docs/vision-mockup.html lines 385-449. */
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green-700);
+    padding: 6px 14px;
+    background: rgba(232, 247, 238, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid theme("colors.brand.100");
+    border-radius: 999px;
+    margin-bottom: 28px;
+    animation: fade-up 800ms var(--ease-sana) both;
+  }
+  /* Pulse dot on the eyebrow pill — same shape/timing as the
+     pulse-dot keyframe (used elsewhere for status indicators). */
+  .hero-eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green-500);
+    box-shadow: 0 0 0 3px theme("colors.brand.100");
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  .hero-title {
+    /* Responsive 48px → 80px, NOT the display-xl token (which is a
+       fixed 56px). The hero gets its own clamp here because it's the
+       single largest type surface in the app. */
+    font-size: clamp(48px, 6.5vw, 80px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: theme("colors.ink.900");
+    margin: 0 0 22px;
+    animation: fade-up 800ms var(--ease-sana) 100ms both;
+  }
+  /* Italic gradient on the "design" word — green-500 → teal-500 →
+     green-700 → green-500 cycle drives gradient-shift. The italic is
+     deliberate; pulls the eye to the verb without bolding. */
+  .hero-title-accent {
+    background: linear-gradient(
+      120deg,
+      var(--green-500),
+      var(--teal-500),
+      var(--green-700),
+      var(--green-500)
+    );
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+    animation: gradient-shift 6s ease-in-out infinite;
+    font-style: italic;
+    font-weight: 700;
+  }
+
+  .hero-subtitle {
+    font-size: 19px;
+    font-weight: 400;
+    color: theme("colors.ink.700");
+    max-width: 640px;
+    line-height: 1.55;
+    margin: 0 0 48px;
+    animation: fade-up 800ms var(--ease-sana) 200ms both;
+  }
+
   /* ── Course card with photo cover (Phase 2 #2 A6) ────────────────────
      Used by <CourseCardPhoto> in app/src/components/CourseCardPhoto.tsx.
      Two visual branches off the same shape:
