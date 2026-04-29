@@ -165,7 +165,9 @@ export default {
         "slide-up":         "fade-up 350ms cubic-bezier(0.16, 1, 0.3, 1)",
         "scale-in":         "scale-in 250ms cubic-bezier(0.16, 1, 0.3, 1)",
         "fade-up":          "fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "shine-sweep":      "shine-sweep 5s ease-in-out infinite",
+        // shine-sweep removed in B2b-tune — the composer's gradient
+        // border is the single "alive surface" motion now; running a
+        // second shine band on top read as competing animation.
         "gradient-shift":   "gradient-shift 6s ease-in-out infinite",
         "pulse-dot":        "pulse-dot 2s ease-in-out infinite",
         "agent-pulse":      "agent-pulse 1.6s ease-in-out infinite",

@@ -40,23 +40,31 @@
   mix-blend-mode: multiply;
 }
 
-/* Blob palette per A5 spec — final approved values:
- *   blob-1  green-500  (740px)  — bright primary anchor
- *   blob-2  teal-500   (620px)  — primary teal accent
- *   blob-3  yellow     (500px)  — yellow highlight
- *   blob-4  green-500  (480px)  — second bright green anchor
- *   blob-5  teal-700   (420px)  — depth accent without murk
+/* Blob palette — B2b-tune darkens toward the legacy index.html
+ * saturated-dark-green look. The bright BCG green of A5 read as
+ * neon under the new composer + entry surfaces; the legacy reference
+ * lands at a deeper saturated tone with one bright accent for
+ * liveliness rather than wall-to-wall brightness.
+ *
+ *   blob-1  green-700  (740px)  — saturated dark anchor (was green-500)
+ *   blob-2  teal-700   (620px)  — deep teal accent (was teal-500)
+ *   blob-3  yellow     (500px)  — kept; opacity 0.35 -> 0.25 so the
+ *                                  yellow reads as background warmth,
+ *                                  not a foreground splash
+ *   blob-4  green-500  (480px)  — KEPT bright; the single live accent
+ *                                  the composition needs
+ *   blob-5  green-900  (420px)  — deepest depth anchor (was teal-700)
  */
 .blob-1 {
   width: 740px; height: 740px;
-  background: radial-gradient(circle, var(--green-500) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-700) 0%, transparent 70%);
   top: -10%; left: -5%;
   animation: blob-drift-1 22s ease-in-out infinite;
   opacity: 1;
 }
 .blob-2 {
   width: 620px; height: 620px;
-  background: radial-gradient(circle, var(--teal-500) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--teal-700) 0%, transparent 70%);
   top: 10%; right: -8%;
   animation: blob-drift-2 26s ease-in-out infinite;
   opacity: 0.95;
@@ -65,7 +73,7 @@
   width: 500px; height: 500px;
   background: radial-gradient(circle, #FFC72C 0%, transparent 70%);
   bottom: -15%; left: 30%;
-  opacity: 0.35;
+  opacity: 0.25; /* B2b-tune: was 0.35 — dial yellow back so it reads as warmth */
   animation: blob-drift-3 30s ease-in-out infinite;
 }
 .blob-4 {
@@ -77,7 +85,7 @@
 }
 .blob-5 {
   width: 420px; height: 420px;
-  background: radial-gradient(circle, var(--teal-700) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-900) 0%, transparent 70%);
   bottom: 20%; right: 25%;
   animation: blob-drift-5 24s ease-in-out infinite;
   opacity: 0.9;
@@ -94,8 +102,11 @@
   75%      { transform: translate(80px, -50px) scale(0.9); }
 }
 @keyframes blob-drift-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  50%      { transform: translate(-150px, -80px) scale(1.2); opacity: 0.65; }
+  /* B2b-tune: opacity values dropped from 0.5 / 0.65 to 0.35 / 0.45
+     so the perceived yellow stays in proportion to the new static
+     0.25 — same pulse ratio, dimmer baseline. */
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+  50%      { transform: translate(-150px, -80px) scale(1.2); opacity: 0.45; }
 }
 @keyframes blob-drift-4 {
   0%, 100% { transform: translate(0, 0) scale(1); }

@@ -40,6 +40,7 @@
 
   --green-500: #00A651;       /* BCG official bright green */
   --green-700: #006B3F;
+  --green-900: #003B22;       /* deep depth anchor (B2b-tune; mesh blob-5) */
   --teal-400:  #2BAFA3;       /* BCG-aligned teal — lighter accent */
   --teal-500:  #00857C;       /* BCG-aligned teal — primary accent */
   --teal-700:  #005C56;       /* BCG-aligned teal — deep accent */
@@ -52,9 +53,14 @@
   /* AI-identity tokens (B2b) — the orb gradient + glow used by the
      hero composer's Sparkles orb. Also reused for the Studio Copilot
      avatar in B4 (when that surface lands). Lifted to :root so both
-     components reach for the same values. */
+     components reach for the same values.
+
+     B2b-tune dimmed the glow ~50% — the original 80px / 0.45 +
+     28px / 0.3 read as a halo "spotlight" against the new darker
+     mesh; the muted version sits right next to the orb instead of
+     blooming across the composer. */
   --orb-gradient: radial-gradient(circle at 30% 30%, #6FD49A, #00A651 40%, #006B3F 80%);
-  --shadow-orb:   0 0 80px rgba(0,166,81,0.45), 0 0 28px rgba(0,166,81,0.3);
+  --shadow-orb:   0 0 28px rgba(0,166,81,0.22), 0 0 10px rgba(0,166,81,0.18);
 }
 
 /* ─── Animation keyframes ─────────────────────────────────────────────────────
@@ -82,16 +88,6 @@
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.96); }
   to   { opacity: 1; transform: scale(1); }
-}
-
-/* shine-sweep — light band that travels left → right.
-   Used by the hero composer and other "alive surface" treatments
-   (mockup line 495). 5s ease-in-out infinite. */
-@keyframes shine-sweep {
-  0%   { left: -10%; opacity: 0; }
-  30%  { opacity: 1; }
-  70%  { opacity: 1; }
-  100% { left: 110%; opacity: 0; }
 }
 
 /* gradient-shift — accent text + composer border gradient drift
@@ -493,25 +489,9 @@
     animation: gradient-shift 8s linear infinite;
     z-index: 0;
   }
-  /* Shine sweep — 80px-wide green band travels left -> right every
-     5s. Reuses the existing shine-sweep keyframe (A3). */
-  .composer::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -10%;
-    width: 80px;
-    background: linear-gradient(
-      110deg,
-      transparent,
-      rgba(0, 166, 81, 0.18),
-      transparent
-    );
-    animation: shine-sweep 5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
-  }
+  /* Shine sweep removed in B2b-tune — the gradient border + the
+     sweep band were two simultaneous animations competing for
+     attention. Gradient border is more on-brand and stays. */
 
   .composer-inner {
     position: relative;
