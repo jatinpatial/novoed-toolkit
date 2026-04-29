@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Inter is loaded via <link> in app/index.html for proper preconnect.
+   The CSS @import was removed in Phase 2 #2 A2 — having both caused
+   double-loading and missed the preconnect window. */
 
 @tailwind base;
 @tailwind components;
@@ -36,7 +38,14 @@
     @apply font-sans text-ink-900 bg-ink-50 antialiased;
     margin: 0;
     -webkit-font-smoothing: antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Inter stylistic alternates for a more polished modern look:
+         cv11 — single-story `a` (rounder, friendlier)
+         ss01 — open digits
+       Other Inter features available if needed: zero (slashed zero),
+       tnum (tabular numbers), cv02-cv04 (alt punctuation), ss02
+       (disambiguation). Keep this list small — every feature has
+       a perceptual cost. */
+    font-feature-settings: "cv11", "ss01";
   }
   *:focus-visible {
     @apply outline-none shadow-focus rounded;

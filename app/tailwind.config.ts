@@ -64,18 +64,27 @@ export default {
         info:    "#3B82F6", // Tailwind blue-600
       },
       fontFamily: {
-        // Trebuchet MS is the BCG-sanctioned Windows-built-in fallback
-        // for body copy when the licensed Henderson Sans isn't
-        // installed. Inter remains a webfont fallback for non-Windows
-        // platforms (Linux desktops, Chromebooks).
+        // Inter is the primary app font (Phase 2 #2 A2). MIT-licensed,
+        // free via Google Fonts, variable-axis loaded in app/index.html
+        // with preconnect. Inter renders crisper on screens than
+        // Trebuchet and unlocks a modern type scale (the display
+        // sizes need a font designed for tight tracking; Trebuchet's
+        // weights cap too low to carry 56px display copy).
         //
-        // Henderson upgrade path: drop the licensed Henderson Sans
-        // .woff2 files into app/public/fonts/, add @font-face rules
-        // in src/index.css, and prepend "Henderson Sans" to both
-        // sans/display stacks. Same upgrade is captured in the
-        // .docx exporter — keep them in lockstep.
-        sans: ['"Trebuchet MS"', "Trebuchet", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ['"Trebuchet MS"', "Trebuchet", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Trebuchet MS stays the .docx export font — handled in
+        // agent_backend/exports.py (_DOCX_FONT). The two surfaces
+        // diverge intentionally: web wants modern Inter, exported
+        // Word docs land on BCG laptops where Trebuchet is the
+        // sanctioned default and Inter is not installed.
+        //
+        // Henderson upgrade path (unchanged):
+        //   - drop Henderson Sans .woff2 into app/public/fonts/
+        //   - add @font-face rules in src/index.css
+        //   - prepend "Henderson Sans" to both stacks below
+        //   - swap _DOCX_FONT in exports.py to "Henderson Sans"
+        //   Web + .docx upgrade in lockstep.
+        sans:    ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       // Four-tier shadow system. Surface code SHOULD use the semantic
       // names (resting / hover / active / modal). Legacy names (card /
