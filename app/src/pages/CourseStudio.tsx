@@ -858,13 +858,26 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
           {saved ? <><Check size={12} /> Saved</> : <><Save size={12} /> Saving…</>}
         </span>
 
-        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100">
+        {/* B3d: same swatch + tooltip treatment as the global TopBar's
+            brand toggle, so both surfaces signal "active theme" the
+            same way. The course-level toggle still writes to
+            course.brand (per-project), and opening a course syncs
+            the global active brand to it (existing behavior, line ~153). */}
+        <div
+          className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100"
+          title="Theme used in preview & export"
+        >
           {(Object.keys(B) as BrandKey[]).map((k) => (
             <button
               key={k}
               onClick={() => onBrandChange(k)}
-              className={`px-2 h-7 rounded text-[11px] font-semibold transition ${course.brand === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
+              className={`flex items-center gap-1.5 px-2 h-7 rounded text-[11px] font-semibold transition ${course.brand === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"}`}
             >
+              <span
+                className="w-2 h-2 rounded-full inline-block flex-shrink-0"
+                style={{ background: B[k].pri }}
+                aria-hidden="true"
+              />
               {B[k].n}
             </button>
           ))}

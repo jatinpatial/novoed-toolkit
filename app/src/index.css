@@ -72,7 +72,34 @@
   --brand-500: #197A56; /* bcgu pri (default) */
   --brand-700: #0D3B2C; /* bcgu priDk */
   --brand-50:  #E8F3ED; /* bcgu priLt */
+}
 
+/* B3d: per-brand overrides cascading from <body data-brand="...">.
+   Values pulled from app/src/brand/tokens.ts (B[brand].pri / .priDk /
+   .priLt) so the live UI cascade matches what the export pipelines
+   render. shell/TopBar.tsx mounts <BrandBodyAttribute> in main.tsx
+   so the body attribute tracks the active brand. */
+[data-brand="bcg"] {
+  --brand-500: #29BA74; /* B.bcg.pri */
+  --brand-700: #1B7A4F; /* B.bcg.priDk */
+  --brand-50:  #E6F7EF; /* B.bcg.priLt */
+}
+[data-brand="bcgu"] {
+  --brand-500: #197A56; /* B.bcgu.pri */
+  --brand-700: #0D3B2C; /* B.bcgu.priDk */
+  --brand-50:  #E8F3ED; /* B.bcgu.priLt */
+}
+[data-brand="client"] {
+  --brand-500: #2563EB; /* B.client.pri */
+  --brand-700: #1D4ED8; /* B.client.priDk */
+  --brand-50:  #DBEAFE; /* B.client.priLt */
+}
+
+/* Second :root block continues after the per-brand selectors.
+   Multiple :root blocks merge in CSS, so the orb / hero-accent
+   tokens below sit alongside the cascade vars defined above —
+   they're just split by the [data-brand="..."] overrides. */
+:root {
   /* AI-identity tokens (B2b) — the orb gradient + glow used by the
      hero composer's Sparkles orb. Also reused for the Studio Copilot
      avatar in B4 (when that surface lands). Lifted to :root so both
