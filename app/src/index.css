@@ -51,6 +51,13 @@
   --shadow-hover:   0 12px 32px rgba(14,17,22,0.08), 0 4px 12px rgba(14,17,22,0.05);
   --shadow-active:  0 18px 50px rgba(0,166,81,0.15), 0 6px 18px rgba(0,166,81,0.10);
 
+  /* Hero / feature accent gradient (B2c) — three-stop diagonal used
+     by the entry-card icon hover treatment and reserved for any
+     surface that wants the same "feature lit up" visual (B5
+     catalog tile hover, B7 course cover, etc.). Lifted to :root
+     so future surfaces share the gradient definition. */
+  --hero-accent: linear-gradient(135deg, var(--green-500) 0%, var(--teal-500) 60%, var(--green-700) 100%);
+
   /* AI-identity tokens (B2b) — the orb gradient + glow used by the
      hero composer's Sparkles orb. Also reused for the Studio Copilot
      avatar in B4 (when that surface lands). Lifted to :root so both
@@ -687,6 +694,246 @@
     padding: 2px 6px;
     border-radius: 4px;
     margin-left: 4px;
+  }
+
+  /* ── Section headers (Phase 2 #2 B2c) ────────────────────────────────
+     Used above each below-hero block on the Dashboard ("Three ways
+     to start.", "Recent work."). Inline-end alignment lets a "See
+     all" link sit on the right next to the header copy.
+     Mockup anchors: docs/vision-mockup.html lines 698-712. */
+  .section-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: theme("colors.ink.900");
+    line-height: 1.15;
+    margin: 0;
+  }
+  .section-sub {
+    font-size: 15px;
+    color: theme("colors.ink.500");
+    margin: 8px 0 0;
+  }
+
+  /* ── Entry cards (Phase 2 #2 B2c) ────────────────────────────────────
+     Three-card landing under the hero. Each card has:
+       - mouse-follow radial glow via ::before (reads --mx / --my
+         CSS vars set by the useTilt hook in shell/useTilt.ts)
+       - accent stripe along the top edge via ::after, draws in
+         left -> right on hover (transform: scaleX(0) -> scaleX(1))
+       - 3D tilt transform applied inline by useTilt
+       - icon swap on hover: brand-50/green-700 -> hero-accent
+         gradient with white icon, scale 1.08 + rotate -3deg
+       - entry-link arrow scoots right on hover (gap 6 -> 12px)
+     Disabled cards skip useTilt and freeze hover effects so the
+     "soon" affordance reads as static.
+     Mockup anchors: docs/vision-mockup.html lines 714-817. */
+  .entry-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  @media (min-width: 768px) {
+    .entry-cards {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .entry-card {
+    position: relative;
+    padding: 28px 24px 24px;
+    background: white;
+    border: 1px solid theme("colors.ink.100");
+    border-radius: theme("borderRadius.2xl"); /* 16px */
+    box-shadow: var(--shadow-resting);
+    text-align: left;
+    width: 100%;
+    /* Reset button defaults so <button class="entry-card"> matches
+       <div class="entry-card"> visually. */
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    /* preserve-3d makes the rotateX/rotateY from useTilt register
+       as real depth instead of a flat skew. */
+    transform-style: preserve-3d;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--duration-base) var(--ease-sana),
+                box-shadow var(--duration-base) var(--ease-sana),
+                border-color var(--duration-base) var(--ease-sana);
+  }
+
+  /* Mouse-follow radial glow. useTilt writes --mx / --my from the
+     cursor; this rule reads those vars to position the glow. */
+  .entry-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at var(--mx, 50%) var(--my, 50%),
+      rgba(0, 166, 81, 0.08),
+      transparent 50%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-sana);
+    pointer-events: none;
+  }
+
+  /* Accent stripe along the top edge. transform-origin: left makes
+     the stripe "draw in" left -> right when scaleX 0 -> 1. */
+  .entry-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--card-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-base) var(--ease-sana);
+    pointer-events: none;
+  }
+
+  .entry-card:hover {
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(0, 166, 81, 0.3);
+  }
+  .entry-card:hover::before { opacity: 1; }
+  .entry-card:hover::after  { transform: scaleX(1); }
+
+  /* Accent variant — middle "Brief in chat" card. Pre-applies the
+     green border + active shadow so the live primary path stands
+     out before the user hovers. */
+  .entry-card-accent {
+    border-color: rgba(0, 166, 81, 0.3);
+    box-shadow: var(--shadow-active);
+  }
+
+  /* Disabled variant — flat, not-allowed cursor, no hover effects.
+     The card still renders fully (icon, step, title, desc) so the
+     "soon" preview reads complete; only the affordance is muted. */
+  .entry-card-disabled {
+    cursor: not-allowed;
+    background: theme("colors.ink.50");
+  }
+  .entry-card-disabled:hover {
+    border-color: theme("colors.ink.100");
+    box-shadow: var(--shadow-resting);
+    transform: none;
+  }
+  .entry-card-disabled:hover::before { opacity: 0; }
+  .entry-card-disabled:hover::after  { transform: scaleX(0); }
+
+  /* Icon — 56px square, brand-50 / green-700 at rest, swaps to the
+     --hero-accent gradient + white icon on hover with a small lift
+     (scale 1.08 + rotate -3deg). */
+  .entry-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: theme("colors.brand.50");
+    display: grid;
+    place-items: center;
+    color: var(--green-700);
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 1;
+    transition: background var(--duration-base) var(--ease-sana),
+                color      var(--duration-base) var(--ease-sana),
+                transform  var(--duration-base) var(--ease-sana),
+                box-shadow var(--duration-base) var(--ease-sana);
+  }
+  .entry-card:hover .entry-icon {
+    background: var(--hero-accent);
+    color: white;
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow: 0 12px 32px rgba(0, 166, 81, 0.3);
+  }
+  /* Disabled icon — neutral colors, no hover lift. */
+  .entry-icon-soon {
+    background: theme("colors.ink.50");
+    color: theme("colors.ink.500");
+  }
+  .entry-card-disabled:hover .entry-icon {
+    background: theme("colors.ink.50");
+    color: theme("colors.ink.500");
+    transform: none;
+    box-shadow: none;
+  }
+
+  .entry-step {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: theme("colors.ink.500");
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .entry-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: theme("colors.ink.900");
+    margin: 0 0 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .entry-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: theme("colors.ink.500");
+    margin: 0 0 20px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* CTA arrow row on live cards — gap widens on hover so the arrow
+     "scoots" toward the title. */
+  .entry-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green-700);
+    transition: gap var(--duration-fast) var(--ease-sana);
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+  }
+  .entry-card:hover .entry-link { gap: 12px; }
+
+  /* "Coming soon" pill — bottom of disabled cards, same vertical
+     slot as entry-link on live cards so the three card heights stay
+     equal in the grid. ink-100 / ink-400 vocabulary matches the
+     composer-soon + the original EntryCards soonLabel pill across
+     the app. */
+  .entry-soon {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: theme("colors.ink.400");
+    background: theme("colors.ink.100");
+    padding: 4px 9px;
+    border-radius: 6px;
+    display: inline-block;
+    align-self: flex-start;
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
   }
 
   /* ── Course card with photo cover (Phase 2 #2 A6) ────────────────────

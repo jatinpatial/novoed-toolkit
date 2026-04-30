@@ -1,18 +1,40 @@
+import type { ReactNode } from "react";
 import { Upload, MessageCircle, Grid3x3, ArrowRight } from "lucide-react";
+import { useTilt } from "./useTilt";
 
 /**
- * Three-card landing under the hero (Phase 2 #1e).
+ * Three-card landing under the hero (Phase 2 #1e, rebuilt in #2 B2c).
  *
  * Three entry paths the legacy index.html surfaced:
- *   - From a deck   — drop a PPTX/PDF/DOCX, agent designs from it
- *   - From an idea  — brief-in-chat (the hero composer above)
- *   - From parts    — browse the Components catalog
+ *   A · From a deck      — drop a PPTX/PDF/DOCX (Coming soon)
+ *   B · From an idea     — brief-in-chat (the hero composer above)
+ *   C · From the catalog — browse Components (Coming soon)
  *
- * Phase 2 #1 ships the chat path live; the deck and parts paths
- * are placeholders ("soon" badge, disabled). The deck-drop wiring
- * opens enough scope (pre-course materials home, agent-aware build,
- * parse error states) that it gets its own commit later — captured
- * in POLISH_BACKLOG under "Phase 2 — Deck-drop entry flow."
+ * Phase 2 #2 B2c rebuild:
+ *   - Cards now use the .entry-card structure: mouse-follow radial
+ *     glow (::before reads --mx / --my from useTilt), accent stripe
+ *     (::after, draws in left -> right on hover), 56px gradient icon
+ *     that swaps to --hero-accent + scales 1.08 + rotates -3deg on
+ *     hover, entry-link arrow that scoots right (gap 6 -> 12px).
+ *   - Live cards spread the useTilt handlers for 3D rotation +
+ *     --mx / --my glow tracking. Disabled cards skip useTilt —
+ *     tilting a "soon" card reads as a misleading affordance.
+ *   - The middle card ("Brief in chat") gets the .entry-card-accent
+ *     modifier — green border + shadow-active — to flag it as the
+ *     primary live path before the user even hovers.
+ *   - Section header above the grid: "Three ways to start."
+ *
+ * Disabled cards still render fully (icon, step, title, description)
+ * but swap the entry-link CTA at the bottom for a "Coming soon" pill
+ * so the vertical layout stays the same as live cards (heights match
+ * across the 3-up grid).
+ *
+ * "Coming soon" pill keeps the ink-100 / ink-400 vocabulary used by
+ * composer-soon and the original EntryCards soonLabel — same look
+ * across the app for unreleased CTAs.
+ *
+ * Mockup anchors: docs/vision-mockup.html lines 714-817 (CSS),
+ * 1494-1538 (DOM).
  */
 
 interface EntryCardsProps {
@@ -21,93 +43,104 @@ interface EntryCardsProps {
 
 export function EntryCards({ onFocusComposer }: EntryCardsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-12">
-      <Card
-        eyebrow="A · From a deck"
-        title="Drop a deck"
-        description="PPTX · PDF · DOCX → cover, modules, lessons, scripts, knowledge checks — in one Word file."
-        icon={<Upload size={18} />}
-        cta="Open"
-        disabled
-        soonLabel="soon"
-      />
-      <Card
-        eyebrow="B · From an idea"
-        title="Brief in chat"
-        description="Describe a course, scenario, or single component. Studio drafts the structure."
-        icon={<MessageCircle size={18} />}
-        cta="Open chat"
-        onClick={onFocusComposer}
-        accent
-      />
-      <Card
-        eyebrow="C · From the catalog"
-        title="Browse parts"
-        description="Pre-built components — cards, timelines, quizzes, polls. Pick a piece, fill it with your data."
-        icon={<Grid3x3 size={18} />}
-        cta="Open library"
-        disabled
-        soonLabel="soon"
-      />
-    </div>
+    <section>
+      <div className="section-header">
+        <div>
+          <h2 className="section-title">Three ways to start.</h2>
+          <p className="section-sub">Pick the one that matches what you have.</p>
+        </div>
+      </div>
+      <div className="entry-cards">
+        <Card
+          step="A · From a deck"
+          title="Drop a deck"
+          description="PPTX · PDF · DOCX → cover, modules, lessons, scripts, knowledge checks — drafted in one click."
+          icon={<Upload size={24} strokeWidth={2} />}
+          disabled
+          soonLabel="Coming soon"
+        />
+        <Card
+          step="B · From an idea"
+          title="Brief in chat"
+          description="Describe a course, scenario, or single component. Studio Copilot drafts the structure for you."
+          icon={<MessageCircle size={24} strokeWidth={2} />}
+          cta="Start in chat"
+          onClick={onFocusComposer}
+          accent
+        />
+        <Card
+          step="C · From the catalog"
+          title="Browse parts"
+          description="47 components · journey canvas · media studio. Pick a piece, fill it in, paste it anywhere."
+          icon={<Grid3x3 size={24} strokeWidth={2} />}
+          disabled
+          soonLabel="Coming soon"
+        />
+      </div>
+    </section>
   );
 }
 
 interface CardProps {
-  eyebrow: string;
+  step: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
-  cta: string;
+  icon: ReactNode;
+  cta?: string;
   onClick?: () => void;
   disabled?: boolean;
   accent?: boolean;
   soonLabel?: string;
 }
 
-function Card({ eyebrow, title, description, icon, cta, onClick, disabled, accent, soonLabel }: CardProps) {
-  const baseClasses =
-    "rounded-2xl border p-5 text-left flex flex-col h-full transition";
-  const liveClasses = accent
-    ? "border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 shadow-card hover:shadow-elevated cursor-pointer"
-    : "border-ink-200 bg-white hover:border-ink-300 hover:shadow-elevated cursor-pointer";
-  const disabledClasses =
-    "border-ink-200 bg-ink-50 cursor-not-allowed opacity-90";
+function Card({
+  step,
+  title,
+  description,
+  icon,
+  cta,
+  onClick,
+  disabled,
+  accent,
+  soonLabel,
+}: CardProps) {
+  const tilt = useTilt();
+  const className =
+    `entry-card${accent ? " entry-card-accent" : ""}${disabled ? " entry-card-disabled" : ""}`;
+
+  const inner = (
+    <>
+      <div className={`entry-icon${disabled ? " entry-icon-soon" : ""}`}>
+        {icon}
+      </div>
+      <div className="entry-step">{step}</div>
+      <div className="entry-title">{title}</div>
+      <p className="entry-desc">{description}</p>
+      {disabled ? (
+        <span className="entry-soon">{soonLabel ?? "Coming soon"}</span>
+      ) : (
+        <span className="entry-link">
+          {cta} <ArrowRight size={14} strokeWidth={2.5} />
+        </span>
+      )}
+    </>
+  );
+
+  // Disabled cards skip useTilt — tilting a card the user can't
+  // click reads as a misleading affordance. Render as a plain <div>
+  // so screen readers don't announce a button-like role on a
+  // non-interactive surface.
+  if (disabled) {
+    return (
+      <div className={className} aria-disabled="true">
+        {inner}
+      </div>
+    );
+  }
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`${baseClasses} ${disabled ? disabledClasses : liveClasses}`}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-            disabled ? "bg-ink-200 text-ink-500" : "bg-brand-gradient text-white"
-          }`}
-        >
-          {icon}
-        </div>
-        {soonLabel && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
-            {soonLabel}
-          </span>
-        )}
-      </div>
-      <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${disabled ? "text-ink-400" : "text-brand-700"}`}>
-        {eyebrow}
-      </div>
-      <div className={`text-base font-bold mb-1 ${disabled ? "text-ink-500" : "text-ink-900"}`}>
-        {title}
-      </div>
-      <div className={`text-xs leading-relaxed flex-1 ${disabled ? "text-ink-400" : "text-ink-600"}`}>
-        {description}
-      </div>
-      {!disabled && (
-        <div className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
-          {cta} <ArrowRight size={12} />
-        </div>
-      )}
+    <button type="button" onClick={onClick} className={className} {...tilt}>
+      {inner}
     </button>
   );
 }
