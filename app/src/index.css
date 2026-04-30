@@ -1200,6 +1200,28 @@
     animation: orb-glow 1.4s ease-in-out infinite;
   }
 
+  /* ── Course intake page chrome (Phase 2 #2 C0d) ──────────────────────
+     CreateCoursePage opts into the brand-cascade by adding a thin
+     accent strip at the page top — same visual pattern as the lesson
+     canvas pane (B3c). Stagger-children + fade-up on the form sections
+     gives the page a calm, deliberate entrance per field group. */
+  .create-course-page {
+    /* 4px top accent strip wired to the runtime brand cascade. Same
+       --brand-500 var as .lesson-canvas-pane so the brand toggle
+       flips both surfaces in lockstep. */
+    border-top: 4px solid var(--brand-500);
+    transition: border-color var(--duration-base) var(--ease-sana);
+    min-height: 100%;
+  }
+  /* Form fields fade up with the .stagger-children cascade. Scoped
+     to the page so this rule doesn't animate other surfaces using
+     stagger-children (e.g. dashboard recent-courses, which uses
+     .course-card scoping). 8 form children total — nth-child(1..8)
+     delays in stagger-children cover all. */
+  .create-course-page .stagger-children > * {
+    animation: fade-up 600ms var(--ease-sana) both;
+  }
+
   /* ── Course intake form (Phase 2 #2 C0b) ─────────────────────────────
      Field input chrome shared by CreateCoursePage. Inputs + textareas
      pick up motion-token transitions on focus; chips share the

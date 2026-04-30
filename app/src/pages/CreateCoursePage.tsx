@@ -116,24 +116,34 @@ export default function CreateCoursePage() {
   }
 
   return (
-    <AppShell>
-      <div className="max-w-3xl mx-auto py-10">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 hover:text-brand-700 mb-6 transition-colors"
-        >
-          <ArrowLeft size={14} /> Back to dashboard
-        </Link>
+    /* C0d: AppShell switched to fullBleed so the .create-course-page
+       wrapper's 4px brand-cascade strip can run edge-to-edge across
+       the main pane (matching the .lesson-canvas-pane pattern from
+       B3c). The inner content stays in a 768px reading column. */
+    <AppShell fullBleed>
+      <div className="create-course-page">
+        <div className="max-w-3xl mx-auto px-8 md:px-12 py-12">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 hover:text-brand-700 mb-6 transition-colors"
+          >
+            <ArrowLeft size={14} /> Back to dashboard
+          </Link>
 
-        <header className="mb-10">
-          <h1 className="text-h1 text-ink-900 mb-2">Design a course.</h1>
-          <p className="text-body-lg text-ink-500">
-            Tell Studio Copilot who it's for and what you want it to do. The
-            agent drafts a weekly outline you can build with one click.
-          </p>
-        </header>
+          {/* C0d: section-header pattern (matches B2c "Three ways to
+              start." rhythm so the form reads as part of the same
+              product, not a separate utility). 32px h2 + 15px sub. */}
+          <header className="section-header mb-12 animate-fade-up">
+            <div>
+              <h2 className="section-title">Design a course.</h2>
+              <p className="section-sub">
+                Tell Studio Copilot who it's for and what you want it to do.
+                The agent drafts a weekly outline you can build with one click.
+              </p>
+            </div>
+          </header>
 
-        <form onSubmit={handleSubmit} className="space-y-7">
+          <form onSubmit={handleSubmit} className="space-y-7 stagger-children">
           {/* ── Field 1: Title (optional text) ─────────────────────── */}
           <FormField
             label="Course title"
@@ -292,7 +302,8 @@ export default function CreateCoursePage() {
               </p>
             )}
           </div>
-        </form>
+          </form>
+        </div>
       </div>
     </AppShell>
   );
