@@ -544,6 +544,13 @@ class BlockDataModel(BaseModel):
     items: list[BlockItemModel] | None = None
     script: str | None = None
     videoType: str | None = None
+    # AI-1b additions — must match BlockData in app/src/course/types.ts
+    # so server-side .docx export sees the same fields the FE writes.
+    imageUrl: str | None = None              # banner statement-mode photo
+    attribution: str | None = None           # quote speaker name
+    attributionRole: str | None = None       # quote role/company
+    attributionPhotoUrl: str | None = None   # quote round-photo URL
+    iconName: str | None = None              # sectionHeader icon name
 
 
 class BlockModel(BaseModel):
