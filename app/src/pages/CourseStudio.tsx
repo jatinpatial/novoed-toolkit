@@ -23,7 +23,7 @@ import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../cours
 import type { Block, BlockData, BlockItem, CaseStudy, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
-import { AgentChat } from "../agent/AgentChat";
+import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
@@ -2198,7 +2198,7 @@ function SceneTable({
 }
 
 function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt, onContinue }: any) {
-  const { setOpen: setChatOpen, prefillInput } = useAgent();
+  const { setOpen: setChatOpen, prefillInput, isThinking: agentThinking } = useAgent();
   const hasWriterBlocks = lesson.blocks.some((b: Block) => b.source === "writer");
 
   function triggerWriter(mode: "write" | "regenerate") {
@@ -2291,6 +2291,17 @@ function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLess
           </span>
         </div>
       </div>
+
+      {/* polish-5c: in-flight loading card visible from the canvas
+          surface during a write_lesson (or any agent turn). LD sees
+          activity without having to glance at the chat panel. The
+          AgentInflightIndicator returns null when not thinking, so
+          this is a no-op at rest. */}
+      {agentThinking && (
+        <div className="agent-inflight-card-wrap mb-6">
+          <AgentInflightIndicator centered />
+        </div>
+      )}
 
       {/* Blocks */}
       {lesson.blocks.length === 0 ? (

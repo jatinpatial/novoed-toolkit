@@ -1315,45 +1315,80 @@
     /* Subtle drop-shadow makes the icon read against the orb gradient. */
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
   }
-  /* polish-4b: ambient sparkle particles drift in/out inside the orb
-     when the agent is working. 3px white dots at preset positions —
-     each nth-child has a different delay + slight position offset so
-     the four together read as a constellation, not a synced pulse.
-     Hidden at rest (the parent only renders these when isWorking). */
-  .copilot-mock-orb-sparkle {
+  /* polish-5c: sparkle particles relocated to the in-message orb (was
+     in the header orb pre-polish-5c). Kept as .msg-tool-orb-sparkle
+     so they render inside .msg-tool / .agent-inflight-card via the
+     AgentInflightIndicator component. Subtler than the header orb's
+     scale because the in-message orb is only 16px; sparkles are 2px
+     instead of 3px and animate over a slightly tighter range. */
+  .msg-tool-orb {
+    position: relative;
+  }
+  .msg-tool-orb-sparkle {
     position: absolute;
-    width: 3px;
-    height: 3px;
+    width: 2px;
+    height: 2px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.55);
     pointer-events: none;
     opacity: 0;
     z-index: 2;
     animation: sparkle-drift 4s ease-in-out infinite;
   }
-  .copilot-mock-orb-sparkle:nth-child(2) {
-    top: 22%;
+  .msg-tool-orb-sparkle:nth-child(1) {
+    top: 25%;
     left: 30%;
     animation-delay: 0s;
   }
-  .copilot-mock-orb-sparkle:nth-child(3) {
-    top: 62%;
-    left: 70%;
+  .msg-tool-orb-sparkle:nth-child(2) {
+    top: 60%;
+    left: 65%;
     animation-delay: 1.1s;
     animation-duration: 4.6s;
   }
-  .copilot-mock-orb-sparkle:nth-child(4) {
-    top: 75%;
-    left: 26%;
+  .msg-tool-orb-sparkle:nth-child(3) {
+    top: 70%;
+    left: 25%;
     animation-delay: 2.3s;
     animation-duration: 3.8s;
   }
-  .copilot-mock-orb-sparkle:nth-child(5) {
-    top: 32%;
-    left: 72%;
+  .msg-tool-orb-sparkle:nth-child(4) {
+    top: 30%;
+    left: 70%;
     animation-delay: 0.7s;
     animation-duration: 5.2s;
+  }
+
+  /* polish-5c: card-shaped centered variant of the in-message
+     indicator. Same orb + sparkles + label, sized for use inside a
+     canvas (LessonCanvas during write_lesson, ScriptStudio empty
+     state during write_script). The agent-inflight-card sits as
+     a centered card with brand-50 wash + brand-100 border so the
+     LD sees activity from any surface, not just the chat panel. */
+  .agent-inflight-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px;
+    background: theme("colors.brand.50");
+    border: 1px solid theme("colors.brand.100");
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: theme("colors.ink.700");
+    margin: 24px auto;
+    animation: msg-in 0.5s var(--ease-sana) both;
+  }
+  .agent-inflight-card .msg-tool-orb {
+    width: 22px;
+    height: 22px;
+  }
+  /* Center the card horizontally when it's a direct child of a flex
+     parent that's not centered already (e.g. LessonCanvas's body). */
+  .agent-inflight-card-wrap {
+    display: flex;
+    justify-content: center;
   }
   .copilot-mock-text {
     flex: 1;

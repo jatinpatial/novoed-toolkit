@@ -8,7 +8,7 @@ import {
   useRegisterAgentActions,
   type AgentActions,
 } from "../agent/AgentContext";
-import { AgentChat } from "../agent/AgentChat";
+import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { useActiveBrand } from "../shell/TopBar";
 import { getScript, saveScript, subscribeScripts, type Script } from "../store/scripts";
 import type { Course } from "../course/types";
@@ -473,16 +473,26 @@ function ScriptContent({
   // content yet (autosend is dispatching the brief; agent is on its
   // first turn). Once write_script lands, content fills in and the
   // scenes view renders.
+  //
+  // polish-5c: shows the AgentInflightIndicator card when the agent
+  // is working — same visual + cycling phrases as the in-message
+  // indicator in the chat panel. When the agent isn't thinking
+  // (no autosend in flight, manual draft state), shows the static
+  // "draft your script" prompt. AgentInflightIndicator returns
+  // null when not thinking so this composition is robust.
   if (!content) {
     return (
       <div className="card p-10 text-center">
         <Mic className="mx-auto text-brand-500 mb-3" size={32} />
         <h3 className="text-h3 text-ink-900 mb-2">Studio Copilot is drafting your script…</h3>
-        <p className="text-sm text-ink-500 max-w-md mx-auto">
+        <p className="text-sm text-ink-500 max-w-md mx-auto mb-4">
           The SPOKEN / VISUAL scene structure will appear here once the
           agent finishes its first pass. Open the chat panel on the
           right to follow along or refine the angle.
         </p>
+        <div className="agent-inflight-card-wrap">
+          <AgentInflightIndicator centered />
+        </div>
       </div>
     );
   }

@@ -29,12 +29,16 @@ function toolLabel(name: string | null): string {
   return TOOL_LABELS[name] || "Working";
 }
 
-// polish-4b: personality phrases cycled every 2.5s when the agent is
-// working and no tool is active (pre-tool or between-tools state).
-// Replaces the static "Thinking…" with claude.ai-style copy that feels
-// alive across a 30-45 sec turn. Order matters — index 0 is "Thinking"
-// so the first frame matches the existing baseline; cycle drifts from
+// polish-4b: personality phrases cycled when the agent is working and
+// no tool is active (pre-tool or between-tools state). Replaces the
+// static "Thinking…" with claude.ai-style copy that feels alive
+// across a 30-45 sec turn. Order matters — index 0 is "Thinking" so
+// the first frame matches the existing baseline; cycle drifts from
 // there into the more characterful phrases.
+//
+// polish-5c: cadence slowed from 2.5s to 7s per phrase. 2.5s was
+// blurring phrases together — each phrase needs time to land before
+// the next. 7s is the read-then-shift cadence claude.ai uses.
 const CYCLING_PHRASES = [
   "Thinking",
   "Considering the angle",
@@ -44,7 +48,7 @@ const CYCLING_PHRASES = [
   "Cooking up something good",
 ];
 const ALMOST_THERE_THRESHOLD_MS = 25_000;
-const PHRASE_CYCLE_MS = 2_500;
+const PHRASE_CYCLE_MS = 7_000;
 
 export function AgentChat() {
   const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal } = useAgent();
@@ -115,53 +119,18 @@ export function AgentChat() {
     );
   }
 
-  // polish-4b: cycling status pill — replaces the static "Thinking"
-  // with rotating personality copy when the agent is working and no
-  // tool is active. Tool labels still win when a real tool fires.
-  // After 25s elapsed in the same turn, switches to "Almost there"
-  // to signal progress and prevent timeout panic.
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const turnStartedAtRef = useRef<number | null>(null);
-  const [elapsedTick, setElapsedTick] = useState(0); // forces re-render to recompute elapsed
-
-  // Track turn start / end. Reset cycle when a new turn begins.
-  useEffect(() => {
-    if (isThinking && turnStartedAtRef.current === null) {
-      turnStartedAtRef.current = Date.now();
-      setPhraseIndex(0);
-      setElapsedTick(0);
-    } else if (!isThinking && turnStartedAtRef.current !== null) {
-      turnStartedAtRef.current = null;
-      setElapsedTick(0);
-    }
-  }, [isThinking]);
-
-  // Cycle phrase every PHRASE_CYCLE_MS while thinking. Tick re-renders
-  // so the elapsed-time check picks up "Almost there" once the
-  // threshold passes.
-  useEffect(() => {
-    if (!isThinking) return;
-    const timer = setInterval(() => {
-      setPhraseIndex((i) => (i + 1) % CYCLING_PHRASES.length);
-      setElapsedTick((t) => t + 1);
-    }, PHRASE_CYCLE_MS);
-    return () => clearInterval(timer);
-  }, [isThinking]);
-
-  const elapsedMs =
-    turnStartedAtRef.current !== null ? Date.now() - turnStartedAtRef.current : 0;
-  void elapsedTick; // referenced so the re-render fires when the tick increments
-
+  // polish-5c: the cycling-phrases logic moved out of the header into
+  // the in-message ProgressIndicator (below). Header pill is now
+  // static — "Connected" at rest, tool label or "Working" when in
+  // flight. Pre-polish-5c the cycling sat in the header and felt
+  // detached from the conversation; the in-message indicator is
+  // closer to the active message and reads as the agent's live
+  // thought.
   const statusLabel = (() => {
     if (status !== "open") return "Connecting…"; // ellipsis baked in
     if (!isThinking) return "Connected";
-    // Tool-aware label always wins when a tool is active.
     if (currentTool) return toolLabel(currentTool);
-    // Long-running fallback after 25s — pins to "Almost there"
-    // (don't go back to other phrases once we hit this state).
-    if (elapsedMs >= ALMOST_THERE_THRESHOLD_MS) return "Almost there";
-    // Default: cycle through personality phrases.
-    return CYCLING_PHRASES[phraseIndex];
+    return "Working";
   })();
   const isWorking = status === "open" && isThinking;
 
@@ -177,25 +146,15 @@ export function AgentChat() {
       <div className="copilot-mock-header">
         <div className="copilot-mock-orb">
           <Sparkles size={16} className="copilot-mock-orb-icon" aria-hidden="true" />
-          {/* polish-4b: 4 sparkle particles drift in/out at random
-              positions inside the orb when the agent is working.
-              Hidden at rest. CSS keyframes (sparkle-drift) handle the
-              fade + tiny translate per nth-child delay. */}
-          {isWorking && (
-            <>
-              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
-              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
-              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
-              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
-            </>
-          )}
+          {/* polish-5c: sparkle particles moved out of the header orb
+              (which is large and decorative) into the in-message
+              indicator's orb (which is the live status). Header orb
+              keeps its B3-tune-b breathing + glow without sparkles. */}
         </div>
         <div className="copilot-mock-text">
           <div className="copilot-mock-name">Studio Copilot</div>
           <div className={`copilot-mock-status${isWorking ? " copilot-mock-status-working" : ""}`}>
-            {/* polish-4b: append ellipsis when working — keeps Connected
-                / Connecting… clean while making working states feel
-                in-flight ("Considering the angle…"). */}
+            {/* Working states get an ellipsis appended for the in-flight feel. */}
             {statusLabel}{isWorking ? "…" : ""}
           </div>
         </div>
@@ -218,7 +177,7 @@ export function AgentChat() {
         {messages.map((m) => (
           <Bubble key={m.id} role={m.role} text={m.text} />
         ))}
-        {isThinking && <ProgressIndicator label={toolLabel(currentTool)} />}
+        {isThinking && <ProgressIndicator />}
         {!isThinking && lastTarget && (
           <JumpButton
             label={lastTarget.kind === "script" ? "Open script editor" : "Open"}
@@ -432,13 +391,98 @@ function JumpButton({ label, onClick }: { label: string; onClick: () => void }) 
  * commit ensures the indicator no longer disappears on first text
  * token — so the LD gets continuous feedback across the whole turn.
  */
-function ProgressIndicator({ label }: { label: string }) {
+/**
+ * AgentInflightIndicator — the in-message orb-shimmer indicator that
+ * shows the agent's live status during a turn. polish-5c moved the
+ * cycling-phrases state here (was previously in AgentChat's header
+ * status pill). The header pill is now static; this component is
+ * the live one.
+ *
+ * Two render shapes via the `centered` prop:
+ *   - default     pill-shaped left-aligned message-row indicator.
+ *                 Used inside the chat feed (replaces the legacy
+ *                 ProgressIndicator).
+ *   - centered    card-shaped centered indicator with bigger orb +
+ *                 padding. Used by LessonCanvas (during write_lesson)
+ *                 and ScriptStudio (empty state during write_script)
+ *                 so the LD sees agent activity from the canvas
+ *                 without having to glance at the chat panel.
+ *
+ * Pulls isThinking + currentTool + status from useAgent() so consumers
+ * just render <AgentInflightIndicator /> and the component handles
+ * its own visibility (returns null when not thinking).
+ */
+export function AgentInflightIndicator({
+  centered = false,
+}: {
+  centered?: boolean;
+}) {
+  const { isThinking, currentTool, status } = useAgent();
+
+  // Cycling state — phrase index + turn-start tracking. Same logic
+  // that lived in AgentChat's header pre-polish-5c, just relocated.
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const turnStartedAtRef = useRef<number | null>(null);
+  const [, forceTick] = useState(0); // re-render to recompute elapsed
+
+  useEffect(() => {
+    if (isThinking && turnStartedAtRef.current === null) {
+      turnStartedAtRef.current = Date.now();
+      setPhraseIndex(0);
+      forceTick((t) => t + 1);
+    } else if (!isThinking && turnStartedAtRef.current !== null) {
+      turnStartedAtRef.current = null;
+    }
+  }, [isThinking]);
+
+  useEffect(() => {
+    if (!isThinking) return;
+    const timer = setInterval(() => {
+      setPhraseIndex((i) => (i + 1) % CYCLING_PHRASES.length);
+      forceTick((t) => t + 1);
+    }, PHRASE_CYCLE_MS);
+    return () => clearInterval(timer);
+  }, [isThinking]);
+
+  if (!isThinking || status !== "open") return null;
+
+  const elapsedMs =
+    turnStartedAtRef.current !== null ? Date.now() - turnStartedAtRef.current : 0;
+
+  // Tool label always wins when a tool is active. Otherwise cycle
+  // unless we've crossed the "Almost there" threshold.
+  const label = currentTool
+    ? toolLabel(currentTool)
+    : elapsedMs >= ALMOST_THERE_THRESHOLD_MS
+      ? "Almost there"
+      : CYCLING_PHRASES[phraseIndex];
+
+  const wrapperClass = centered
+    ? "agent-inflight-card"
+    : "msg-tool";
   return (
-    <div className="msg-tool">
-      <div className="msg-tool-orb" aria-hidden="true" />
+    <div className={wrapperClass}>
+      <div className="msg-tool-orb" aria-hidden="true">
+        {/* polish-5c: 4 sparkle particles inside the in-message orb
+            (moved from the header in polish-5c). Tiny — the orb is
+            16px in pill mode, 22px in card mode. CSS keyframe
+            sparkle-drift handles the fade + translate per nth-child. */}
+        <span className="msg-tool-orb-sparkle" aria-hidden="true" />
+        <span className="msg-tool-orb-sparkle" aria-hidden="true" />
+        <span className="msg-tool-orb-sparkle" aria-hidden="true" />
+        <span className="msg-tool-orb-sparkle" aria-hidden="true" />
+      </div>
       <span>{label}…</span>
     </div>
   );
+}
+
+/**
+ * ProgressIndicator — legacy alias kept for AgentChat's existing call
+ * site. Renders the pill-shaped variant of AgentInflightIndicator.
+ */
+function ProgressIndicator() {
+  return <AgentInflightIndicator />;
 }
 
 /* StatusDot removed in B3-tune-b — its functionality (a connection
