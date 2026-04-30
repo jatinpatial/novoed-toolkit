@@ -20,7 +20,11 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 function toolLabel(name: string | null): string {
-  if (!name) return "Working";
+  // null fallback bumped from "Working" to "Thinking" in B3-tune-a:
+  // friendlier copy for the pre-tool / between-tools state. Unknown-
+  // tool fallback stays "Working" so the existing e2e test (which
+  // asserts "Working…" for set_brand, an unmapped tool) keeps green.
+  if (!name) return "Thinking";
   return TOOL_LABELS[name] || "Working";
 }
 
@@ -226,27 +230,28 @@ function JumpButton({ label, onClick }: { label: string; onClick: () => void }) 
   );
 }
 
+/**
+ * ProgressIndicator — rebuilt in B3-tune-a to the mockup .msg-tool
+ * pattern (docs/vision-mockup.html lines 1037-1054).
+ *
+ * Renders as an inline chat message rather than a top-of-feed bar:
+ *   - White pill with 1px ink-100 border, 12px radius
+ *   - 16px orb-gradient circle on the left, glowing via orb-glow
+ *     keyframe at 1.4s ease-in-out (subtle pulse, calmer than the
+ *     old shimmer bar)
+ *   - Tool-aware label on the right ("Building the knowledge
+ *     check…", "Writing lesson content…", "Thinking…", etc.)
+ *
+ * Visible from the moment isThinking flips true until onDone /
+ * onError clears it (see AgentContext.tsx). Bug fix in the same
+ * commit ensures the indicator no longer disappears on first text
+ * token — so the LD gets continuous feedback across the whole turn.
+ */
 function ProgressIndicator({ label }: { label: string }) {
   return (
-    <div style={{ margin: "8px 4px" }}>
-      <div
-        style={{
-          height: 3,
-          borderRadius: 2,
-          background: "linear-gradient(90deg, #E6F7EF 0%, #29BA74 50%, #E6F7EF 100%)",
-          backgroundSize: "200% 100%",
-          animation: "agent-shimmer 1.4s infinite linear",
-        }}
-      />
-      <div style={{ marginTop: 6, fontSize: 11, color: "#666", fontStyle: "italic" }}>
-        {label}…
-      </div>
-      <style>{`
-        @keyframes agent-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
+    <div className="msg-tool">
+      <div className="msg-tool-orb" aria-hidden="true" />
+      <span>{label}…</span>
     </div>
   );
 }

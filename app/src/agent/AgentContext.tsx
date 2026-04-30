@@ -121,7 +121,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     url: WS_URL,
     getActions: () => actionsRef.current,
     onAssistantText: (text) => {
-      setIsThinking(false);
+      // B3-tune-a: previously cleared isThinking on the FIRST text
+      // token. That left the loading indicator dark for 10-20s during
+      // long tool runs (write_lesson, write_knowledge_check) when the
+      // agent emits a few words of preamble before calling the tool.
+      // Indicator now stays visible until onDone (turn complete) or
+      // onError fires — so the LD sees a continuous "still working"
+      // signal across the whole turn.
       updateLastAssistant(text);
     },
     onToolCall: (name, args) => {

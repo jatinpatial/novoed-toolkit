@@ -1026,17 +1026,16 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
         {course.modules.map((m: any, mi: number) => {
           const moduleActive = viewMode === "module" && am === mi;
           return (
-          <div key={m.id} className="mb-1">
-            {/* B3b: outline-module-row provides the resting/hover/active
-                visual language (subtle bg + brand-tinted border on hover,
-                pre-applied on active). Inline Tailwind kept for layout
-                only (flex/gap). The bg-brand-50/60 + rounded-md + mx-2
-                that previously appeared only on active is now baked into
-                the .outline-module-active class. */}
-            <div className={`outline-module-row flex items-center gap-1.5 group ${moduleActive ? "outline-module-active" : ""}`}>
+          /* B3-tune-a: each module + its lessons wrapped in an
+             outline-module-card. Module header row holds the number
+             badge + title + delete; the meta row below shows lesson
+             count and (when present) a yellow Case chip. Lessons sit
+             inside .outline-lessons indented from the header. */
+          <div key={m.id} className={`outline-module-card${moduleActive ? " outline-module-card-active" : ""}`}>
+            <div className="outline-module-header group">
               <button
                 onClick={() => onSelectModule(mi)}
-                className={`w-5 h-5 flex-shrink-0 rounded text-[9px] font-bold flex items-center justify-center transition ${moduleActive ? "bg-brand-600 text-white" : "bg-ink-900 text-white hover:bg-brand-700"}`}
+                className="outline-module-num"
                 title="Open module summary"
               >
                 {mi + 1}
@@ -1045,8 +1044,20 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 value={m.title}
                 onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
                 onClick={(e) => e.stopPropagation()}
-                className={`flex-1 text-xs font-bold bg-transparent border-none outline-none min-w-0 ${moduleActive ? "text-brand-800" : "text-ink-900"}`}
+                className="outline-module-title"
               />
+              {course.modules.length > 1 && (
+                <button
+                  onClick={() => { if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
+                  className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
+                  title="Delete module"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+            <div className="outline-module-meta">
+              <span>{m.lessons.length} lesson{m.lessons.length === 1 ? "" : "s"}</span>
               {m.caseStudyId && (() => {
                 const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
                 const designed = !!cs && (cs.context.trim().length > 0 || cs.stakeholders.length > 0);
@@ -1057,51 +1068,43 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                   <button
                     onClick={(e) => { e.stopPropagation(); onSelectModule(mi); }}
                     title={tip}
-                    className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition ${designed ? "text-brand-700 hover:bg-brand-50" : "text-ink-400 hover:text-brand-700 hover:bg-brand-50"}`}
+                    className="outline-cs-chip"
                   >
-                    <BookOpen size={11} />
+                    <BookOpen size={9} /> Case
                   </button>
                 );
               })()}
-              {course.modules.length > 1 && (
-                <button
-                  onClick={() => { if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
-                  className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500"
-                  title="Delete module"
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
             </div>
-            {m.lessons.map((l: any, li: number) => {
-              const active = am === mi && al === li;
-              return (
-                /* B3b: outline-lesson-row class provides motion-token
-                   transitions; outline-lesson-active adds a 2px brand-500
-                   left accent stripe via ::before (matches the global
-                   Sidebar nav-item-active pattern from B1). bg-brand-50
-                   active fill stays inline. */
-                <div key={l.id} className={`outline-lesson-row group mx-2 rounded-md flex items-center gap-1.5 pl-7 pr-2 py-1.5 cursor-pointer ${active ? "bg-brand-50 outline-lesson-active" : "hover:bg-ink-50"}`}
-                  onClick={() => onSelect(mi, li)}
-                >
-                  <span className={`text-[10px] font-bold flex-shrink-0 ${active ? "text-brand-700" : "text-ink-400"}`}>{mi + 1}.{li + 1}</span>
-                  <span className={`text-[12px] flex-1 truncate ${active ? "text-brand-800 font-semibold" : "text-ink-700"}`}>
-                    {l.title.replace(/^\d+\.\d+\s*/, "")}
-                  </span>
-                  <span className="text-[10px] text-ink-300">{l.blocks.length}</span>
-                  {m.lessons.length > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); if (confirm("Delete lesson?")) removeLesson(mi, li); }}
-                      className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500"
-                      title="Delete"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            <button onClick={() => addLesson(mi)} className="mx-2 mt-0.5 px-7 py-1 text-[11px] text-ink-400 hover:text-brand-700 rounded hover:bg-brand-50 w-[calc(100%-16px)] text-left">
+            <div className="outline-lessons">
+              {m.lessons.map((l: any, li: number) => {
+                const active = am === mi && al === li;
+                return (
+                  /* B3-tune-a: lesson row inside the module card.
+                     Indented via .outline-lessons padding; active row
+                     gets the 2px brand-500 left accent (.outline-lesson-
+                     active::before) and brand-700 text + bg-brand-50. */
+                  <div key={l.id} className={`outline-lesson-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${active ? "bg-brand-50 outline-lesson-active" : "hover:bg-ink-50"}`}
+                    onClick={() => onSelect(mi, li)}
+                  >
+                    <span className={`text-[10px] font-bold flex-shrink-0 ${active ? "text-brand-700" : "text-ink-400"}`}>{mi + 1}.{li + 1}</span>
+                    <span className={`text-[13px] flex-1 truncate ${active ? "text-brand-700 font-semibold" : "text-ink-700"}`}>
+                      {l.title.replace(/^\d+\.\d+\s*/, "")}
+                    </span>
+                    <span className="outline-lesson-count-chip">{l.blocks.length}</span>
+                    {m.lessons.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete lesson?")) removeLesson(mi, li); }}
+                        className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
+                        title="Delete"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => addLesson(mi)} className="outline-add-lesson">
               + lesson
             </button>
           </div>

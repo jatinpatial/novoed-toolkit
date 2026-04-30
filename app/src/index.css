@@ -750,33 +750,123 @@
     transition: border-color var(--duration-base) var(--ease-sana);
   }
 
-  /* ── Course Studio outline tree (Phase 2 #2 B3b) ─────────────────────
-     Module rows + lesson rows in the LeftSidebar's outline pane.
-     Module rows pick up subtle card depth (resting -> hover with a
-     brand-tinted border + subtle resting shadow); active lesson rows
-     get a 2px brand-500 left accent stripe matching the global
-     Sidebar's nav-item-active pattern (B1).
+  /* ── Course Studio outline tree (Phase 2 #2 B3b -> rebuilt B3-tune-a)
+     Each module + its lessons wrap in a distinct .outline-module-card
+     so the hierarchy (course -> module -> lesson) reads clearly at a
+     glance. Module header sits at the top of the card with a 22px
+     ink-900 number badge (brand-500 + glow when active), bold module
+     title, and optional delete. Below the header: meta row with
+     lesson count + optional yellow "Case" chip. Lessons indent inside
+     the card; active lesson keeps the 2px brand-500 left accent
+     matching the global Sidebar nav-item-active pattern (B1).
 
-     CSS rules co-located here rather than inlined as Tailwind so
-     the active::before pseudo-element stays centralized; existing
-     Tailwind classes on the JSX cover layout/typography. */
-  .outline-module-row {
-    margin: 0 8px;
-    padding: 8px 12px 4px;
-    border-radius: 8px;
-    border: 1px solid transparent;
+     Mockup anchors: docs/vision-mockup.html lines 1193-1244 (.module-
+     node, .module-num, .module-title, .module-meta, .module-cs-badge). */
+  .outline-module-card {
+    position: relative;
+    margin: 0 8px 12px;
+    padding: 12px;
+    background: white;
+    border: 1px solid theme("colors.ink.100");
+    border-radius: 12px;
+    transition: background var(--duration-base) var(--ease-sana),
+                border-color var(--duration-base) var(--ease-sana),
+                box-shadow var(--duration-base) var(--ease-sana),
+                transform var(--duration-fast) var(--ease-sana);
+  }
+  .outline-module-card:hover:not(.outline-module-card-active) {
+    border-color: theme("colors.brand.300");
+    box-shadow: 0 4px 12px rgba(0, 166, 81, 0.08);
+    transform: translateX(3px);
+  }
+  .outline-module-card-active {
+    background: theme("colors.brand.50");
+    border-color: theme("colors.brand.500");
+    box-shadow: var(--shadow-active);
+  }
+
+  .outline-module-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .outline-module-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: theme("colors.ink.900");
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: none;
+    cursor: pointer;
     transition: background var(--duration-fast) var(--ease-sana),
-                border-color var(--duration-fast) var(--ease-sana),
                 box-shadow var(--duration-fast) var(--ease-sana);
   }
-  .outline-module-row:hover:not(.outline-module-active) {
-    background: theme("colors.ink.50");
-    border-color: theme("colors.brand.100");
-    box-shadow: var(--shadow-resting);
+  .outline-module-card:hover:not(.outline-module-card-active) .outline-module-num {
+    background: theme("colors.brand.700");
   }
-  .outline-module-active {
-    background: theme("colors.brand.50");
-    border-color: theme("colors.brand.200");
+  .outline-module-card-active .outline-module-num {
+    background: theme("colors.brand.500");
+    box-shadow: 0 0 12px rgba(0, 166, 81, 0.4);
+  }
+  /* Module title input — bold, slightly tighter than text-h3 so it
+     fits the 256px sidebar without truncating short-to-medium titles.
+     14px / 700 / -0.005em is the sweet spot between density and
+     readability in the constrained pane. */
+  .outline-module-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    color: theme("colors.ink.900");
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+
+  .outline-module-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-left: 30px; /* aligns under module title, past the 22px badge + 8px gap */
+    font-size: 11px;
+    color: theme("colors.ink.500");
+  }
+  /* Yellow "Case" chip in the module meta row — signals that this
+     module has a case-study slot. Click jumps to module summary. */
+  .outline-cs-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: theme("colors.yellow.700");
+    background: theme("colors.yellow.100");
+    padding: 2px 6px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: filter var(--duration-fast) var(--ease-sana);
+  }
+  .outline-cs-chip:hover {
+    filter: brightness(0.95);
+  }
+
+  .outline-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-left: 8px;
   }
 
   .outline-lesson-row {
@@ -785,8 +875,7 @@
                 color var(--duration-fast) var(--ease-sana);
   }
   /* 2px left accent stripe — matches the global Sidebar nav-item-
-     active treatment (B1) so the active surface signal reads the
-     same way across the app. */
+     active treatment (B1). Inset 6px from row edges for a calmer fit. */
   .outline-lesson-active::before {
     content: "";
     position: absolute;
@@ -796,6 +885,71 @@
     width: 2px;
     background: theme("colors.brand.500");
     border-radius: 0 2px 2px 0;
+  }
+  /* Lesson block-count chip — subtle ink pill in the row's right
+     side. Replaces the previous bare "0"/"4" text in ink-300. */
+  .outline-lesson-count-chip {
+    font-size: 10px;
+    font-weight: 600;
+    color: theme("colors.ink.500");
+    background: theme("colors.ink.50");
+    padding: 1px 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .outline-add-lesson {
+    margin: 4px 0 0 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: theme("colors.ink.400");
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    width: calc(100% - 8px);
+    transition: background var(--duration-fast) var(--ease-sana),
+                color var(--duration-fast) var(--ease-sana);
+  }
+  .outline-add-lesson:hover {
+    color: theme("colors.brand.700");
+    background: theme("colors.brand.50");
+  }
+
+  /* ── Studio Copilot tool indicator (Phase 2 #2 B3-tune-a) ────────────
+     The .msg-tool pill replaces the old shimmer-bar ProgressIndicator.
+     Renders inline as a chat message rather than a top-of-feed bar.
+     16px orb-gradient circle on the left + tool-aware label on the
+     right. Visible from isThinking-true through onDone (turn complete)
+     so the LD never sits in silence during long tool runs.
+     Mockup anchors: docs/vision-mockup.html lines 1037-1054 (.msg-tool,
+     .msg-tool-shimmer, msg-in keyframe). */
+  .msg-tool {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid theme("colors.ink.100");
+    border-radius: 12px;
+    font-size: 12px;
+    color: theme("colors.ink.700");
+    max-width: 85%;
+    margin: 8px 0;
+    animation: msg-in 0.5s var(--ease-sana) both;
+  }
+  .msg-tool-orb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--orb-gradient);
+    box-shadow: 0 0 10px rgba(0, 166, 81, 0.55);
+    flex-shrink: 0;
+    /* orb-glow already defined in :root keyframes (B2b); reuse with
+       a tighter 1.4s cadence for the indicator's subtle pulse. */
+    animation: orb-glow 1.4s ease-in-out infinite;
   }
 
   /* ── Section headers (Phase 2 #2 B2c) ────────────────────────────────
@@ -1235,4 +1389,13 @@
 @keyframes orb-glow {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50%      { opacity: 0.7; transform: scale(1.2); }
+}
+
+/* Chat message arrival animation (B3-tune-a) — paired with .msg-tool
+   (and the .msg-agent / .msg-user bubbles in B3-tune-b). Smaller
+   translate (8px) than fade-up (16px) for a tighter, less floaty feel
+   on the chat surface. Mockup line 1017. */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
