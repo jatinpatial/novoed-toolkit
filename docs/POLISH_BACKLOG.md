@@ -112,6 +112,40 @@ across one or two commits.
 - Archive `NovoEd_Component_Library.jsx`, `ARCHITECTURE.md`, `NovoEd_Toolkit_Claude_Project_Instructions.md` after extracting any reusable bits.
 - Rewrite top-level `README.md` to point at the React + agent-backend architecture.
 
+## Phase 3 — BCG icon mapping for section headers
+
+Section header semantic icons currently use lucide-react (Target,
+Clock, CheckCircle2, Lightbulb, Brain, Pencil, etc. — 12 curated
+names from B3-tune-c / AI-1b / polish-3a's icon picker). Mostly
+generic "GitHub-issue-y" iconography.
+
+Goal: section headers in lessons feel BCG-y, not generic. Map each
+of the 12 curated icon names to a BCG-branded equivalent from the
+BcgIcon library (B0 — 42 curated icons in app/src/icons/bcg/).
+Where a clean BCG match exists, use it; where it doesn't, keep the
+lucide fallback (don't force a bad mapping).
+
+Candidate mappings to investigate (BCG icon names from B0):
+  target        → Target            (BCG has direct equivalent)
+  brain         → BrainNetwork      (BCG)
+  pencil        → Document / Brochure (BCG)
+  quote         → Speaking          (BCG)
+  check         → BetaTest          (BCG, ✓-themed)
+  clock         → Clock             (BCG)
+  lightbulb     → LightBulb         (BCG)
+  bookOpen      → ClosedBook / HigherEducation (BCG)
+  sparkles      → Innovation        (BCG)
+  alertCircle   → Alert             (BCG)
+  trendingUp    → BarChart / DataAnalysis (BCG)
+  users         → People / GroupCollaboration (BCG)
+
+Implementation: extend SECTION_ICON_COMPONENTS in CourseStudio.tsx
+with a BCG-first lookup, lucide as fallback. Same rendering path —
+each icon takes a size/className prop.
+
+~1 hour focused work. Not blocking demo-readiness; the lucide
+icons read clean today, this is brand polish.
+
 ## Phase 3 — Block editing UX overhaul
 
 User feedback (live test): *"edits to input text in interactive elements

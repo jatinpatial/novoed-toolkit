@@ -117,6 +117,17 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
             <div className="text-[10px] font-bold text-brand-700 uppercase tracking-wider mb-1">
               Course Architect — proposed outline
             </div>
+            {/* polish-5d: editable-hint tagline. Live testing showed
+                LDs not realizing every cell on the card is click-to-
+                edit (the hover-tinted bg helps, but needs a verbal
+                affordance hint too). One subtle line below the
+                eyebrow, before the title — 11px ink-500 italic so
+                it doesn't crowd the heading. */}
+            <div className="text-[11px] italic text-ink-500 mb-1.5">
+              💡 Click any title or objective to edit. Or use{" "}
+              <strong className="not-italic font-semibold text-ink-700">Refine in chat</strong>{" "}
+              for structural changes.
+            </div>
             <h2 className="text-xl font-bold text-ink-900 leading-tight mb-1.5">
               <EditableField
                 value={draft.title}
