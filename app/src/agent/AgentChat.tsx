@@ -29,6 +29,23 @@ function toolLabel(name: string | null): string {
   return TOOL_LABELS[name] || "Working";
 }
 
+// polish-4b: personality phrases cycled every 2.5s when the agent is
+// working and no tool is active (pre-tool or between-tools state).
+// Replaces the static "Thinking…" with claude.ai-style copy that feels
+// alive across a 30-45 sec turn. Order matters — index 0 is "Thinking"
+// so the first frame matches the existing baseline; cycle drifts from
+// there into the more characterful phrases.
+const CYCLING_PHRASES = [
+  "Thinking",
+  "Considering the angle",
+  "Stitching this together",
+  "Reading between the lines",
+  "Brewing the next bit",
+  "Cooking up something good",
+];
+const ALMOST_THERE_THRESHOLD_MS = 25_000;
+const PHRASE_CYCLE_MS = 2_500;
+
 export function AgentChat() {
   const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal } = useAgent();
   const [draft, setDraft] = useState("");
@@ -98,14 +115,54 @@ export function AgentChat() {
     );
   }
 
-  // Status pill text — "Connected" when idle, friendly tool label
-  // when working. The orb status dot pulses while working (B3-tune-b).
-  const statusLabel =
-    status !== "open"
-      ? "Connecting…"
-      : isThinking
-        ? toolLabel(currentTool)
-        : "Connected";
+  // polish-4b: cycling status pill — replaces the static "Thinking"
+  // with rotating personality copy when the agent is working and no
+  // tool is active. Tool labels still win when a real tool fires.
+  // After 25s elapsed in the same turn, switches to "Almost there"
+  // to signal progress and prevent timeout panic.
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const turnStartedAtRef = useRef<number | null>(null);
+  const [elapsedTick, setElapsedTick] = useState(0); // forces re-render to recompute elapsed
+
+  // Track turn start / end. Reset cycle when a new turn begins.
+  useEffect(() => {
+    if (isThinking && turnStartedAtRef.current === null) {
+      turnStartedAtRef.current = Date.now();
+      setPhraseIndex(0);
+      setElapsedTick(0);
+    } else if (!isThinking && turnStartedAtRef.current !== null) {
+      turnStartedAtRef.current = null;
+      setElapsedTick(0);
+    }
+  }, [isThinking]);
+
+  // Cycle phrase every PHRASE_CYCLE_MS while thinking. Tick re-renders
+  // so the elapsed-time check picks up "Almost there" once the
+  // threshold passes.
+  useEffect(() => {
+    if (!isThinking) return;
+    const timer = setInterval(() => {
+      setPhraseIndex((i) => (i + 1) % CYCLING_PHRASES.length);
+      setElapsedTick((t) => t + 1);
+    }, PHRASE_CYCLE_MS);
+    return () => clearInterval(timer);
+  }, [isThinking]);
+
+  const elapsedMs =
+    turnStartedAtRef.current !== null ? Date.now() - turnStartedAtRef.current : 0;
+  void elapsedTick; // referenced so the re-render fires when the tick increments
+
+  const statusLabel = (() => {
+    if (status !== "open") return "Connecting…"; // ellipsis baked in
+    if (!isThinking) return "Connected";
+    // Tool-aware label always wins when a tool is active.
+    if (currentTool) return toolLabel(currentTool);
+    // Long-running fallback after 25s — pins to "Almost there"
+    // (don't go back to other phrases once we hit this state).
+    if (elapsedMs >= ALMOST_THERE_THRESHOLD_MS) return "Almost there";
+    // Default: cycle through personality phrases.
+    return CYCLING_PHRASES[phraseIndex];
+  })();
   const isWorking = status === "open" && isThinking;
 
   return (
@@ -120,11 +177,26 @@ export function AgentChat() {
       <div className="copilot-mock-header">
         <div className="copilot-mock-orb">
           <Sparkles size={16} className="copilot-mock-orb-icon" aria-hidden="true" />
+          {/* polish-4b: 4 sparkle particles drift in/out at random
+              positions inside the orb when the agent is working.
+              Hidden at rest. CSS keyframes (sparkle-drift) handle the
+              fade + tiny translate per nth-child delay. */}
+          {isWorking && (
+            <>
+              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
+              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
+              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
+              <span className="copilot-mock-orb-sparkle" aria-hidden="true" />
+            </>
+          )}
         </div>
         <div className="copilot-mock-text">
           <div className="copilot-mock-name">Studio Copilot</div>
           <div className={`copilot-mock-status${isWorking ? " copilot-mock-status-working" : ""}`}>
-            {statusLabel}
+            {/* polish-4b: append ellipsis when working — keeps Connected
+                / Connecting… clean while making working states feel
+                in-flight ("Considering the angle…"). */}
+            {statusLabel}{isWorking ? "…" : ""}
           </div>
         </div>
         <button
