@@ -13,7 +13,7 @@ from claude_agent_sdk import (
 )
 
 from .bridge import ToolBridge
-from .config import SYSTEM_PROMPT, TOOL_CALL_TIMEOUT_SECONDS
+from .config import SYSTEM_PROMPT_FILE, TOOL_CALL_TIMEOUT_SECONDS
 from .ui_tools import ALLOWED_TOOL_NAMES, build_ui_mcp_server
 
 log = logging.getLogger(__name__)
@@ -34,8 +34,16 @@ class Session:
 
     async def start(self) -> None:
         ui_server = build_ui_mcp_server(self.bridge)
+        # urgent-fix-prompt-size: pass the system prompt as a FILE rather
+        # than a string. Pre-fix the SDK was stuffing the full 34 KB
+        # prompt onto the CLI subprocess command line, which exceeded
+        # the Windows CreateProcess 32,767-char limit and the agent
+        # couldn't spawn. The {"type": "file", "path": ...} dict form
+        # tells the SDK to use --system-prompt-file <path> instead;
+        # subprocess args drop to a few hundred bytes regardless of
+        # prompt size. See config.py for the file-write logic.
         options = ClaudeAgentOptions(
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": ui_server},
             allowed_tools=ALLOWED_TOOL_NAMES,
         )

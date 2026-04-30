@@ -1,4 +1,6 @@
 import os
+import tempfile
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -449,3 +451,37 @@ If the slot reference is ambiguous (multiple slots, no clear title match), ask o
 """
 
 TOOL_CALL_TIMEOUT_SECONDS = 30
+
+
+# ─── System-prompt file handoff (urgent-fix-prompt-size) ──────────────────────
+#
+# Critical bug surfaced in live testing: the agent subprocess failed to
+# spawn on Windows with FileNotFoundError [WinError 206] — "filename or
+# extension is too long." Root cause: claude_agent_sdk's subprocess_cli
+# transport (see _internal/transport/subprocess_cli.py:209-219) passes
+# `system_prompt: str` as a `--system-prompt <full-text>` command-line
+# argument. SYSTEM_PROMPT grew to 34,705 chars across MODE 1-5 + the
+# RESPONSE FORMATTING / vocabulary tables / ban lists / shape constraints
+# / citation rules. Windows CreateProcess caps the entire command line
+# at 32,767 chars. The CLI couldn't spawn; frontend showed an infinite
+# "Connecting…" loop.
+#
+# The SDK natively supports a file-based handoff for exactly this
+# scenario:
+#
+#   system_prompt: str                                  -> --system-prompt <text>
+#   system_prompt: {"type": "file", "path": str}        -> --system-prompt-file <path>
+#   system_prompt: {"type": "preset", "append": str}    -> --append-system-prompt <text>
+#
+# We write SYSTEM_PROMPT to a stable temp file at module import and
+# expose SYSTEM_PROMPT_FILE for session.py to pass via the dict form.
+# Subprocess args drop from ~36 KB to ~256 bytes (just the file path).
+# Prompt size becomes a non-issue regardless of how the prompt grows.
+#
+# Stable filename — overwritten on each backend process start, no
+# cleanup needed. Lives in the OS temp dir so backups / version
+# control don't pick it up.
+
+_PROMPT_FILE = Path(tempfile.gettempdir()) / "bcgu_studio_system_prompt.txt"
+_PROMPT_FILE.write_text(SYSTEM_PROMPT, encoding="utf-8")
+SYSTEM_PROMPT_FILE = str(_PROMPT_FILE)
