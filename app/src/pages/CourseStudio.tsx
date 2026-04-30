@@ -255,14 +255,31 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     onOpen(course, id);
   }
 
-  function handleBuild() {
-    if (!outlineProposal) return;
-    const course = buildCourseFromProposal(outlineProposal, brand);
+  function handleBuild(edited?: CourseOutlineProposal) {
+    // AI-1-polish-C bug 8: the proposal card now passes its locally-
+    // edited copy on Build. Falls back to the unedited outlineProposal
+    // when called without args (defensive — current callers always
+    // pass `edited`).
+    const proposalToBuild = edited ?? outlineProposal;
+    if (!proposalToBuild) return;
+    const course = buildCourseFromProposal(proposalToBuild, brand);
     const id = uid();
     saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
     clearOutlineProposal();
     onOpen(course, id);
     toast("Course built — fill in the lessons next");
+  }
+
+  // AI-1-polish-C bug 9: dismiss the proposal AND open the chat with
+  // a "Refine the outline: " prefill. For structural changes the LD
+  // can't easily make via inline cell edits — merge modules, change
+  // duration, swap topic emphasis, etc. AgentChat's polish-A auto-
+  // collapse only fires when outlineProposal becomes non-null; we're
+  // setting it null here so the chat can re-open without a fight.
+  function handleRefine() {
+    clearOutlineProposal();
+    setChatOpen(true);
+    prefillInput("Refine the outline: ");
   }
 
   function handleImport() {
@@ -314,6 +331,7 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
                 proposal={outlineProposal}
                 onBuild={handleBuild}
                 onDiscard={clearOutlineProposal}
+                onRefine={handleRefine}
               />
             </div>
           )}
