@@ -218,10 +218,40 @@ function summarizeCourse(course: Course) {
   };
 }
 
+/**
+ * summarizeBlock — short human-readable digest of a block's contents,
+ * used in list_structure responses so the agent knows what's already
+ * in a lesson when planning a regenerate or follow-up turn.
+ *
+ * AI-1e: extended for the new block types from AI-1b (banner with
+ * imageUrl variant, quote, clickInstruction, sectionHeader). Without
+ * these branches the agent would see "(no url)" or empty strings for
+ * the new types and lose structural awareness.
+ */
 function summarizeBlock(type: string, data: BlockData): string {
-  if (type === "text") return truncate(data.content || "", 80);
+  if (type === "text" || type === "clickInstruction") return truncate(data.content || "", 80);
   if (type === "video" || type === "image") return data.url || "(no url)";
-  if (type === "banner" || type === "callout") return truncate(data.title || data.body || "", 80);
+  // Banner: noting whether it's the gradient-only or photo-statement
+  // variant helps the agent decide whether to keep, swap, or remove
+  // on regenerate. callout: surface the type variant so the agent
+  // sees note vs tip vs warning at a glance.
+  if (type === "banner") {
+    const head = truncate(data.title || data.body || "", 60);
+    return data.imageUrl ? `[photo] ${head}` : head;
+  }
+  if (type === "callout") {
+    const variant = data.type || "tip";
+    return `[${variant}] ${truncate(data.body || "", 60)}`;
+  }
+  if (type === "quote") {
+    const body = truncate(data.body || "", 60);
+    const attr = data.attribution ? ` — ${data.attribution}` : "";
+    return body + attr;
+  }
+  if (type === "sectionHeader") {
+    const icon = data.iconName ? ` (${data.iconName})` : "";
+    return truncate(data.title || "", 60) + icon;
+  }
   if (data.items) return `${data.items.length} items`;
   return data.title ? truncate(data.title, 60) : "";
 }
