@@ -757,6 +757,105 @@
     transition: border-color var(--duration-base) var(--ease-sana);
   }
 
+  /* ── Lesson canvas chrome (Phase 2 #2 B3-tune-c) ─────────────────────
+     Eyebrow + bigger title + icon-prefixed meta row. Replaces the
+     bare "LESSON" eyebrow / 32px title / flat meta from B3c.
+     Mockup anchors: docs/vision-mockup.html lines 1254-1316. */
+  .lesson-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green-700);
+  }
+  /* Lesson title input — bumped from text-h1 (32px) to a slightly
+     larger 36px / 700 / -0.02em tracking per the B3-tune-c spec. */
+  .lesson-title-input {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: theme("colors.ink.900");
+  }
+  .lesson-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: theme("colors.ink.500");
+  }
+  .lesson-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Add-a-block hero CTA — designed entry point above the existing
+     BlockInsertRow picker grid. Click / Enter / Space scrolls the
+     picker grid into view. Hover scales 1.005, brightens the
+     gradient, lifts shadow; the inner +icon rotates 90° so it
+     reads as a proper plus sign on hover.
+     Mockup anchors: docs/vision-mockup.html lines 1273-1316. */
+  .add-block-hero {
+    border: 2px dashed theme("colors.ink.200");
+    border-radius: 12px;
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    background: radial-gradient(
+      ellipse 60% 80% at 50% 100%,
+      rgba(0, 166, 81, 0.05),
+      transparent 70%
+    );
+    position: relative;
+    transition: border-color var(--duration-base) var(--ease-sana),
+                background var(--duration-base) var(--ease-sana),
+                box-shadow var(--duration-base) var(--ease-sana),
+                transform var(--duration-base) var(--ease-sana);
+  }
+  .add-block-hero:hover,
+  .add-block-hero:focus-visible {
+    border-color: var(--green-500);
+    background: radial-gradient(
+      ellipse 60% 80% at 50% 100%,
+      rgba(0, 166, 81, 0.1),
+      transparent 70%
+    );
+    transform: scale(1.005);
+    box-shadow: var(--shadow-active);
+    outline: none;
+  }
+  .add-block-hero .add-block-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: var(--hero-accent);
+    color: white;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 14px;
+    box-shadow: 0 12px 28px rgba(0, 166, 81, 0.3);
+    transition: transform var(--duration-base) var(--ease-sana);
+  }
+  .add-block-hero:hover .add-block-icon,
+  .add-block-hero:focus-visible .add-block-icon {
+    transform: scale(1.08) rotate(90deg);
+  }
+  .add-block-hero .add-block-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: theme("colors.ink.900");
+    margin-bottom: 6px;
+  }
+  .add-block-hero .add-block-desc {
+    font-size: 13px;
+    line-height: 1.55;
+    color: theme("colors.ink.500");
+    max-width: 380px;
+    margin: 0 auto;
+  }
+
   /* ── Course Studio outline tree (Phase 2 #2 B3b -> rebuilt B3-tune-a)
      Each module + its lessons wrap in a distinct .outline-module-card
      so the hierarchy (course -> module -> lesson) reads clearly at a

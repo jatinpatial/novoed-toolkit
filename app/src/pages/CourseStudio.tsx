@@ -2080,12 +2080,21 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
     prefillInput(buildRegenerateQuestionPrefill(mod, al, questionIndex));
   }
 
+  // B3-tune-c: meta strings — icons render alongside in the JSX.
+  const lessonNumber = `${am + 1}.${al + 1}`;
+  const moduleNumber = am + 1;
+  const blockCountLabel = `${lesson.blocks.length} block${lesson.blocks.length !== 1 ? "s" : ""}`;
+
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
-      {/* Lesson header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between gap-3 mb-1">
-          <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider">Lesson</div>
+      {/* B3-tune-c lesson header — eyebrow + bigger title + meta row
+          with three icon-prefixed segments. Replaces the bare
+          "LESSON" eyebrow + 32px title + flat meta from B3c. */}
+      <div className="mb-7">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="lesson-eyebrow">
+            Module {moduleNumber} · Lesson {lessonNumber}
+          </div>
           {hasWriterBlocks && (
             <button
               onClick={() => triggerWriter("regenerate")}
@@ -2100,33 +2109,38 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
           value={lesson.title}
           onChange={(e) => onUpdateLesson((l: Lesson) => { l.title = e.target.value; })}
           placeholder="Lesson title"
-          /* B3c: text-3xl + font-bold replaced by the text-h1 token
-             (32px / 1.15 / -0.01em / 700) — same visual size, but
-             pulls from the typography scale so the lesson title
-             rhythm matches Dashboard / section headers. Motion
-             tokens added on the focus transition. */
-          className="w-full text-h1 text-ink-900 bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus transition-all duration-base ease-sana"
+          className="lesson-title-input w-full bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus transition-all duration-base ease-sana"
         />
-        <div className="flex items-center gap-3 text-xs text-ink-500">
-          <div className="flex items-center gap-1.5">
+        <div className="lesson-meta">
+          <span className="lesson-meta-item">
             <Clock size={12} className="text-ink-400" />
             <input
               type="number"
               value={lesson.duration}
               min={1}
               onChange={(e) => onUpdateLesson((l: Lesson) => { l.duration = parseInt(e.target.value) || 5; })}
-              className="w-10 bg-transparent border-none outline-none text-xs font-medium"
+              className="w-10 bg-transparent border-none outline-none font-medium text-ink-700"
             />
-            <span>minutes</span>
-          </div>
-          <span>·</span>
-          <span>{lesson.blocks.length} block{lesson.blocks.length !== 1 ? "s" : ""}</span>
+            <span>min</span>
+          </span>
+          <span className="lesson-meta-item">
+            <BarChart3 size={12} className="text-ink-400" />
+            <span>{blockCountLabel}</span>
+          </span>
+          <span className="lesson-meta-item">
+            <Check size={12} className="text-brand-600" />
+            <span>Saved</span>
+          </span>
         </div>
       </div>
 
       {/* Blocks */}
       {lesson.blocks.length === 0 ? (
-        <div className="py-10 space-y-6">
+        <div className="py-6 space-y-6">
+          {/* "Write this lesson" CTA — the AI-write entry point.
+              Stays since it's a distinct action from inserting a
+              single block; the new add-block hero (below) handles
+              manual block insertion. */}
           <button
             onClick={() => triggerWriter("write")}
             className="w-full rounded-xl border-2 border-dashed border-brand-300 bg-brand-50/40 hover:bg-brand-50 hover:border-brand-500 transition p-5 text-left flex items-start gap-3 group"
@@ -2137,11 +2151,48 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-ink-900 mb-0.5 group-hover:text-brand-700">Write this lesson</div>
               <div className="text-xs text-ink-600">
-                Have the Copilot draft a Hook → Body → Examples → Summary based on the title and objectives. You'll be able to edit the chat message before sending.
+                Have Studio Copilot draft a Hook → Body → Examples → Summary based on the title and objectives. You'll be able to edit the chat message before sending.
               </div>
             </div>
           </button>
-          <BlockInsertRow onPick={(t) => onAddBlock(t)} expanded />
+          {/* B3-tune-c: designed Add-a-block hero CTA — the existing
+              BlockInsertRow (in expanded form) renders the picker
+              grid; this hero sits above as a more inviting entry
+              point. Click anywhere on it to focus / scroll to the
+              picker grid below.
+
+              Existing keyboard / picker logic preserved by keeping
+              <BlockInsertRow expanded />; this is a visual
+              promotion only. */}
+          <div
+            className="add-block-hero"
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              const grid = document.getElementById("block-picker-grid");
+              grid?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                const grid = document.getElementById("block-picker-grid");
+                grid?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }
+            }}
+          >
+            <div className="add-block-icon" aria-hidden="true">
+              <Plus size={24} strokeWidth={2.5} />
+            </div>
+            <div className="add-block-title">
+              Add a block — or ask Studio Copilot to write one
+            </div>
+            <div className="add-block-desc">
+              Text, banner, callout, card grid, timeline, video script, quiz — 47 components.
+            </div>
+          </div>
+          <div id="block-picker-grid">
+            <BlockInsertRow onPick={(t) => onAddBlock(t)} expanded />
+          </div>
         </div>
       ) : (
         <>
