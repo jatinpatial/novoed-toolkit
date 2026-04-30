@@ -58,6 +58,21 @@
      so future surfaces share the gradient definition. */
   --hero-accent: linear-gradient(135deg, var(--green-500) 0%, var(--teal-500) 60%, var(--green-700) 100%);
 
+  /* Active-brand cascade vars (B3c / B3d) — overridden per
+     <body data-brand="..."> selector below. Default tracks bcgu
+     (the default active brand). Surfaces that want to track the
+     runtime active brand at render time use these vars
+     (e.g. .lesson-canvas-pane top accent). Surfaces using static
+     Tailwind brand-* utilities (bg-brand-500 etc.) are unchanged.
+     Source of truth: app/src/brand/tokens.ts B[brand].pri/priDk/priLt.
+     Note: --brand-500 here is the *runtime* brand; Tailwind's
+     theme.colors.brand.500 is a static palette value (#29BA74).
+     They have overlapping names but different purposes — the
+     cascade var is opt-in via var(--brand-500) reads in CSS. */
+  --brand-500: #197A56; /* bcgu pri (default) */
+  --brand-700: #0D3B2C; /* bcgu priDk */
+  --brand-50:  #E8F3ED; /* bcgu priLt */
+
   /* AI-identity tokens (B2b) — the orb gradient + glow used by the
      hero composer's Sparkles orb. Also reused for the Studio Copilot
      avatar in B4 (when that surface lands). Lifted to :root so both
@@ -694,6 +709,18 @@
     padding: 2px 6px;
     border-radius: 4px;
     margin-left: 4px;
+  }
+
+  /* ── Course Studio lesson canvas pane (Phase 2 #2 B3c) ───────────────
+     The center pane that hosts <LessonCanvas> / <ModuleSummary>.
+     Picks up a 3px top accent strip wired to the runtime brand
+     (--brand-500) — the LD instantly sees which brand is active
+     when toggling, since the strip color flips between BCG green,
+     BCG U green, and the client blue. Cascade defined per
+     <body data-brand="..."> in :root above. */
+  .lesson-canvas-pane {
+    border-top: 3px solid var(--brand-500);
+    transition: border-color var(--duration-base) var(--ease-sana);
   }
 
   /* ── Course Studio outline tree (Phase 2 #2 B3b) ─────────────────────

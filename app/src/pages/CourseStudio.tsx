@@ -741,8 +741,11 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           </button>
         )}
 
-        {/* Canvas */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        {/* Canvas — B3c adds .lesson-canvas-pane for the 3px brand-
+            cascade top accent strip. The strip color flips when
+            the user toggles the brand (B3d wires <body data-brand>),
+            giving an instant visible signal of the active theme. */}
+        <div className="flex-1 min-w-0 overflow-y-auto lesson-canvas-pane">
           {viewMode === "module" && mod ? (
             <ModuleSummary
               module={mod}
@@ -2081,7 +2084,12 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
           value={lesson.title}
           onChange={(e) => onUpdateLesson((l: Lesson) => { l.title = e.target.value; })}
           placeholder="Lesson title"
-          className="w-full text-3xl font-bold text-ink-900 bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+          /* B3c: text-3xl + font-bold replaced by the text-h1 token
+             (32px / 1.15 / -0.01em / 700) — same visual size, but
+             pulls from the typography scale so the lesson title
+             rhythm matches Dashboard / section headers. Motion
+             tokens added on the focus transition. */
+          className="w-full text-h1 text-ink-900 bg-transparent border-none outline-none mb-2 placeholder:text-ink-300 -ml-1 px-1 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus transition-all duration-base ease-sana"
         />
         <div className="flex items-center gap-3 text-xs text-ink-500">
           <div className="flex items-center gap-1.5">
