@@ -666,20 +666,55 @@
     flex-shrink: 0;
     align-items: center;
   }
-  /* AI-1-polish-A bug 1: stack the secondary CTA above its tagline so
-     the "audience · duration · goals" caption clarifies what the
-     "More structured" button does without bumping its visual weight. */
-  .composer-cta-secondary-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 3px;
-  }
-  .composer-cta-tagline {
-    font-size: 10px;
+  /* polish-2a bug 1: paperclip placeholder for the deck-drop entry
+     point. Disabled today (no wiring); keeps a visible affordance
+     that the dashboard composer accepts source materials in a
+     future sprint. ink-400 / not-allowed cursor + ink-200 border
+     so it reads as "here but unavailable" without competing with
+     the helper text or the primary CTA. */
+  .composer-paperclip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid theme("colors.ink.200");
     color: theme("colors.ink.400");
+    cursor: not-allowed;
+    flex-shrink: 0;
+    margin-right: 4px;
+    transition: opacity var(--duration-fast) var(--ease-sana);
+  }
+  .composer-paperclip:hover {
+    /* Slight opacity dip on hover so the disabled state stays
+       discoverable without reading as broken. */
+    opacity: 0.85;
+  }
+
+  /* polish-2a bug 1: subtle text link below the composer pointing to
+     the structured intake form (/courses/new). Replaces the
+     dual-button layout where "More structured" sat next to "Design"
+     and read as competing choices. The link sits centered under
+     the composer, sized small enough to defer to the primary
+     "Design course →" CTA but readable enough that an LD scanning
+     the hero notices the alternative path. */
+  .composer-secondary-link {
+    margin-top: 14px;
     text-align: center;
-    letter-spacing: 0.02em;
+    font-size: 12px;
+    color: theme("colors.ink.500");
+  }
+  .composer-secondary-link a {
+    color: var(--green-700);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-sana);
+  }
+  .composer-secondary-link a:hover {
+    color: var(--green-500);
+    text-decoration: underline;
   }
 
   /* Composer CTA buttons — separate selectors from the global .btn

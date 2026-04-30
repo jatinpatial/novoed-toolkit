@@ -1,6 +1,6 @@
 import { forwardRef, type KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Paperclip, Sparkles } from "lucide-react";
 
 /**
  * HeroComposer — brief-entry composer on the Dashboard hero.
@@ -47,7 +47,12 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
     function submit() {
       const text = brief.trim();
       if (!text) return;
-      navigate(`/courses?brief=${encodeURIComponent(text)}`);
+      // polish-2a bug 2: auto-send. Pre-polish-2 the dashboard composer
+      // routed to /courses?brief=… and CourseStudio prefilled the chat
+      // textarea — leaving the LD to click Send. Now the autosend=1
+      // param tells CourseStudio to fire sendMessage directly once the
+      // socket is open, so Course Architect runs without a second click.
+      navigate(`/courses?brief=${encodeURIComponent(text)}&autosend=1`);
     }
 
     function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -60,63 +65,69 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
     }
 
     return (
-      <div className="composer">
-        <div className="composer-inner">
-          <div className="composer-input">
-            <div className="composer-orb" aria-hidden="true">
-              <Sparkles size={20} strokeWidth={2} />
+      <>
+        <div className="composer">
+          <div className="composer-inner">
+            <div className="composer-input">
+              <div className="composer-orb" aria-hidden="true">
+                <Sparkles size={20} strokeWidth={2} />
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+                onKeyDown={onKey}
+                placeholder={PLACEHOLDER}
+                rows={2}
+                className="composer-textarea"
+              />
             </div>
-            <textarea
-              ref={textareaRef}
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              onKeyDown={onKey}
-              placeholder={PLACEHOLDER}
-              rows={2}
-              className="composer-textarea"
-            />
-          </div>
-          <div className="composer-actions">
-            <div className="composer-helper">
-              <span>Press</span>
-              <kbd>↵</kbd>
-              <span>to design with Studio Copilot</span>
-            </div>
-            <div className="composer-cta-row">
-              {/*
-                More structured -> /courses/new (the structured intake
-                form, C0a). AI-1-polish-A bug 1: copy bumped from
-                "Detailed brief" to "More structured" so the secondary
-                button reads as a real choice, not an escape hatch.
-                Subtitle row clarifies what makes this path different
-                ("audience · duration · goals"). The form-based path
-                is the BETTER entry for serious LDs working with full
-                context; this button needs to invite use.
-              */}
-              <div className="composer-cta-secondary-stack">
+            <div className="composer-actions">
+              <div className="composer-helper">
+                {/* polish-2a bug 1: paperclip placeholder for the deck-
+                    drop entry that lands in a future AI sprint. Disabled
+                    today; the title attribute carries the "Coming soon"
+                    affordance hint until the wire-up ships. */}
                 <button
                   type="button"
-                  onClick={() => navigate("/courses/new")}
-                  className="btn-cta-secondary"
+                  disabled
+                  title="Coming soon — drop a deck to design from"
+                  aria-label="Attach a deck (coming soon)"
+                  className="composer-paperclip"
                 >
-                  More structured <ArrowRight size={14} strokeWidth={2.5} />
+                  <Paperclip size={14} />
                 </button>
-                <span className="composer-cta-tagline">
-                  audience · duration · goals
-                </span>
+                <span>Press</span>
+                <kbd>↵</kbd>
+                <span>to design with Studio Copilot</span>
               </div>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={!brief.trim()}
-                className="btn-cta-primary"
-              >
-                Design <ArrowRight size={14} strokeWidth={2.5} />
-              </button>
+              {/* polish-2a bug 1: single primary CTA. The dual-button
+                  layout (Design + More structured) read as competing
+                  choices; LDs were defaulting to Design even when the
+                  form path would have served them better. Now: one
+                  primary "Design course →" button + a subtle text link
+                  below the composer pointing to the structured form. */}
+              <div className="composer-cta-row">
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={!brief.trim()}
+                  className="btn-cta-primary"
+                >
+                  Design course <ArrowRight size={14} strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        {/* polish-2a bug 1: subtle text link to the structured form,
+            sized small enough that it doesn't compete with the primary
+            CTA but readable enough that an LD scanning the hero notices
+            the alternative path. */}
+        <div className="composer-secondary-link">
+          Or <Link to="/courses/new">fill in a structured brief →</Link>
+        </div>
+      </>
     );
   },
 );

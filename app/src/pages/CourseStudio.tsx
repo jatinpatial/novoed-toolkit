@@ -205,18 +205,48 @@ function CourseStudioInner() {
 function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [params, setParams] = useSearchParams();
-  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput } = useAgent();
+  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus } = useAgent();
 
-  // Brief handoff from the Dashboard hero composer (Phase 2 #1c).
-  // If we land on /courses?brief=…, open the chat, prefill the
-  // composer, and clear the param so back-nav doesn't re-prefill.
+  // Brief handoff from the Dashboard hero composer (Phase 2 #1c) +
+  // /courses/new structured intake form (C0).
+  //
+  // polish-2a bug 2: if `&autosend=1` is set, fire sendMessage directly
+  // once the agent socket is open — Course Architect runs without the
+  // LD clicking Send a second time. Pre-polish-2 the brief always
+  // prefilled the textarea and waited; for both the dashboard composer
+  // and the form, that second click was friction without value.
+  //
+  // Effect re-runs when status changes (connecting -> open) so the
+  // brief gets sent on the FIRST opportunity. Params are only cleared
+  // AFTER successful handling so a slow socket connect doesn't drop
+  // the brief mid-mount.
   useEffect(() => {
     const brief = params.get("brief");
+    const autosend = params.get("autosend") === "1";
     if (!brief) return;
+
     setChatOpen(true);
-    prefillInput(brief);
-    setParams((prev) => { const n = new URLSearchParams(prev); n.delete("brief"); return n; }, { replace: true });
-  }, [params, setParams, setChatOpen, prefillInput]);
+
+    if (autosend) {
+      // Wait for the agent socket to be open before sending. Once
+      // status flips to "open" the effect re-runs and we land here.
+      if (agentStatus !== "open") return;
+      sendMessage(brief);
+    } else {
+      // Legacy path — prefill, let the LD review and press Enter.
+      prefillInput(brief);
+    }
+
+    setParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.delete("brief");
+        n.delete("autosend");
+        return n;
+      },
+      { replace: true },
+    );
+  }, [params, agentStatus, setParams, setChatOpen, prefillInput, sendMessage]);
 
   useEffect(() => {
     const refresh = () => setProjects(listProjects().filter((p) => p.kind === "course"));

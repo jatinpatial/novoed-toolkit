@@ -108,11 +108,14 @@ export default function CreateCoursePage() {
     // until the LD opens an existing project.
     setActiveBrand(brand);
 
-    // Same destination as the dashboard quick-composer (B2b). CourseStudio
-    // reads ?brief= in a useEffect (line ~206), prefills the chat input,
-    // and clears the param. The LD reviews the brief and presses Enter
-    // to send to Course Architect.
-    navigate(`/courses?brief=${encodeURIComponent(brief)}`);
+    // polish-2a bug 2: auto-send. The form has already collected enough
+    // structured context from the LD (audience + duration + goals + notes
+    // + brand) that asking them to click Send a second time after landing
+    // in chat is friction without value. Pass autosend=1 — CourseStudio's
+    // mount effect (next polish-2a edit) detects this and fires
+    // sendMessage directly once the agent socket is open, instead of
+    // prefilling the chat textarea.
+    navigate(`/courses?brief=${encodeURIComponent(brief)}&autosend=1`);
   }
 
   return (
