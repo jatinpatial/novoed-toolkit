@@ -77,15 +77,36 @@ export function AgentChat() {
     );
   }
 
+  // Status pill text — "Connected" when idle, friendly tool label
+  // when working. The orb status dot pulses while working (B3-tune-b).
+  const statusLabel =
+    status !== "open"
+      ? "Connecting…"
+      : isThinking
+        ? toolLabel(currentTool)
+        : "Connected";
+  const isWorking = status === "open" && isThinking;
+
   return (
     <div style={panel}>
-      <div style={header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14 }}>✨</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a2e" }}>Course Copilot</span>
-          <StatusDot status={status} />
+      {/* B3-tune-b: Studio Copilot identity header. 36px squircle orb
+          (var(--orb-gradient) + glow + breathing), bold name, status
+          pill with idle/working dot. Replaces the old "Course Copilot
+          ✨" inline text. */}
+      <div className="copilot-mock-header">
+        <div className="copilot-mock-orb" aria-hidden="true" />
+        <div className="copilot-mock-text">
+          <div className="copilot-mock-name">Studio Copilot</div>
+          <div className={`copilot-mock-status${isWorking ? " copilot-mock-status-working" : ""}`}>
+            {statusLabel}
+          </div>
         </div>
-        <button onClick={() => setOpen(false)} style={closeBtn} title="Close">×</button>
+        <button
+          onClick={() => setOpen(false)}
+          style={closeBtn}
+          title="Close"
+          aria-label="Close Studio Copilot"
+        >×</button>
       </div>
 
       <div ref={scrollRef} style={feed}>
@@ -127,19 +148,58 @@ export function AgentChat() {
   );
 }
 
+/**
+ * Bubble — chat message renderer (B3-tune-b refresh).
+ *
+ * Agent + user bubbles now use CSS classes (.msg-agent / .msg-user)
+ * matching the mockup: surface-tinted bg + green-100 border + chat-
+ * tail border-radius for agent; ink-900 + right-tail for user. Both
+ * fade-up via msg-in keyframe.
+ *
+ * Tool + error bubbles keep inline styling (rare paths — tool bubbles
+ * are no longer appended in normal flow per the AgentContext comment;
+ * error bubbles render only on socket / agent errors).
+ */
 function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boolean }) {
   const isUser = role === "user";
   const isTool = role === "tool";
   const isError = role === "error";
   const isAssistant = role === "assistant";
-  const bg = isUser ? "#1a1a2e" : isTool ? "#F5F5F5" : isError ? "#fef2f2" : "#E6F7EF";
-  const color = isUser ? "#fff" : isError ? "#b91c1c" : isTool ? "#666" : "#1a1a2e";
-  const border = isTool ? "1px dashed #d5d5d5" : "none";
+
+  // Wrapper layout: flex with alignment to either side.
   const align = isUser ? "flex-end" : "flex-start";
+  const wrapperStyle: CSSProperties = {
+    display: "flex",
+    justifyContent: align,
+    margin: "6px 0",
+    opacity: pulse ? 0.6 : 1,
+  };
+
+  if (isAssistant) {
+    return (
+      <div style={wrapperStyle}>
+        <div className="msg-agent">
+          <MarkdownText text={text} />
+        </div>
+      </div>
+    );
+  }
+  if (isUser) {
+    return (
+      <div style={wrapperStyle}>
+        <div className="msg-user">{text}</div>
+      </div>
+    );
+  }
+
+  // Tool + error: inline styles (rare paths, distinct visual language).
+  const bg = isTool ? "#F5F5F5" : "#fef2f2";
+  const color = isError ? "#b91c1c" : "#666";
+  const border = isTool ? "1px dashed #d5d5d5" : "none";
   const prefix = isTool ? "→ " : "";
 
   return (
-    <div style={{ display: "flex", justifyContent: align, margin: "6px 0" }}>
+    <div style={wrapperStyle}>
       <div
         style={{
           maxWidth: "86%",
@@ -150,17 +210,12 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
           border,
           fontSize: isTool ? 10 : 12,
           lineHeight: 1.55,
-          // Markdown renderer handles its own line breaks for assistant
-          // bubbles. Pre-wrap stays for user/tool/error so plain-text
-          // newlines render as authored.
-          whiteSpace: isAssistant ? "normal" : "pre-wrap",
+          whiteSpace: "pre-wrap",
           fontFamily: isTool ? "ui-monospace,SFMono-Regular,Menlo,monospace" : undefined,
-          opacity: pulse ? 0.6 : 1,
           wordBreak: "break-word",
         }}
       >
-        {prefix}
-        {isAssistant ? <MarkdownText text={text} /> : text}
+        {prefix}{text}
       </div>
     </div>
   );
@@ -256,18 +311,11 @@ function ProgressIndicator({ label }: { label: string }) {
   );
 }
 
-function StatusDot({ status }: { status: string }) {
-  const color =
-    status === "open" ? "#22c55e" :
-    status === "connecting" ? "#f59e0b" :
-    "#ef4444";
-  return (
-    <span
-      title={status}
-      style={{ width: 7, height: 7, borderRadius: "50%", background: color, display: "inline-block" }}
-    />
-  );
-}
+/* StatusDot removed in B3-tune-b — its functionality (a connection
+   indicator) is now part of the .copilot-mock-status pill (idle dot
+   green-500 with pulse-dot animation when working). The connecting /
+   error states are surfaced through the status text + textarea
+   disabled state rather than a separate dot. */
 
 const panel: CSSProperties = {
   position: "fixed",
@@ -285,14 +333,9 @@ const panel: CSSProperties = {
   overflow: "hidden",
 };
 
-const header: CSSProperties = {
-  padding: "10px 12px",
-  borderBottom: "1px solid #E8E8E8",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  background: "#fafafa",
-};
+/* `header` inline style removed in B3-tune-b — replaced by the
+   .copilot-mock-header CSS class which carries the new identity
+   chrome (orb + name + status pill + border treatment). */
 
 const closeBtn: CSSProperties = {
   background: "none",
