@@ -37,7 +37,9 @@ def build_ui_mcp_server(bridge: ToolBridge):
 
     @tool("set_brand", "Set the active brand theme.", {
         "type": "object",
-        "properties": {"brand": {"type": "string", "enum": ["bcg", "bcgu", "custom"]}},
+        # polish-5a: enum was stale ["bcg", "bcgu", "custom"]; the actual
+        # brand keys are bcg / bcgu / client per app/src/brand/tokens.ts.
+        "properties": {"brand": {"type": "string", "enum": ["bcg", "bcgu", "client"]}},
         "required": ["brand"],
     })
     async def set_brand(args):
@@ -103,6 +105,43 @@ def build_ui_mcp_server(bridge: ToolBridge):
                         "required": ["week_number", "title", "lessons"],
                     },
                 },
+                # polish-5a: shape field exposed in the tool schema per
+                # polish-3d. Course Architect's prompt parses "Course
+                # shape:" sections from the brief and forwards values
+                # via this field; buildCourseFromProposal copies them
+                # to course.shape so MODE 2 (Lesson Writer) reads the
+                # constraints from list_structure on every turn.
+                # All fields optional — emit only when the LD specified
+                # at least one dimension explicitly in the brief.
+                "shape": {
+                    "type": "object",
+                    "description": "Course shape constraints from the LD's structured brief. Only emit when the brief contains a 'Course shape:' section; otherwise omit so the agent picks defaults.",
+                    "properties": {
+                        "caseStudies": {
+                            "description": "Number of case-study slots to plant, OR 'auto' / 'none'.",
+                            "oneOf": [
+                                {"type": "string", "enum": ["auto", "none"]},
+                                {"type": "integer", "minimum": 1, "maximum": 3},
+                            ],
+                        },
+                        "videoScripts": {
+                            "type": "string",
+                            "enum": ["auto", "none", "key", "every"],
+                            "description": "Video block insertion policy for Lesson Writer. 'every' = every lesson MUST include a video block; 'key' = only where topic warrants; 'none' = skip entirely; 'auto' = default behavior.",
+                        },
+                        "knowledgeChecks": {
+                            "type": "string",
+                            "enum": ["auto", "lesson", "module", "both"],
+                            "description": "Quiz Builder scope — affects MODE 4, not MODE 1 directly.",
+                        },
+                        "interactivity": {
+                            "type": "string",
+                            "enum": ["light", "mixed", "heavy"],
+                            "description": "Interactive block density per lesson. 'heavy' = 2+ per lesson; 'light' = minimize.",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
             },
             "required": ["title", "duration_weeks", "modules"],
         },
@@ -115,9 +154,13 @@ def build_ui_mcp_server(bridge: ToolBridge):
     @tool(
         "write_lesson",
         (
-            "Write or regenerate the body of a single lesson. Replaces any prior writer-generated "
-            "blocks in the lesson with the new ones; manually-authored blocks are preserved. Provide "
-            "3-5 text blocks covering Hook → Body → Examples → Summary, in order."
+            "Write or regenerate the body of a single lesson with VARIED block types. "
+            "Replaces any prior writer-generated blocks; manually-authored blocks are preserved. "
+            "The canonical lesson template (see system prompt MODE 2) is 11-13 blocks: "
+            "sectionHeader → text → editorial moment (banner / callout / quote) → text → "
+            "video → text → clickInstruction → accordion → sectionHeader → text. Adapt to "
+            "topic + course.shape constraints (videoScripts: every / key / none, "
+            "interactivity: heavy / mixed / light)."
         ),
         {
             "type": "object",
@@ -126,17 +169,87 @@ def build_ui_mcp_server(bridge: ToolBridge):
                 "blocks": {
                     "type": "array",
                     "minItems": 3,
-                    "maxItems": 5,
+                    "maxItems": 30,
                     "items": {
                         "type": "object",
                         "properties": {
-                            "type": {"type": "string", "enum": ["text"]},
+                            # polish-5a: schema widened to allow all 16 block types
+                            # the React app's BlockTypes catalog renders. Pre-polish-5a
+                            # this enum was literally ["text"] — agent introspected the
+                            # tool, saw only text was valid, and emitted 3-5 text blocks
+                            # with **Hook** / **Body** labels (which the description
+                            # actively encouraged). That overruled AI-1a's schema
+                            # widening, AI-1c's canonical template, AI-1b's new block
+                            # types (quote / clickInstruction / sectionHeader), polish-
+                            # 3a's heading ban, AND polish-3d's course-shape video /
+                            # interactivity directives. THIS WAS THE BUG.
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "text",
+                                    "sectionHeader",
+                                    "banner",
+                                    "callout",
+                                    "quote",
+                                    "clickInstruction",
+                                    "cards",
+                                    "accordion",
+                                    "flipcard",
+                                    "timeline",
+                                    "stats",
+                                    "video",
+                                    "image",
+                                    "divider",
+                                    "quiz",
+                                    "poll",
+                                ],
+                            },
                             "content": {
                                 "type": "string",
-                                "description": "Markdown body. Open with a bold section label (**Hook**, **Body**, **Examples**, **Summary**).",
+                                "description": (
+                                    "Plain-text body — used by text-only block types "
+                                    "(text, clickInstruction). Markdown bold (**phrases**) "
+                                    "renders as bold; markdown headings (# / ## / ###) are "
+                                    "BANNED inside text content — emit a sectionHeader block "
+                                    "instead. Numbered lists (`1. **Verb** clause.`) render "
+                                    "with green-circle markers on the canvas."
+                                ),
+                            },
+                            "data": {
+                                "type": "object",
+                                "additionalProperties": True,
+                                "description": (
+                                    "Structured block data — REQUIRED for non-text block "
+                                    "types. Shape varies per type:\n"
+                                    "  sectionHeader  { title, iconName }   icon from the "
+                                    "12 curated names (target / brain / pencil / quote / "
+                                    "check / clock / lightbulb / bookOpen / sparkles / "
+                                    "alertCircle / trendingUp / users)\n"
+                                    "  banner         { title, body, imageUrl? }   imageUrl "
+                                    "turns banner into a statement block\n"
+                                    "  callout        { type, body }   type ∈ "
+                                    "{info, tip, note, warning, success}\n"
+                                    "  quote          { body, attribution, "
+                                    "attributionRole, attributionPhotoUrl? }\n"
+                                    "  cards          { items: [{ title, desc }] }   "
+                                    "2-4 items\n"
+                                    "  accordion      { items: [{ title, desc }] }   "
+                                    "3-5 items, title is the takeaway-thesis (complete "
+                                    "sentence), not a label\n"
+                                    "  flipcard       { items: [{ title, desc }] }   "
+                                    "3-6 items, title is term/question, desc is back\n"
+                                    "  timeline       { items: [{ title, desc }] }   "
+                                    "3-6 chronological steps\n"
+                                    "  stats          { items: [{ title, desc }] }   "
+                                    "ONLY when you have specific numbers from materials\n"
+                                    "  video          {}   empty — Synthesia Scriptwriter "
+                                    "(MODE 3) writes the script later\n"
+                                    "  divider        { title? }   optional label\n"
+                                    "Either content or data must be present per block."
+                                ),
                             },
                         },
-                        "required": ["type", "content"],
+                        "required": ["type"],
                     },
                 },
             },
