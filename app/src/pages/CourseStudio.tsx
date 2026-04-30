@@ -824,7 +824,11 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
   }, [course]);
 
   return (
-    <header className="h-14 bg-white border-b border-ink-200 flex items-center px-4 gap-3 flex-shrink-0">
+    /* B3a: spacing + typography aligned with the global TopBar so
+       the two bars read as one piece across pages. px-5 gap-4 +
+       tracking-[-0.01em] on the title pull the chrome onto the
+       same Sana-modern rhythm. */
+    <header className="h-14 bg-white border-b border-ink-200 flex items-center px-5 gap-4 flex-shrink-0">
       <Link to="/" className="btn-ghost btn-sm -ml-2" title="Dashboard"><Home size={14} /></Link>
       <div className="h-5 w-px bg-ink-200" />
       <Link to="/courses" onClick={onClose} className="btn-ghost btn-sm">
@@ -836,7 +840,7 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
           value={course.title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Untitled course"
-          className="max-w-md text-base font-bold text-ink-900 bg-transparent border-none outline-none text-center px-2 h-8 rounded hover:bg-ink-50 focus:bg-white focus:shadow-focus"
+          className="max-w-md text-base font-bold text-ink-900 bg-transparent border-none outline-none text-center px-3 h-8 rounded tracking-[-0.01em] hover:bg-ink-50 focus:bg-white focus:shadow-focus transition-all duration-base ease-sana"
         />
         {lesson && (
           <>
@@ -847,7 +851,7 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        <span className={`text-[11px] font-medium flex items-center gap-1 ${saved ? "text-ink-400" : "text-brand-700"}`}>
+        <span className={`text-[11px] font-medium flex items-center gap-1.5 ${saved ? "text-ink-500" : "text-brand-700"}`}>
           {saved ? <><Check size={12} /> Saved</> : <><Save size={12} /> Saving…</>}
         </span>
 
