@@ -773,6 +773,59 @@
     transition: border-color var(--duration-base) var(--ease-sana);
   }
 
+  /* ── Text block render (AI-1-polish-B) ───────────────────────────────
+     Shared styling for the markdown-rendered text-block output —
+     used by both the lesson canvas TextBlockEditor (when blurred)
+     and previewBlock.ts text branch.
+
+     Numbered lines like "1. **Frame the change**…" land as a green-
+     circle marker + content row, matching the BCG U / Rise visual
+     treatment from the screenshots. Plain lines render as normal
+     block elements; empty lines render as small spacers preserving
+     paragraph-break structure from the textarea source. */
+  .text-block-render {
+    /* Container — line-height inherited; specific child rules below. */
+  }
+  .text-block-render .text-line {
+    line-height: 1.55;
+    margin-bottom: 4px;
+  }
+  .text-block-render .text-line:empty {
+    display: none;  /* trimmed lines get caught by .text-line-spacer */
+  }
+  .text-block-render .text-line-spacer {
+    /* Preserves paragraph break structure from textarea \n\n. */
+    height: 0.6em;
+  }
+  .text-block-render .text-numbered-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .text-block-render .text-numbered-marker {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--green-500);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+  .text-block-render .text-numbered-content {
+    flex: 1;
+    line-height: 1.55;
+  }
+  .text-block-render strong {
+    font-weight: 700;
+    color: theme("colors.ink.900");
+  }
+
   /* ── Lesson hero band (AI-1d) ────────────────────────────────────────
      Green-tinted band wrapping the lesson chrome (eyebrow + title +
      meta). Matches the BCG U / Rise per-lesson hero treatment —

@@ -26,6 +26,52 @@ export function renderInlineMd(text: string): string {
   return esc(text).replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
 }
 
+/**
+ * renderTextBlockBody — full text-block render with line structure
+ * preservation, inline markdown bolding, AND numbered-line markers
+ * (AI-1-polish-B bug 6).
+ *
+ * Splits on newline (preserving line structure for the textarea-style
+ * editor look), then per-line:
+ *   - Lines matching `^\d+\.\s+(.*)$` get a green-circle marker
+ *     prefix (the BCG U / Rise numbered-list visual treatment).
+ *     Renders as `<div class="text-numbered-line">` with a marker
+ *     span + content span.
+ *   - Empty lines render as a small `.text-line-spacer` for visual
+ *     paragraph breaks (preserves the textarea white-space: pre-wrap
+ *     feel without relying on browser default).
+ *   - Other lines render as `<div class="text-line">{inline-md}</div>`
+ *     so each line is its own block (no inline mixing of <div> with
+ *     loose text, which causes layout wobble).
+ *
+ * Used by previewBlock.ts text branch + the lesson canvas
+ * TextBlockEditor when the block is unfocused (rendered preview
+ * state). Edit-mode textarea stays plain (Q2 confirmed: simple
+ * textarea-as-asterisks).
+ */
+export function renderTextBlockBody(text: string): string {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .map((line) => {
+      const numbered = /^(\d+)\.\s+(.*)$/.exec(line);
+      if (numbered) {
+        return (
+          '<div class="text-numbered-line"><span class="text-numbered-marker">' +
+          esc(numbered[1]) +
+          '</span><span class="text-numbered-content">' +
+          renderInlineMd(numbered[2]) +
+          "</span></div>"
+        );
+      }
+      if (line.trim() === "") {
+        return '<div class="text-line-spacer"></div>';
+      }
+      return '<div class="text-line">' + renderInlineMd(line) + "</div>";
+    })
+    .join("");
+}
+
 export function previewBlock(blk: Block, brand: BrandKey): string {
   const b = B[brand] || B.bcgu;
   const d = blk.data || {};
@@ -33,10 +79,12 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
 
   switch (blk.type) {
     case "text":
-      // AI-1a: text content now respects **markdown bold**. Body
-      // paragraphs from Lesson Writer v2 carry strategic inline
-      // bolding (3-5 phrases per paragraph) for scanability.
-      return '<div style="font-size:13px;color:' + b.tx + ';line-height:1.8;white-space:pre-wrap;">' + renderInlineMd(d.content || "") + "</div>";
+      // AI-1a + AI-1-polish-B: text content respects **markdown bold**
+      // AND renders numbered-line markers (green circle + content)
+      // when the agent emits "1. ... \n2. ..." patterns. white-space
+      // pre-wrap is dropped now since renderTextBlockBody emits its
+      // own block-per-line structure.
+      return '<div style="font-size:13px;color:' + b.tx + ';line-height:1.55;">' + renderTextBlockBody(d.content || "") + "</div>";
 
     case "video": {
       if (d.url) {

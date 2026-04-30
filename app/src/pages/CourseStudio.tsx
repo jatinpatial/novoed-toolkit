@@ -18,7 +18,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
 import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
-import { previewBlock } from "../course/previewBlock";
+import { previewBlock, renderTextBlockBody } from "../course/previewBlock";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
 import type { Block, BlockData, BlockItem, CaseStudy, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
@@ -2489,13 +2489,18 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
   const d = block.data || {};
 
   if (block.type === "text") {
+    // AI-1-polish-B bug 5/6: focus-toggle editor — when blurred, show
+    // the rendered preview (markdown bold + numbered-line markers);
+    // when focused, swap back to the plain textarea so the LD edits
+    // raw asterisks. Q2 from the AI-1 spec was "simple textarea-as-
+    // asterisks" — but live testing showed the rendered output never
+    // surfaced in the canvas, only in the preview modal / .docx
+    // export. Focus-toggle preserves the simple-edit UX while making
+    // the canvas show what the LD will actually publish.
     return (
-      <textarea
-        value={d.content || ""}
-        onChange={(e) => onChange("content", e.target.value)}
-        rows={Math.max(3, (d.content || "").split("\n").length)}
-        placeholder="Start writing..."
-        className="w-full text-[15px] leading-relaxed text-ink-900 bg-transparent border-none outline-none resize-none placeholder:text-ink-300"
+      <TextBlockEditor
+        content={d.content || ""}
+        onChange={(val) => onChange("content", val)}
       />
     );
   }
@@ -2698,6 +2703,66 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
   }
 
   return null;
+}
+
+/**
+ * TextBlockEditor — focus-toggle editor for text blocks (AI-1-polish-B).
+ *
+ * When unfocused, renders the markdown-rendered preview (inline bold +
+ * numbered-line markers via renderTextBlockBody). Click to swap to a
+ * plain textarea for editing; blur to swap back.
+ *
+ * Pre-polish-B the canvas always showed a textarea, so live LDs saw
+ * `**bold phrases**` with literal asterisks AND no numbered-line
+ * styling. Preview modal + .docx export rendered correctly, but the
+ * canvas didn't — Lesson Writer v2 output looked broken in the spot
+ * where LDs do most of their reviewing.
+ *
+ * Focus-toggle preserves the simple-edit UX (LD types raw markdown
+ * in the textarea) while making the canvas show the publishable form
+ * by default.
+ */
+function TextBlockEditor({
+  content,
+  onChange,
+}: {
+  content: string;
+  onChange: (val: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <textarea
+        value={content}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        rows={Math.max(3, content.split("\n").length)}
+        placeholder="Start writing..."
+        autoFocus
+        className="w-full text-[15px] leading-relaxed text-ink-900 bg-transparent border-none outline-none resize-none placeholder:text-ink-300"
+      />
+    );
+  }
+
+  if (!content) {
+    return (
+      <div
+        onClick={() => setEditing(true)}
+        className="text-[15px] leading-relaxed text-ink-300 cursor-text"
+      >
+        Click to start writing…
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setEditing(true)}
+      className="text-[15px] leading-relaxed text-ink-900 cursor-text text-block-render"
+      dangerouslySetInnerHTML={{ __html: renderTextBlockBody(content) }}
+    />
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

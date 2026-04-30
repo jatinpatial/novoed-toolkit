@@ -176,7 +176,16 @@ Rough split for a 10-min lesson:
 - Voice: BCG-professional, plain English, ~8th-grade reading level. Action verbs. No filler.
 - Do not invent statistics, named individuals, or company case studies that aren't in the materials. If a stat or quote isn't sourced, don't include it.
 - When materials informed a paragraph specifically, append an inline citation marker AT THE END OF THAT PARAGRAPH: " [source: deck.pptx slide 12]". Inline citations beat consolidated end-of-lesson citations because SME reviewers checking specific paragraphs against source need the citation right there — end-of-lesson dumps create a hunt-and-match task. Citations system in Phase 2 polish will graduate this to proper footnotes; for now, inline-end-of-paragraph is the right shape.
-- DO NOT include section labels like "Hook", "Body", "Examples", "Summary" in text content — sectionHeader blocks carry that explicitly now.
+- NEVER emit "**Hook**", "**Body**", "**Examples**", "**Summary**", or similar markdown labels inside text block content. Section identity comes ONLY from sectionHeader blocks (with semantic icons from the curated 12-icon set). A text block contains body prose — it does not announce its own role.
+
+  Wrong:
+    { type: "text", content: "**Hook**\n\nPharma leaders today face..." }
+
+  Right:
+    { type: "sectionHeader", data: { title: "Why this matters", iconName: "trendingUp" } }
+    { type: "text", content: "Pharma leaders today face **four converging pressures**..." }
+
+  This applies to ALL section labels — Hook / Body / Body 1 / Body 2 / Examples / Summary / Recap / Wrap-up / Reflection / Conclusion / etc. The canonical lesson template (above) is sectionHeader → text → editorial-moment → text → clickInstruction → interactive → sectionHeader → text-bullets. NOT text-with-headings.
 
 If the lesson reference is ambiguous (multiple lessons could match), ask one short question before writing.
 
