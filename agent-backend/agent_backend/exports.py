@@ -6,16 +6,22 @@ Three .docx endpoints today:
   - /export/course-docx       — full course bundle (Phase 1 #6, in progress)
 
 All three share:
-  - BCG green section accents (_BCG_GREEN)
+  - Brand-driven section accents — the active brand drives every
+    primary/dark/ink/inkLt color via _palette() (AI-1f). The brand
+    toggle in the UI was previously surface-only; AI-1f wires it
+    through to exports so a Client-branded course exports in blue,
+    BCG in bright green, BCG U in deeper green — TOC, section
+    headers, KC bullets, case study attribution, all of it.
   - Trebuchet MS body font, with the Henderson Sans upgrade path
-    documented in _DOCX_FONT
-  - Consolas only on monospace columns (script SPOKEN cells)
+    documented in _DOCX_FONT.
+  - Consolas only on monospace columns (script SPOKEN cells).
 
 This module exposes a FastAPI APIRouter; main.py wires it into the
 app via include_router.
 """
 from __future__ import annotations
 
+import contextvars
 import io
 import re
 
@@ -30,12 +36,70 @@ from docx.shared import Cm, Pt, RGBColor
 router = APIRouter(prefix="/export", tags=["export"])
 
 
-# ─── Shared constants ─────────────────────────────────────────────────────────
+# ─── Brand-driven color palettes (AI-1f) ──────────────────────────────────────
 
-# BCG green for section headers / accents in the exported .docx.
-_BCG_GREEN = RGBColor(0x1B, 0x7A, 0x4F)
-_BCG_INK = RGBColor(0x33, 0x33, 0x33)
-_BCG_INK_LT = RGBColor(0x66, 0x66, 0x66)
+# Per-brand palette dictionaries. Keys match BrandKey in
+# app/src/brand/tokens.ts so server-side rendering matches what the
+# in-app preview shows. Each export endpoint resolves the active
+# brand into the _current_brand ContextVar at the top of the request,
+# and adapters read colors via _palette().
+
+_BRAND_PALETTES: dict[str, dict[str, RGBColor]] = {
+    "bcg": {
+        "primary":    RGBColor(0x29, 0xBA, 0x74),  # bright BCG green (B[bcg].pri)
+        "primary_dk": RGBColor(0x1B, 0x7A, 0x4F),  # B[bcg].priDk
+        "ink":        RGBColor(0x33, 0x33, 0x33),
+        "ink_lt":     RGBColor(0x66, 0x66, 0x66),
+    },
+    "bcgu": {
+        "primary":    RGBColor(0x19, 0x7A, 0x56),  # darker BCG U green (B[bcgu].pri)
+        "primary_dk": RGBColor(0x0D, 0x3B, 0x2C),  # B[bcgu].priDk
+        "ink":        RGBColor(0x33, 0x33, 0x33),
+        "ink_lt":     RGBColor(0x66, 0x66, 0x66),
+    },
+    "client": {
+        "primary":    RGBColor(0x25, 0x63, 0xEB),  # generic blue (B[client].pri)
+        "primary_dk": RGBColor(0x1D, 0x4E, 0xD8),  # B[client].priDk
+        "ink":        RGBColor(0x1E, 0x29, 0x3B),
+        "ink_lt":     RGBColor(0x64, 0x74, 0x8B),
+    },
+}
+
+# ContextVar threads the active brand through the render path. Each
+# export endpoint calls `_current_brand.set(course.brand)` at the
+# top; downstream adapters read via _palette() without needing to
+# pass colors through every signature. Default = "bcgu" so tests +
+# tools that import this module without setting the var still work.
+_current_brand: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "_current_brand", default="bcgu",
+)
+
+
+def _palette() -> dict[str, RGBColor]:
+    """Return the currently active brand's color palette.
+
+    Falls back to bcgu if the active brand isn't recognized — handles
+    legacy course payloads where brand might be missing or set to a
+    deprecated value.
+    """
+    brand = _current_brand.get()
+    return _BRAND_PALETTES.get(brand, _BRAND_PALETTES["bcgu"])
+
+
+# Legacy color names — kept as functions returning the active palette
+# so the 75 existing call sites in this module work unchanged. The
+# BCG_ prefix is misleading post-AI-1f (these resolve per-brand) but
+# renaming would churn every adapter; semantic comment here clarifies.
+def _BCG_GREEN() -> RGBColor:  # noqa: N802 — legacy name, brand-resolved
+    return _palette()["primary"]
+
+
+def _BCG_INK() -> RGBColor:  # noqa: N802 — legacy name, brand-resolved
+    return _palette()["ink"]
+
+
+def _BCG_INK_LT() -> RGBColor:  # noqa: N802 — legacy name, brand-resolved
+    return _palette()["ink_lt"]
 
 # Default body font for every .docx export. Trebuchet MS is the
 # Windows-built-in fallback BCG sanctions when the licensed Henderson
@@ -171,7 +235,7 @@ async def export_script_docx(req: ScriptExportRequest):
     run = title.add_run(req.courseName or "Synthesia Script")
     run.bold = True
     run.font.size = Pt(18)
-    run.font.color.rgb = _BCG_GREEN
+    run.font.color.rgb = _BCG_GREEN()
 
     # Subtitle — lesson / type / duration
     sub_bits = []
@@ -185,7 +249,7 @@ async def export_script_docx(req: ScriptExportRequest):
         sub = doc.add_paragraph()
         run = sub.add_run(" · ".join(sub_bits))
         run.font.size = Pt(11)
-        run.font.color.rgb = _BCG_INK_LT
+        run.font.color.rgb = _BCG_INK_LT()
 
     doc.add_paragraph()  # spacer
 
@@ -195,7 +259,7 @@ async def export_script_docx(req: ScriptExportRequest):
         run = header.add_run("Scenes")
         run.bold = True
         run.font.size = Pt(11)
-        run.font.color.rgb = _BCG_GREEN
+        run.font.color.rgb = _BCG_GREEN()
 
         table = doc.add_table(rows=1, cols=3)
         table.style = "Light Grid Accent 1"
@@ -207,7 +271,7 @@ async def export_script_docx(req: ScriptExportRequest):
             r = p.add_run(label)
             r.bold = True
             r.font.size = Pt(10)
-            r.font.color.rgb = _BCG_GREEN
+            r.font.color.rgb = _BCG_GREEN()
 
         # Approximate column widths.
         widths_cm = (1.0, 9.0, 6.0)
@@ -222,25 +286,25 @@ async def export_script_docx(req: ScriptExportRequest):
             r = p.add_run(str(s["index"]))
             r.bold = True
             r.font.size = Pt(10)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
             # Spoken — monospace for readability
             p = row[1].paragraphs[0]
             r = p.add_run(s["spoken"])
             r.font.name = "Consolas"
             r.font.size = Pt(10)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
             # Visual
             p = row[2].paragraphs[0]
             r = p.add_run(s["visual"])
             r.font.size = Pt(10)
-            r.font.color.rgb = _BCG_INK_LT
+            r.font.color.rgb = _BCG_INK_LT()
     else:
         # Fallback — script didn't parse as scenes; embed raw.
         header = doc.add_paragraph()
         run = header.add_run("Script (raw — couldn't parse as scenes)")
         run.bold = True
         run.font.size = Pt(11)
-        run.font.color.rgb = _BCG_GREEN
+        run.font.color.rgb = _BCG_GREEN()
 
         body = doc.add_paragraph()
         run = body.add_run(req.script)
@@ -253,7 +317,7 @@ async def export_script_docx(req: ScriptExportRequest):
     run = foot.add_run(f"~{word_count} words · ~{seconds} sec at 150 wpm")
     run.italic = True
     run.font.size = Pt(9)
-    run.font.color.rgb = _BCG_INK_LT
+    run.font.color.rgb = _BCG_INK_LT()
 
     buf = io.BytesIO()
     doc.save(buf)
@@ -332,7 +396,7 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
     run = title.add_run(req.courseName or "Case Study")
     run.bold = True
     run.font.size = Pt(18)
-    run.font.color.rgb = _BCG_GREEN
+    run.font.color.rgb = _BCG_GREEN()
 
     sub_bits = []
     if req.moduleTitle:
@@ -341,7 +405,7 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
     sub = doc.add_paragraph()
     run = sub.add_run(" · ".join(sub_bits))
     run.font.size = Pt(11)
-    run.font.color.rgb = _BCG_INK_LT
+    run.font.color.rgb = _BCG_INK_LT()
 
     doc.add_paragraph()  # spacer
 
@@ -350,13 +414,13 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
         run = p.add_run(text)
         run.bold = True
         run.font.size = Pt(11)
-        run.font.color.rgb = _BCG_GREEN
+        run.font.color.rgb = _BCG_GREEN()
 
     def body_paragraph(text: str) -> None:
         p = doc.add_paragraph()
         run = p.add_run(text)
         run.font.size = Pt(11)
-        run.font.color.rgb = _BCG_INK
+        run.font.color.rgb = _BCG_INK()
 
     # --- Context ---
     if body_context.strip():
@@ -372,17 +436,17 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
             r = p.add_run(s.name)
             r.bold = True
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
             if s.role:
                 r2 = p.add_run(f" — {s.role}")
                 r2.font.size = Pt(11)
-                r2.font.color.rgb = _BCG_INK_LT
+                r2.font.color.rgb = _BCG_INK_LT()
             if s.voice:
                 quote = doc.add_paragraph()
                 rq = quote.add_run(f"“{s.voice}”")
                 rq.italic = True
                 rq.font.size = Pt(10)
-                rq.font.color.rgb = _BCG_INK
+                rq.font.color.rgb = _BCG_INK()
                 quote.paragraph_format.left_indent = Cm(0.6)
 
     # --- Decision points ---
@@ -393,10 +457,10 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
             r = p.add_run(f"{i}. ")
             r.bold = True
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_GREEN
+            r.font.color.rgb = _BCG_GREEN()
             r2 = p.add_run(dp)
             r2.font.size = Pt(11)
-            r2.font.color.rgb = _BCG_INK
+            r2.font.color.rgb = _BCG_INK()
 
     # --- Debrief prompts ---
     if cs.debriefPrompts:
@@ -406,10 +470,10 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
             r = p.add_run(f"{i}. ")
             r.bold = True
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_GREEN
+            r.font.color.rgb = _BCG_GREEN()
             r2 = p.add_run(dp)
             r2.font.size = Pt(11)
-            r2.font.color.rgb = _BCG_INK
+            r2.font.color.rgb = _BCG_INK()
 
     # --- Sources ---
     if sources_block:
@@ -419,7 +483,7 @@ async def export_case_study_docx(req: CaseStudyExportRequest):
             p = doc.add_paragraph()
             r = p.add_run(f"• {cleaned}")
             r.font.size = Pt(10)
-            r.font.color.rgb = _BCG_INK_LT
+            r.font.color.rgb = _BCG_INK_LT()
 
     # --- Stream out ---
     buf = io.BytesIO()
@@ -550,7 +614,7 @@ def _h1(doc: Document, text: str) -> None:
     r = p.add_run(text)
     r.bold = True
     r.font.size = Pt(20)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
 
 def _h2(doc: Document, text: str) -> None:
@@ -558,7 +622,7 @@ def _h2(doc: Document, text: str) -> None:
     r = p.add_run(text)
     r.bold = True
     r.font.size = Pt(15)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
 
 def _h3(doc: Document, text: str) -> None:
@@ -566,7 +630,7 @@ def _h3(doc: Document, text: str) -> None:
     r = p.add_run(text)
     r.bold = True
     r.font.size = Pt(12)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
 
 def _body(doc: Document, text: str, italic: bool = False, light: bool = False) -> None:
@@ -574,14 +638,14 @@ def _body(doc: Document, text: str, italic: bool = False, light: bool = False) -
     r = p.add_run(text)
     r.font.size = Pt(11)
     r.italic = italic
-    r.font.color.rgb = _BCG_INK_LT if light else _BCG_INK
+    r.font.color.rgb = _BCG_INK_LT() if light else _BCG_INK()
 
 
 def _bullet(doc: Document, text: str) -> None:
     p = doc.add_paragraph()
     r = p.add_run(f"• {text}")
     r.font.size = Pt(11)
-    r.font.color.rgb = _BCG_INK
+    r.font.color.rgb = _BCG_INK()
 
 
 def _numbered(doc: Document, idx: int, text: str) -> None:
@@ -589,10 +653,10 @@ def _numbered(doc: Document, idx: int, text: str) -> None:
     r1 = p.add_run(f"{idx}. ")
     r1.bold = True
     r1.font.size = Pt(11)
-    r1.font.color.rgb = _BCG_GREEN
+    r1.font.color.rgb = _BCG_GREEN()
     r2 = p.add_run(text)
     r2.font.size = Pt(11)
-    r2.font.color.rgb = _BCG_INK
+    r2.font.color.rgb = _BCG_INK()
 
 
 def _page_break(doc: Document) -> None:
@@ -637,40 +701,191 @@ def _body_with_bold(doc: Document, text: str) -> None:
         if m.start() > last_end:
             r = p.add_run(text[last_end:m.start()])
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
         r = p.add_run(m.group(1))
         r.bold = True
         r.font.size = Pt(11)
-        r.font.color.rgb = _BCG_INK
+        r.font.color.rgb = _BCG_INK()
         last_end = m.end()
     if last_end < len(text):
         r = p.add_run(text[last_end:])
         r.font.size = Pt(11)
-        r.font.color.rgb = _BCG_INK
+        r.font.color.rgb = _BCG_INK()
 
 
 def _render_banner_block(doc: Document, block: BlockModel) -> None:
+    """Render a banner block to .docx (AI-1b extended).
+
+    The banner's optional imageUrl (statement-mode background photo)
+    isn't embedded in the .docx — fetching remote URLs at export time
+    would balloon doc size + hit network reliability questions in
+    enterprise environments. The .docx version surfaces title + body
+    only; the photo lives in the web preview / SCORM export.
+    """
     title = (block.data.title or "").strip()
     body = (block.data.body or "").strip()
     if title:
         _h3(doc, title)
     if body:
-        _body(doc, body)
+        # AI-1f: banner body now respects **markdown bold** runs so the
+        # statement's emphasized phrases land bolded in print.
+        _body_with_bold(doc, body)
 
 
 def _render_callout_block(doc: Document, block: BlockModel) -> None:
+    """Render a callout block to .docx with markdown bold body (AI-1f).
+
+    Callout variants (info / tip / note / warning / success) prefix the
+    body with `[VARIANT]` in primary color, then the body text in ink
+    with **markdown bold** runs split via _body_with_bold.
+    """
     callout_kind = (block.data.type or "tip").upper()
     body = (block.data.body or "").strip()
     if not body:
         return
+    # Title row with [VARIANT] prefix in primary color.
     p = doc.add_paragraph()
     r1 = p.add_run(f"[{callout_kind}] ")
     r1.bold = True
     r1.font.size = Pt(11)
-    r1.font.color.rgb = _BCG_GREEN
-    r2 = p.add_run(body)
+    r1.font.color.rgb = _BCG_GREEN()
+    # Body — split on **bold** markers, append runs to the same paragraph.
+    last_end = 0
+    for m in _BOLD_RE.finditer(body):
+        if m.start() > last_end:
+            r = p.add_run(body[last_end:m.start()])
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK()
+        rb = p.add_run(m.group(1))
+        rb.bold = True
+        rb.font.size = Pt(11)
+        rb.font.color.rgb = _BCG_INK()
+        last_end = m.end()
+    if last_end < len(body):
+        r = p.add_run(body[last_end:])
+        r.font.size = Pt(11)
+        r.font.color.rgb = _BCG_INK()
+
+
+# ─── AI-1b new block adapters ─────────────────────────────────────────────────
+
+
+def _render_quote_block(doc: Document, block: BlockModel) -> None:
+    """Render a quote block — italic body + attribution row (AI-1f)."""
+    body = (block.data.body or "").strip()
+    attribution = (block.data.attribution or "").strip()
+    role = (block.data.attributionRole or "").strip()
+    if not body:
+        return
+    # Quote body — italic, ink-900, with bold runs preserved.
+    p = doc.add_paragraph()
+    qopen = p.add_run('"')
+    qopen.italic = True
+    qopen.font.size = Pt(11)
+    qopen.font.color.rgb = _BCG_INK()
+    last_end = 0
+    for m in _BOLD_RE.finditer(body):
+        if m.start() > last_end:
+            r = p.add_run(body[last_end:m.start()])
+            r.italic = True
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK()
+        rb = p.add_run(m.group(1))
+        rb.italic = True
+        rb.bold = True
+        rb.font.size = Pt(11)
+        rb.font.color.rgb = _BCG_INK()
+        last_end = m.end()
+    if last_end < len(body):
+        r = p.add_run(body[last_end:])
+        r.italic = True
+        r.font.size = Pt(11)
+        r.font.color.rgb = _BCG_INK()
+    qclose = p.add_run('"')
+    qclose.italic = True
+    qclose.font.size = Pt(11)
+    qclose.font.color.rgb = _BCG_INK()
+    # Attribution row — em-dash + name (bold, primary) + role (ink-lt).
+    if attribution or role:
+        a = doc.add_paragraph()
+        a.paragraph_format.left_indent = Cm(0.6)
+        em = a.add_run("— ")
+        em.font.size = Pt(10)
+        em.font.color.rgb = _BCG_INK_LT()
+        if attribution:
+            r = a.add_run(attribution)
+            r.bold = True
+            r.font.size = Pt(10)
+            r.font.color.rgb = _BCG_GREEN()
+        if role:
+            r = a.add_run(f", {role}" if attribution else role)
+            r.font.size = Pt(10)
+            r.font.color.rgb = _BCG_INK_LT()
+
+
+def _render_click_instruction_block(doc: Document, block: BlockModel) -> None:
+    """Render a clickInstruction block — short italic green hint (AI-1f).
+
+    In .docx the click affordance doesn't apply (paper / Word doesn't
+    have an interactive equivalent), but we still emit the hint as an
+    italic green callout so SME reviewers reading the doc see "this is
+    where the learner gets a click cue" — useful for review even
+    though it doesn't drive interaction.
+    """
+    content = (block.data.content or "").strip()
+    if not content:
+        return
+    p = doc.add_paragraph()
+    r1 = p.add_run("→ ")
+    r1.italic = True
+    r1.bold = True
+    r1.font.size = Pt(10)
+    r1.font.color.rgb = _BCG_GREEN()
+    r2 = p.add_run(content)
+    r2.italic = True
+    r2.font.size = Pt(10)
+    r2.font.color.rgb = _BCG_GREEN()
+
+
+def _render_section_header_block(doc: Document, block: BlockModel) -> None:
+    """Render a sectionHeader block — icon glyph + title divider (AI-1f).
+
+    .docx doesn't render lucide icons natively; we use a unicode glyph
+    fallback that matches the previewBlock.ts iconGlyphs map (so web
+    preview + .docx export agree on the visual). The title gets h3
+    styling with the brand-primary color, prefixed by the icon glyph.
+    """
+    title = (block.data.title or "").strip()
+    icon_name = (block.data.iconName or "bookOpen").strip()
+    if not title:
+        return
+    # Curated 12 icon glyphs — must match SECTION_ICON_NAMES + the
+    # iconGlyphs map in app/src/course/previewBlock.ts. Out-of-set
+    # names fall back to bookOpen.
+    icon_glyphs: dict[str, str] = {
+        "target":      "◎",
+        "brain":       "🧠",
+        "pencil":      "✎",
+        "quote":       "❝",
+        "check":       "✓",
+        "clock":       "◷",
+        "lightbulb":   "💡",
+        "bookOpen":    "📖",
+        "sparkles":    "✦",
+        "alertCircle": "!",
+        "trendingUp":  "↗",
+        "users":       "👥",
+    }
+    glyph = icon_glyphs.get(icon_name, icon_glyphs["bookOpen"])
+    p = doc.add_paragraph()
+    r1 = p.add_run(f"{glyph}  ")
+    r1.bold = True
+    r1.font.size = Pt(13)
+    r1.font.color.rgb = _BCG_GREEN()
+    r2 = p.add_run(title.upper())
+    r2.bold = True
     r2.font.size = Pt(11)
-    r2.font.color.rgb = _BCG_INK
+    r2.font.color.rgb = _BCG_GREEN()
 
 
 def _render_cards_block(doc: Document, block: BlockModel) -> None:
@@ -685,11 +900,11 @@ def _render_cards_block(doc: Document, block: BlockModel) -> None:
             r = p.add_run(f"• {title}")
             r.bold = True
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
         if desc:
             r2 = p.add_run(f"  — {desc}" if title else f"• {desc}")
             r2.font.size = Pt(11)
-            r2.font.color.rgb = _BCG_INK_LT
+            r2.font.color.rgb = _BCG_INK_LT()
 
 
 def _render_accordion_block(doc: Document, block: BlockModel) -> None:
@@ -714,19 +929,19 @@ def _render_flipcard_block(doc: Document, block: BlockModel) -> None:
         r1 = p.add_run("Front: ")
         r1.bold = True
         r1.font.size = Pt(11)
-        r1.font.color.rgb = _BCG_GREEN
+        r1.font.color.rgb = _BCG_GREEN()
         r2 = p.add_run(front)
         r2.font.size = Pt(11)
-        r2.font.color.rgb = _BCG_INK
+        r2.font.color.rgb = _BCG_INK()
         if back:
             p2 = doc.add_paragraph()
             r3 = p2.add_run("Back: ")
             r3.bold = True
             r3.font.size = Pt(11)
-            r3.font.color.rgb = _BCG_GREEN
+            r3.font.color.rgb = _BCG_GREEN()
             r4 = p2.add_run(back)
             r4.font.size = Pt(11)
-            r4.font.color.rgb = _BCG_INK
+            r4.font.color.rgb = _BCG_INK()
 
 
 def _render_timeline_block(doc: Document, block: BlockModel) -> None:
@@ -756,7 +971,7 @@ def _render_quiz_block(doc: Document, block: BlockModel) -> None:
         p = doc.add_paragraph()
         r = p.add_run(prefix + title)
         r.font.size = Pt(11)
-        r.font.color.rgb = _BCG_GREEN if is_correct else _BCG_INK
+        r.font.color.rgb = _BCG_GREEN() if is_correct else _BCG_INK()
         r.bold = is_correct
 
 
@@ -788,11 +1003,11 @@ def _render_stats_block(doc: Document, block: BlockModel) -> None:
             r = p.add_run(number)
             r.bold = True
             r.font.size = Pt(14)
-            r.font.color.rgb = _BCG_GREEN
+            r.font.color.rgb = _BCG_GREEN()
         if label:
             r2 = p.add_run(f"  {label}")
             r2.font.size = Pt(11)
-            r2.font.color.rgb = _BCG_INK_LT
+            r2.font.color.rgb = _BCG_INK_LT()
 
 
 def _render_image_block(doc: Document, block: BlockModel) -> None:
@@ -804,10 +1019,10 @@ def _render_image_block(doc: Document, block: BlockModel) -> None:
     r1 = p.add_run("[Image] ")
     r1.bold = True
     r1.font.size = Pt(11)
-    r1.font.color.rgb = _BCG_GREEN
+    r1.font.color.rgb = _BCG_GREEN()
     r2 = p.add_run(caption or alt or url or "(no caption / alt / url)")
     r2.font.size = Pt(11)
-    r2.font.color.rgb = _BCG_INK_LT
+    r2.font.color.rgb = _BCG_INK_LT()
     r2.italic = True
 
 
@@ -822,10 +1037,10 @@ def _render_video_block(doc: Document, block: BlockModel) -> None:
         r1 = p.add_run("[Video] ")
         r1.bold = True
         r1.font.size = Pt(11)
-        r1.font.color.rgb = _BCG_GREEN
+        r1.font.color.rgb = _BCG_GREEN()
         r2 = p.add_run(caption or url)
         r2.font.size = Pt(11)
-        r2.font.color.rgb = _BCG_INK_LT
+        r2.font.color.rgb = _BCG_INK_LT()
         r2.italic = True
 
     if not script:
@@ -850,7 +1065,7 @@ def _render_video_block(doc: Document, block: BlockModel) -> None:
         r = p.add_run(label)
         r.bold = True
         r.font.size = Pt(10)
-        r.font.color.rgb = _BCG_GREEN
+        r.font.color.rgb = _BCG_GREEN()
 
     widths_cm = (1.0, 9.0, 6.0)
     for col_idx, w in enumerate(widths_cm):
@@ -863,16 +1078,16 @@ def _render_video_block(doc: Document, block: BlockModel) -> None:
         r = p.add_run(str(s["index"]))
         r.bold = True
         r.font.size = Pt(10)
-        r.font.color.rgb = _BCG_INK
+        r.font.color.rgb = _BCG_INK()
         p = row[1].paragraphs[0]
         r = p.add_run(s["spoken"])
         r.font.name = "Consolas"
         r.font.size = Pt(10)
-        r.font.color.rgb = _BCG_INK
+        r.font.color.rgb = _BCG_INK()
         p = row[2].paragraphs[0]
         r = p.add_run(s["visual"])
         r.font.size = Pt(10)
-        r.font.color.rgb = _BCG_INK_LT
+        r.font.color.rgb = _BCG_INK_LT()
 
 
 _BLOCK_ADAPTERS: dict[str, callable] = {
@@ -888,6 +1103,10 @@ _BLOCK_ADAPTERS: dict[str, callable] = {
     "stats": _render_stats_block,
     "image": _render_image_block,
     "video": _render_video_block,
+    # AI-1b new block adapters (AI-1f wires them in).
+    "quote": _render_quote_block,
+    "clickInstruction": _render_click_instruction_block,
+    "sectionHeader": _render_section_header_block,
     # divider: intentionally absent — skipped as genuinely contentless.
 }
 
@@ -904,7 +1123,7 @@ def _render_block(doc: Document, block: BlockModel) -> None:
         r = p.add_run(f"[Block: {block.type} — content not yet rendered for print]")
         r.italic = True
         r.font.size = Pt(10)
-        r.font.color.rgb = _BCG_INK_LT
+        r.font.color.rgb = _BCG_INK_LT()
         return
     adapter(doc, block)
 
@@ -918,7 +1137,7 @@ def _render_cover(doc: Document, course: CourseModel, audience: str) -> None:
     r = p.add_run("BCG U · COURSE")
     r.bold = True
     r.font.size = Pt(10)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
     _h1(doc, course.title or "Untitled Course")
 
@@ -956,20 +1175,20 @@ def _render_toc(doc: Document, course: CourseModel) -> None:
         r1 = p.add_run(f"Module {mi}. ")
         r1.bold = True
         r1.font.size = Pt(11)
-        r1.font.color.rgb = _BCG_GREEN
+        r1.font.color.rgb = _BCG_GREEN()
         r2 = p.add_run(m.title or "Untitled module")
         r2.bold = True
         r2.font.size = Pt(11)
-        r2.font.color.rgb = _BCG_INK
+        r2.font.color.rgb = _BCG_INK()
         # Lesson rows
         for li, lesson in enumerate(m.lessons, start=1):
             p2 = doc.add_paragraph()
             r1 = p2.add_run(f"        {mi}.{li}  ")
             r1.font.size = Pt(11)
-            r1.font.color.rgb = _BCG_INK_LT
+            r1.font.color.rgb = _BCG_INK_LT()
             r2 = p2.add_run(lesson.title or "Untitled lesson")
             r2.font.size = Pt(11)
-            r2.font.color.rgb = _BCG_INK
+            r2.font.color.rgb = _BCG_INK()
 
 
 def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) -> None:
@@ -980,16 +1199,16 @@ def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) ->
         r1 = p.add_run(f"{i}. ")
         r1.bold = True
         r1.font.size = Pt(11)
-        r1.font.color.rgb = _BCG_GREEN
+        r1.font.color.rgb = _BCG_GREEN()
         r2 = p.add_run(q.stem)
         r2.font.size = Pt(11)
-        r2.font.color.rgb = _BCG_INK
+        r2.font.color.rgb = _BCG_INK()
         # Type tag
         type_label = "MCQ" if q.type == "mcq" else "Short answer"
         r3 = p.add_run(f"   ({type_label})")
         r3.italic = True
         r3.font.size = Pt(9)
-        r3.font.color.rgb = _BCG_INK_LT
+        r3.font.color.rgb = _BCG_INK_LT()
 
         if q.type == "mcq":
             for oi, option in enumerate(q.options or []):
@@ -998,7 +1217,7 @@ def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) ->
                 p2 = doc.add_paragraph()
                 r = p2.add_run(f"   {marker}{option}")
                 r.font.size = Pt(11)
-                r.font.color.rgb = _BCG_GREEN if is_correct else _BCG_INK
+                r.font.color.rgb = _BCG_GREEN() if is_correct else _BCG_INK()
                 r.bold = is_correct
             if q.rationale:
                 p3 = doc.add_paragraph()
@@ -1006,11 +1225,11 @@ def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) ->
                 r1.bold = True
                 r1.italic = True
                 r1.font.size = Pt(10)
-                r1.font.color.rgb = _BCG_INK_LT
+                r1.font.color.rgb = _BCG_INK_LT()
                 r2 = p3.add_run(q.rationale)
                 r2.italic = True
                 r2.font.size = Pt(10)
-                r2.font.color.rgb = _BCG_INK_LT
+                r2.font.color.rgb = _BCG_INK_LT()
         else:
             # Short answer — show expected hints (rubric).
             if q.expectedAnswerHints:
@@ -1019,7 +1238,7 @@ def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) ->
                 r.bold = True
                 r.italic = True
                 r.font.size = Pt(10)
-                r.font.color.rgb = _BCG_INK_LT
+                r.font.color.rgb = _BCG_INK_LT()
                 for hint in q.expectedAnswerHints:
                     _bullet(doc, hint)
 
@@ -1051,7 +1270,7 @@ def _render_module(doc: Document, module: CourseModuleModel, mi: int, course: Co
     r = p.add_run(f"{week_label.upper()} · MODULE")
     r.bold = True
     r.font.size = Pt(10)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
     _h1(doc, module.title or "Untitled module")
 
@@ -1089,7 +1308,7 @@ def _render_case_study(doc: Document, cs: CaseStudyModel, course_title: str) -> 
     r = p.add_run("CASE STUDY")
     r.bold = True
     r.font.size = Pt(10)
-    r.font.color.rgb = _BCG_GREEN
+    r.font.color.rgb = _BCG_GREEN()
 
     _h1(doc, cs.title or "Untitled case study")
 
@@ -1107,17 +1326,17 @@ def _render_case_study(doc: Document, cs: CaseStudyModel, course_title: str) -> 
             r = p.add_run(s.name)
             r.bold = True
             r.font.size = Pt(11)
-            r.font.color.rgb = _BCG_INK
+            r.font.color.rgb = _BCG_INK()
             if s.role:
                 r2 = p.add_run(f" — {s.role}")
                 r2.font.size = Pt(11)
-                r2.font.color.rgb = _BCG_INK_LT
+                r2.font.color.rgb = _BCG_INK_LT()
             if s.voice:
                 quote = doc.add_paragraph()
                 rq = quote.add_run(f"“{s.voice}”")
                 rq.italic = True
                 rq.font.size = Pt(10)
-                rq.font.color.rgb = _BCG_INK
+                rq.font.color.rgb = _BCG_INK()
                 quote.paragraph_format.left_indent = Cm(0.6)
 
     if cs.decisionPoints:
@@ -1156,15 +1375,15 @@ def _render_appendix(doc: Document, course: CourseModel) -> None:
         p = doc.add_paragraph()
         r1 = p.add_run("• ")
         r1.font.size = Pt(11)
-        r1.font.color.rgb = _BCG_GREEN
+        r1.font.color.rgb = _BCG_GREEN()
         r2 = p.add_run(m.filename or "(unnamed file)")
         r2.bold = True
         r2.font.size = Pt(11)
-        r2.font.color.rgb = _BCG_INK
+        r2.font.color.rgb = _BCG_INK()
         if m.charCount:
             r3 = p.add_run(f"   ({m.charCount:,} chars)")
             r3.font.size = Pt(10)
-            r3.font.color.rgb = _BCG_INK_LT
+            r3.font.color.rgb = _BCG_INK_LT()
 
 
 # ─── Endpoint ─────────────────────────────────────────────────────────────────
@@ -1175,6 +1394,14 @@ async def export_course_docx(req: CourseExportRequest):
     course = req.course
     if not course.modules:
         raise HTTPException(status_code=400, detail="course has no modules to export")
+
+    # AI-1f: thread the course's brand into the render path. ContextVar
+    # is request-scoped (FastAPI gives each request its own task; tasks
+    # have isolated ContextVar reads). All adapters downstream call
+    # _palette() which reads this ContextVar, so brand colors flow
+    # through TOC + section headers + KC bullets + case study
+    # attribution + every block adapter without arg-threading.
+    _current_brand.set(course.brand or "bcgu")
 
     doc = Document()
     _set_docx_default_font(doc)
