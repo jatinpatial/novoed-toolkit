@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Upload } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { useActiveBrand } from "../shell/TopBar";
 import { B, type BrandKey } from "../brand/tokens";
@@ -35,21 +35,30 @@ import { B, type BrandKey } from "../brand/tokens";
 // Duration chips. 7 chips per user spec — covers the BCG U sweet spot
 // (4-6 week courses) plus shorter formats (workshop, single-day) and
 // a custom escape hatch. Chips wrap on narrow viewports.
-const DURATION_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "30min",  label: "30 min" },
-  { value: "2hr",    label: "2 hours" },
-  { value: "1day",   label: "1 day" },
-  { value: "1week",  label: "1 week" },
-  { value: "4weeks", label: "4 weeks" },
-  { value: "6weeks", label: "6 weeks" },
-  { value: "custom", label: "Custom" },
+//
+// `value` is the chip's machine identifier (used for state matching);
+// `briefLabel` is what we splice into the assembled brief string sent
+// to Course Architect. Keeping briefLabel separate from `label` lets
+// the UI label read more conversationally ("2 hours") while the brief
+// reads more structurally ("2-hour").
+const DURATION_OPTIONS: Array<{ value: string; label: string; briefLabel: string }> = [
+  { value: "30min",  label: "30 min",  briefLabel: "30-minute" },
+  { value: "2hr",    label: "2 hours", briefLabel: "2-hour" },
+  { value: "1day",   label: "1 day",   briefLabel: "1-day" },
+  { value: "1week",  label: "1 week",  briefLabel: "1-week" },
+  { value: "4weeks", label: "4 weeks", briefLabel: "4-week" },
+  { value: "6weeks", label: "6 weeks", briefLabel: "6-week" },
+  { value: "custom", label: "Custom",  briefLabel: "" /* uses customDuration */ },
 ];
 
 export default function CreateCoursePage() {
+  const navigate = useNavigate();
   // Field state — each field is a controlled input. Brand defaults to
   // the active brand so the LD doesn't have to re-pick what they
-  // already have configured globally.
-  const [activeBrand] = useActiveBrand();
+  // already have configured globally. setActiveBrand syncs the form's
+  // chosen brand back to localStorage on submit so the new course
+  // picks it up via CourseStudio's brand-from-active flow.
+  const [activeBrand, setActiveBrand] = useActiveBrand();
   const [title, setTitle] = useState("");
   const [audience, setAudience] = useState("");
   const [duration, setDuration] = useState<string>("");
@@ -61,14 +70,50 @@ export default function CreateCoursePage() {
   // (deferred to the Phase 2 AI sprint's deck-drop ingestion).
 
   // Validation: audience non-empty, duration selected (and if custom,
-  // customDuration non-empty). C0c wires this to a submit handler.
+  // customDuration non-empty).
   const audienceValid = audience.trim().length > 0;
   const durationValid =
     duration.length > 0 && (duration !== "custom" || customDuration.trim().length > 0);
   const isValid = audienceValid && durationValid;
-  // C0c reads isValid for the submit button disabled state and
-  // attaches the actual submit handler. C0b just renders the fields.
-  void isValid;
+
+  // C0c: assemble the structured brief into the conversational format
+  // Course Architect already handles for free-form briefs from the
+  // dashboard composer ("4-week change management for senior managers
+  // leading restructurings"). The form's structure compiles down to a
+  // similar shape so the agent's existing parsing path stays intact;
+  // optional sections (goals, notes) only appear when the user filled
+  // them in.
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValid) return;
+
+    // Resolve the duration into the brief's noun phrase. Standard chips
+    // use briefLabel ("4-week"); custom uses the user's free-form
+    // string verbatim.
+    const opt = DURATION_OPTIONS.find((d) => d.value === duration);
+    const durationLabel =
+      duration === "custom" ? customDuration.trim() : (opt?.briefLabel ?? "");
+
+    const titleClause = title.trim() ? ` titled "${title.trim()}"` : "";
+    const lead = `${durationLabel} course${titleClause} for ${audience.trim()}.`;
+
+    const sections: string[] = [lead];
+    if (goals.trim()) sections.push(`\n\nGoals:\n${goals.trim()}`);
+    if (notes.trim()) sections.push(`\n\nNotes:\n${notes.trim()}`);
+    const brief = sections.join("");
+
+    // Sync active brand BEFORE navigating so the new course's brand
+    // (set when buildCourseFromProposal runs in CourseStudio) reflects
+    // the form's choice. The active brand is the source for new courses
+    // until the LD opens an existing project.
+    setActiveBrand(brand);
+
+    // Same destination as the dashboard quick-composer (B2b). CourseStudio
+    // reads ?brief= in a useEffect (line ~206), prefills the chat input,
+    // and clears the param. The LD reviews the brief and presses Enter
+    // to send to Course Architect.
+    navigate(`/courses?brief=${encodeURIComponent(brief)}`);
+  }
 
   return (
     <AppShell>
@@ -88,11 +133,7 @@ export default function CreateCoursePage() {
           </p>
         </header>
 
-        <form
-          /* C0c attaches onSubmit. C0b only wires field state. */
-          onSubmit={(e) => e.preventDefault()}
-          className="space-y-7"
-        >
+        <form onSubmit={handleSubmit} className="space-y-7">
           {/* ── Field 1: Title (optional text) ─────────────────────── */}
           <FormField
             label="Course title"
@@ -232,19 +273,24 @@ export default function CreateCoursePage() {
             />
           </FormField>
 
-          {/* Submit button placeholder — C0c wires the actual handler
-              + brief assembly + navigation to /courses?brief=. */}
+          {/* Submit — assembles the brief and navigates to
+              /courses?brief=<encoded>. CourseStudio prefills the chat
+              composer with the brief; the LD reviews and presses
+              Enter to fire Course Architect. */}
           <div className="pt-2">
             <button
               type="submit"
-              disabled
+              disabled={!isValid}
               className="btn-cta-primary"
             >
-              Design course →
+              Design course <ArrowRight size={14} strokeWidth={2.5} />
             </button>
-            <p className="text-caption text-ink-400 mt-2">
-              Submit wires up in C0c.
-            </p>
+            {!isValid && (
+              <p className="text-caption text-ink-400 mt-2">
+                {!audienceValid && "Audience is required. "}
+                {!durationValid && "Pick a duration to continue."}
+              </p>
+            )}
           </div>
         </form>
       </div>
