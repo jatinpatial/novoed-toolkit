@@ -6,6 +6,7 @@ import InfographicStudio from "./pages/InfographicStudio";
 import CourseStudio from "./pages/CourseStudio";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import CreateScriptPage from "./pages/CreateScriptPage";
+import ScriptStudio from "./pages/ScriptStudio";
 import ScormPlayer from "./pages/ScormPlayer";
 import ProjectsLibrary from "./pages/ProjectsLibrary";
 import { BrandBodyAttribute } from "./shell/TopBar";
@@ -34,8 +35,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/courses/new" element={<CreateCoursePage />} />
         {/* polish-3c: standalone Synthesia script intake. Submits
             into a 1-module / 1-lesson / 1-video-block course that
-            CourseCanvas opens with the Scriptwriter brief auto-sent. */}
+            CourseCanvas opens with the Scriptwriter brief auto-sent.
+            polish-4a: form now submits into a Script in the scripts
+            store, navigates to /scripts/:id (ScriptStudio). */}
         <Route path="/scripts/new" element={<CreateScriptPage />} />
+        {/* polish-4a: dedicated Script Studio surface. Loads a
+            Script from localStorage; agent runs MODE 3 against a
+            synthetic-course wrapper around the script. */}
+        <Route path="/scripts/:id" element={<ScriptStudio />} />
         <Route path="/player" element={<ScormPlayer />} />
         <Route path="/projects" element={<ProjectsLibrary />} />
         {/* Legacy routes */}

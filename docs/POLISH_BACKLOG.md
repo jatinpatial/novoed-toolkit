@@ -112,6 +112,40 @@ across one or two commits.
 - Archive `NovoEd_Component_Library.jsx`, `ARCHITECTURE.md`, `NovoEd_Toolkit_Claude_Project_Instructions.md` after extracting any reusable bits.
 - Rewrite top-level `README.md` to point at the React + agent-backend architecture.
 
+## Phase 3 — Block editing UX overhaul
+
+User feedback (live test): *"edits to input text in interactive elements
+(accordion + flipcard / cards / callout / quote etc) doesn't feel
+intuitive — feels old and boring."*
+
+Current pattern across the canvas: click-to-edit textarea swap. The
+field becomes a textarea, blur saves, blur-out renders. Functional but
+reads as a 2018 form. Modern alternatives worth exploring:
+
+- **Inline rich editor with floating toolbar** (TipTap-style). Edit in
+  place; toolbar fades in on focus offering bold / italic / link.
+  Best for prose-heavy fields (text blocks, callout body, quote body).
+- **Contextual side panel that slides in for the active block**
+  (Notion-style). Click any block, a panel slides in from the right
+  showing all its fields edit-ready in proper labeled inputs. Avoids
+  the in-place textarea swap entirely.
+- **Hover-to-reveal edit affordances** (Linear-style). Subtle pencil
+  icon fades in on hover; click expands to a styled inline editor.
+  Reads as more intentional than always-clickable text.
+
+Bigger lift than a polish commit — needs design exploration of the
+edit affordance + a decision on which pattern fits BCG U Studio's
+character (calm + branded + scannable, not feature-rich-tool). Likely
+1 focused week (research + spike + integration). Phase 3.
+
+## Phase 3 — Block-add animation
+
+When an LD adds a block from the picker (or the agent inserts one
+during write_lesson), the block currently snaps in with no transition.
+Should animate: slide-down 16px + fade-in over 250ms with `--ease-sana`.
+
+Small CSS-only commit when it lands — `.block-card:not(:hover):first-of-type` doesn't work for "newly inserted" detection without a flag. Cleanest: a one-time `.block-card-entering` class added on mount, removed after animation completes (250ms timer + class swap, ~5 lines). Stack with the Phase 3 editing UX overhaul as one polish pass — together they push the block-editing experience from 2018-form to Notion-grade.
+
 ## Phase 3 — Engaging loading states
 
 Replace the static "Thinking..." indicator with claude.ai-style chat

@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import {
-  Home, BookOpen, Shapes, Grid3x3, FolderOpen, type LucideProps,
+  Home, BookOpen, Shapes, Grid3x3, FolderOpen, Mic, type LucideProps,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -42,6 +42,10 @@ const SECTIONS: NavSection[] = [
   {
     label: "Build pieces",
     items: [
+      // polish-4a: Script Studio entry. Routes to /scripts/new for
+      // the intake form; an existing script is opened by clicking
+      // its row in /projects (Phase-3-ish — scripts list view TBD).
+      { label: "Script Studio", to: "/scripts/new", icon: Mic },
       { label: "Infographic Studio", to: "/infographics", icon: Shapes },
       // Phase-3 placeholder — Components catalog port. Disabled until
       // the index.html catalog ships into the React app.

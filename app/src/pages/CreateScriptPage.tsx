@@ -2,41 +2,33 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
-import { useActiveBrand } from "../shell/TopBar";
-import { B, type BrandKey } from "../brand/tokens";
-import { saveProject } from "../store/projects";
-import type { Course } from "../course/types";
+import { saveScript, type Script } from "../store/scripts";
 
 /**
- * CreateScriptPage — standalone Synthesia script intake (Phase 2 #2 polish-3c).
+ * CreateScriptPage — standalone Synthesia script intake (Phase 2 #2 polish-3c,
+ * cleaned up in polish-4a).
  *
- * Third entry path on the dashboard hero:
+ * Third entry path on the dashboard hero. Some LDs need just a 60-90
+ * second video script — a Synthesia avatar walk-through, a quick
+ * announcement, a scenario monologue. Forcing them through the full
+ * course flow is friction; this page collects the script-shaped intake
+ * and submits straight to the Script Studio surface.
  *
- *   primary           "Design course →"           full course path
- *   secondary pill    "Or fill in a structured
- *                     brief →"                    detailed course form (C0)
- *   tertiary link     "Just a video script?
- *                     Try Script Studio →"       this page
+ * polish-4a changes:
+ *   - DROPPED the Brand chip group. Scripts are brand-agnostic at
+ *     generation time — the Synthesia avatar's voice doesn't change
+ *     per brand, and theming applies at course/export time when the
+ *     script ends up inside a course or exported as .docx.
+ *   - Submit creates a Script (separate localStorage namespace
+ *     bcgu_studio_scripts_v1) rather than a fake 1-module-1-lesson
+ *     course. Navigates to /scripts/:id?autosend=1.
+ *   - ScriptStudio (the new /scripts/:id surface) renders a focused
+ *     script editor + chat — no outline tree, no lesson canvas chrome,
+ *     no brand toggle. See app/src/pages/ScriptStudio.tsx.
  *
- * Some LDs need just a 60-90 second video script — a Synthesia avatar
- * walk-through, a quick announcement, a scenario monologue. Forcing
- * them through the full course flow is friction; this page collects
- * the script-shaped intake (topic / audience / duration / tone /
- * speaker mode) and submits straight to the existing Synthesia
- * Scriptwriter (MODE 3 of the agent system prompt).
- *
- * Implementation choice — Option A from the polish-3c spec:
- *   On submit, create a 1-module / 1-lesson course with a single
- *   video block; save to localStorage; navigate to
- *   /courses?project=<id>&brief=<assembled>&autosend=1. CourseCanvas
- *   picks up the brief and fires the agent, which runs MODE 3 on the
- *   single video block.
- *
- * Option B (a dedicated /scripts/:id surface) is a follow-up if LDs
- * end up using this heavily and want a leaner standalone view.
- *
- * Page chrome: AppShell + section-header pattern (no MeshHero —
- * intake forms need focus, mesh chrome would distract).
+ * Page chrome reuses CreateCoursePage's section-header pattern +
+ * brand-cascade strip — vocabulary consistency across the two intake
+ * forms.
  */
 
 const DURATION_OPTIONS: Array<{ value: string; label: string; seconds: number }> = [
@@ -54,11 +46,10 @@ const SPEAKER_OPTIONS: Array<{ value: "speaker" | "narration"; label: string }> 
   { value: "narration", label: "Voice-over" },
 ];
 
-const rid = () => "b" + Math.random().toString(36).slice(2, 10);
+const rid = () => "s" + Math.random().toString(36).slice(2, 10);
 
 export default function CreateScriptPage() {
   const navigate = useNavigate();
-  const [activeBrand, setActiveBrand] = useActiveBrand();
 
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("");
@@ -67,7 +58,6 @@ export default function CreateScriptPage() {
   const [tone, setTone] = useState<typeof TONE_OPTIONS[number]>("Conversational");
   const [speakerMode, setSpeakerMode] = useState<"speaker" | "narration">("narration");
   const [notes, setNotes] = useState("");
-  const [brand, setBrand] = useState<BrandKey>(activeBrand);
 
   const topicValid = topic.trim().length > 0;
   const audienceValid = audience.trim().length > 0;
@@ -79,79 +69,47 @@ export default function CreateScriptPage() {
     e.preventDefault();
     if (!isValid) return;
 
-    // Resolve duration into a seconds count (custom uses LD's free-form text).
     const opt = DURATION_OPTIONS.find((d) => d.value === duration);
     const durationLabel =
       duration === "custom" ? customDuration.trim() : (opt?.label ?? "90 sec");
-    const durationSeconds = duration === "custom" ? null : (opt?.seconds ?? 90);
 
-    // Build the 1-module / 1-lesson / 1-video-block course shell. The
-    // video block carries `videoType` from the form so MODE 3
-    // (Synthesia Scriptwriter) picks the right voice/visual style
-    // when it writes the script.
-    const blockId = rid();
-    const lessonId = rid();
-    const moduleId = rid();
-    const courseId = rid();
-    const projectId = rid();
-    const courseTitle = topic.trim().slice(0, 80) || "Synthesia script";
-
-    const course: Course = {
-      id: courseId,
-      title: courseTitle,
-      client: "",
-      brand,
-      modules: [
-        {
-          id: moduleId,
-          title: "Script",
-          weekNumber: 1,
-          lessons: [
-            {
-              id: lessonId,
-              title: "1.1 Video script",
-              duration: durationSeconds ? Math.max(1, Math.round(durationSeconds / 60)) : 2,
-              blocks: [
-                {
-                  id: blockId,
-                  type: "video",
-                  data: { videoType: speakerMode },
-                },
-              ],
-            },
-          ],
-        },
-      ],
+    // polish-4a: persist the Script in its own store. The Script.id
+    // doubles as the agent's video-block id when ScriptStudio's
+    // synthetic-course wrapper exposes it via list_structure — that
+    // way the existing MODE 3 (Synthesia Scriptwriter) tool path
+    // works unchanged. See ScriptStudio.tsx for the wrapper.
+    const scriptId = rid();
+    const now = Date.now();
+    const script: Script = {
+      id: scriptId,
+      title: topic.trim().slice(0, 80) || "Synthesia script",
+      topic: topic.trim(),
+      audience: audience.trim(),
+      duration: durationLabel,
+      tone,
+      speakerMode,
+      notes: notes.trim(),
+      content: "",
+      createdAt: now,
+      updatedAt: now,
     };
+    saveScript(script);
 
-    // Persist + sync brand BEFORE navigating so CourseCanvas reads the
-    // correct project on mount. Same pattern as CreateCoursePage.
-    setActiveBrand(brand);
-    saveProject({
-      id: projectId,
-      name: courseTitle,
-      kind: "course",
-      brand,
-      data: { kind: "course", course },
-    });
-
-    // Assemble the brief — same shape as buildVideoScriptPrefill in
-    // CourseStudio.tsx but driven by the form fields. Agent calls
-    // list_structure first (finds the video block by id), then
-    // write_script.
+    // ScriptStudio's mount effect detects ?autosend=1 and fires the
+    // brief once the agent socket opens. The brief mirrors
+    // buildVideoScriptPrefill's shape so MODE 3 picks it up cleanly.
     const briefLines = [
-      `Write a ${speakerMode === "speaker" ? "speaker" : "voice-over"} Synthesia script for the video block on lesson 1.1.`,
-      `Video block id: ${blockId}`,
+      `Write a ${tone.toLowerCase()} ${speakerMode === "speaker" ? "on-camera speaker" : "voice-over"} Synthesia script.`,
+      `Video block id: ${scriptId}`,
       `Topic: ${topic.trim()}.`,
       `Audience: ${audience.trim()}.`,
       `Target: ~${durationLabel}.`,
-      `Tone: ${tone.toLowerCase()}.`,
     ];
     if (notes.trim()) briefLines.push(`\nNotes: ${notes.trim()}`);
     const brief = briefLines.join("\n");
 
     navigate(
-      `/courses?project=${encodeURIComponent(projectId)}&brief=${encodeURIComponent(brief)}&autosend=1`,
+      `/scripts/${encodeURIComponent(scriptId)}?brief=${encodeURIComponent(brief)}&autosend=1`,
     );
   }
 
@@ -170,9 +128,9 @@ export default function CreateScriptPage() {
             <div>
               <h2 className="section-title">Draft a Synthesia script.</h2>
               <p className="section-sub">
-                Avatar-paced narration script. ~150 wpm. Brand-themed. Studio
-                Copilot writes the SPOKEN / VISUAL scene structure; you refine
-                in the block drawer.
+                Avatar-paced narration script. ~150 wpm. Studio Copilot writes
+                the SPOKEN / VISUAL scene structure; you refine in Script
+                Studio.
               </p>
             </div>
           </header>
@@ -294,29 +252,8 @@ export default function CreateScriptPage() {
               />
             </FormField>
 
-            <FormField label="Brand" hint="Theme used in preview & export. Defaults to your current setting.">
-              <div className="flex flex-wrap gap-2">
-                {(Object.keys(B) as BrandKey[]).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setBrand(k)}
-                    className={
-                      brand === k
-                        ? "form-chip form-chip-active inline-flex items-center gap-2"
-                        : "form-chip inline-flex items-center gap-2"
-                    }
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-                      style={{ background: B[k].pri }}
-                      aria-hidden="true"
-                    />
-                    {B[k].n}
-                  </button>
-                ))}
-              </div>
-            </FormField>
+            {/* polish-4a: Brand chip group dropped. Scripts are brand-
+                agnostic at generation time; theming applies at export. */}
 
             <div className="pt-2">
               <button
