@@ -84,20 +84,27 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
             </div>
             <div className="composer-cta-row">
               {/*
-                Detailed brief  ->  /courses/new (the structured intake
-                form, C0a). Re-enabled in C0a; previously disabled-
-                with-soon since B2b. Same visual treatment as the
-                Design button (primary CTA pair); the structured form
-                is the path for LDs who want to think the inputs
-                through before letting Course Architect run.
+                More structured -> /courses/new (the structured intake
+                form, C0a). AI-1-polish-A bug 1: copy bumped from
+                "Detailed brief" to "More structured" so the secondary
+                button reads as a real choice, not an escape hatch.
+                Subtitle row clarifies what makes this path different
+                ("audience · duration · goals"). The form-based path
+                is the BETTER entry for serious LDs working with full
+                context; this button needs to invite use.
               */}
-              <button
-                type="button"
-                onClick={() => navigate("/courses/new")}
-                className="btn-cta-secondary"
-              >
-                Detailed brief <ArrowRight size={14} strokeWidth={2.5} />
-              </button>
+              <div className="composer-cta-secondary-stack">
+                <button
+                  type="button"
+                  onClick={() => navigate("/courses/new")}
+                  className="btn-cta-secondary"
+                >
+                  More structured <ArrowRight size={14} strokeWidth={2.5} />
+                </button>
+                <span className="composer-cta-tagline">
+                  audience · duration · goals
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={submit}

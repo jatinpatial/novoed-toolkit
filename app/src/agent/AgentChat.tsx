@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import ReactMarkdown from "react-markdown";
+import { Sparkles } from "lucide-react";
 import { useAgent } from "./AgentContext";
 
 // Friendly labels for the loading indicator. Keys match the unprefixed
@@ -29,14 +30,34 @@ function toolLabel(name: string | null): string {
 }
 
 export function AgentChat() {
-  const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput } = useAgent();
+  const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal } = useAgent();
   const [draft, setDraft] = useState("");
+  // AI-1-polish-A bug 4: closing-state flag for the slide-right fade-out
+  // animation when a major artifact (proposal card) takes the stage.
+  // Without this, setOpen(false) snaps the panel away with no transition.
+  const [closing, setClosing] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isThinking]);
+
+  // AI-1-polish-A bug 4: auto-collapse the chat panel when a major
+  // agent artifact lands. Today that's the CourseOutlineProposal —
+  // the LD focuses on the artifact, re-opens chat by clicking the
+  // floating Copilot button. Animate fade-out + slide-right over
+  // 250ms via the .agent-panel-closing class, then setOpen(false).
+  // Skip if chat is already closed (no double-fire on a re-mount).
+  useEffect(() => {
+    if (!outlineProposal || !open) return;
+    setClosing(true);
+    const timer = setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [outlineProposal, open, setOpen]);
 
   useEffect(() => {
     if (pendingInput == null) return;
@@ -88,13 +109,18 @@ export function AgentChat() {
   const isWorking = status === "open" && isThinking;
 
   return (
-    <div style={panel}>
+    <div
+      style={panel}
+      className={closing ? "agent-panel-closing" : ""}
+    >
       {/* B3-tune-b: Studio Copilot identity header. 36px squircle orb
           (var(--orb-gradient) + glow + breathing), bold name, status
-          pill with idle/working dot. Replaces the old "Course Copilot
-          ✨" inline text. */}
+          pill with idle/working dot. AI-1-polish-A bug 3: Sparkles
+          icon centered inside the orb (regressed in B3-tune-b). */}
       <div className="copilot-mock-header">
-        <div className="copilot-mock-orb" aria-hidden="true" />
+        <div className="copilot-mock-orb">
+          <Sparkles size={16} className="copilot-mock-orb-icon" aria-hidden="true" />
+        </div>
         <div className="copilot-mock-text">
           <div className="copilot-mock-name">Studio Copilot</div>
           <div className={`copilot-mock-status${isWorking ? " copilot-mock-status-working" : ""}`}>
@@ -226,20 +252,52 @@ function Bubble({ role, text, pulse }: { role: string; text: string; pulse?: boo
 // injection-style risk from agent output. Inline styles override the
 // browser defaults so paragraphs/lists don't bloat the bubble.
 function MarkdownText({ text }: { text: string }) {
+  // AI-1-polish-A bug 2: agent prose was rendering through ReactMarkdown
+  // already (B3-tune-b), but the visual margins were so tight (6px
+  // between paragraphs, 4px around lists, 4px above headings) that the
+  // result read as wall-of-text. Bumped paragraph + heading + list
+  // spacing so the agent's structured output reads as structured.
+  // Also tightened heading visual weight — h2/h3 now render slightly
+  // bigger than body so they actually feel like section labels.
   return (
     <ReactMarkdown
       skipHtml
       disallowedElements={["img"]}
       components={{
-        p: ({ children }) => <p style={{ margin: "0 0 6px 0" }}>{children}</p>,
-        ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ul>,
-        ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ol>,
-        li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
-        strong: ({ children }) => <strong>{children}</strong>,
+        // Body paragraphs: more breathing room — 12px gap between
+        // paragraphs reads as proper structure, not run-on prose.
+        p: ({ children }) => (
+          <p style={{ margin: "0 0 12px 0", lineHeight: 1.55 }}>{children}</p>
+        ),
+        ul: ({ children }) => (
+          <ul style={{ margin: "8px 0 12px", paddingLeft: 20, lineHeight: 1.55 }}>{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol style={{ margin: "8px 0 12px", paddingLeft: 20, lineHeight: 1.55 }}>{children}</ol>
+        ),
+        li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+        strong: ({ children }) => (
+          <strong style={{ fontWeight: 700, color: "#0F172A" }}>{children}</strong>
+        ),
         em: ({ children }) => <em>{children}</em>,
-        h1: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
-        h2: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
-        h3: ({ children }) => <strong style={{ fontSize: "1em", display: "block", marginTop: 4 }}>{children}</strong>,
+        // Headings: actually visible weight bumps so they stand out
+        // from body. h2/h3 slightly larger; all bold; explicit
+        // top/bottom margin so they don't crowd surrounding paragraphs.
+        h1: ({ children }) => (
+          <strong style={{ fontSize: "1.08em", display: "block", margin: "12px 0 6px" }}>
+            {children}
+          </strong>
+        ),
+        h2: ({ children }) => (
+          <strong style={{ fontSize: "1.05em", display: "block", margin: "12px 0 6px" }}>
+            {children}
+          </strong>
+        ),
+        h3: ({ children }) => (
+          <strong style={{ fontSize: "1em", display: "block", margin: "10px 0 4px" }}>
+            {children}
+          </strong>
+        ),
         code: ({ children }) => (
           <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3, fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: "0.92em" }}>
             {children}
@@ -251,7 +309,7 @@ function MarkdownText({ text }: { text: string }) {
           </a>
         ),
         blockquote: ({ children }) => (
-          <blockquote style={{ borderLeft: "3px solid #29BA74", paddingLeft: 8, margin: "4px 0", color: "#444" }}>
+          <blockquote style={{ borderLeft: "3px solid #29BA74", paddingLeft: 10, margin: "8px 0", color: "#374151", fontStyle: "italic" }}>
             {children}
           </blockquote>
         ),
