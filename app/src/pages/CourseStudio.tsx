@@ -1026,55 +1026,73 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
         {course.modules.map((m: any, mi: number) => {
           const moduleActive = viewMode === "module" && am === mi;
           return (
-          /* B3-tune-a: each module + its lessons wrapped in an
-             outline-module-card. Module header row holds the number
-             badge + title + delete; the meta row below shows lesson
-             count and (when present) a yellow Case chip. Lessons sit
-             inside .outline-lessons indented from the header. */
+          /* B3-tune-a + B3-tune-d: each module + its lessons wrapped
+             in an outline-module-card. The module HEADER (badge +
+             title row + meta row) is wrapped in a <button> click
+             target so the LD doesn't have to hit the small 22px
+             number badge to open module summary — the whole header
+             strip works.
+
+             Note on the structure: <input> + nested <button>s inside
+             <button> is technically invalid HTML, but works fine in
+             browsers and preserves the always-editable title UX
+             without forcing click-to-edit. Inner interactives stop
+             event propagation so they don't double-fire onSelectModule. */
           <div key={m.id} className={`outline-module-card${moduleActive ? " outline-module-card-active" : ""}`}>
-            <div className="outline-module-header group">
-              <button
-                onClick={() => onSelectModule(mi)}
-                className="outline-module-num"
-                title="Open module summary"
-              >
-                {mi + 1}
-              </button>
-              <input
-                value={m.title}
-                onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
-                onClick={(e) => e.stopPropagation()}
-                className="outline-module-title"
-              />
-              {course.modules.length > 1 && (
-                <button
-                  onClick={() => { if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
-                  className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
-                  title="Delete module"
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
-            <div className="outline-module-meta">
-              <span>{m.lessons.length} lesson{m.lessons.length === 1 ? "" : "s"}</span>
-              {m.caseStudyId && (() => {
-                const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
-                const designed = !!cs && (cs.context.trim().length > 0 || cs.stakeholders.length > 0);
-                const tip = cs
-                  ? `Case study${designed ? "" : " (planted, not yet designed)"}: ${cs.title}`
-                  : "Case study slot";
-                return (
+            <button
+              type="button"
+              onClick={() => onSelectModule(mi)}
+              title="Open module summary"
+              className="outline-module-header-btn group"
+            >
+              <div className="outline-module-header">
+                <span className="outline-module-num">{mi + 1}</span>
+                <input
+                  value={m.title}
+                  onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
+                  onClick={(e) => e.stopPropagation()}
+                  className="outline-module-title"
+                />
+                {course.modules.length > 1 && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onSelectModule(mi); }}
-                    title={tip}
-                    className="outline-cs-chip"
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
+                    className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
+                    title="Delete module"
                   >
-                    <BookOpen size={9} /> Case
+                    <Trash2 size={12} />
                   </button>
-                );
-              })()}
-            </div>
+                )}
+                {/* B3-tune-d: chevron hint at the far right of the
+                    header — fades in on hover to signal "this opens
+                    module summary". 14px ink-400, sits after delete. */}
+                <ChevronRight
+                  size={14}
+                  className="text-ink-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="outline-module-meta">
+                <span>{m.lessons.length} lesson{m.lessons.length === 1 ? "" : "s"}</span>
+                {m.caseStudyId && (() => {
+                  const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
+                  const designed = !!cs && (cs.context.trim().length > 0 || cs.stakeholders.length > 0);
+                  const tip = cs
+                    ? `Case study${designed ? "" : " (planted, not yet designed)"}: ${cs.title}`
+                    : "Case study slot";
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onSelectModule(mi); }}
+                      title={tip}
+                      className="outline-cs-chip"
+                    >
+                      <BookOpen size={9} /> Case
+                    </button>
+                  );
+                })()}
+              </div>
+            </button>
             <div className="outline-lessons">
               {m.lessons.map((l: any, li: number) => {
                 const active = am === mi && al === li;

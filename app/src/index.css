@@ -891,12 +891,52 @@
     box-shadow: var(--shadow-active);
   }
 
+  /* B3-tune-d: the header button wraps badge + title row + meta row
+     so the entire header strip is the click target for "open module
+     summary" — bigger hit target than the 22px badge alone. Inner
+     interactives (title input, delete, case chip) stopPropagation so
+     they don't double-fire onSelectModule on click. */
+  .outline-module-header-btn {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background var(--duration-fast) var(--ease-sana);
+  }
+  .outline-module-header-btn:hover {
+    /* ink-50 / 30% — barely-there hover wash so the header reads as
+       interactive without competing with the active card's brand-50. */
+    background: rgba(249, 250, 251, 0.5);
+  }
+  /* When the module is active, the card already has bg-brand-50;
+     soften the header button's hover overlay so it doesn't darken
+     the active state too much. */
+  .outline-module-card-active .outline-module-header-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+  /* Keyboard focus ring — only on focus-visible (not focus from
+     click), so mouse users don't see the ring after clicking. */
+  .outline-module-header-btn:focus-visible {
+    outline: 2px solid theme("colors.brand.500");
+    outline-offset: 2px;
+  }
+
   .outline-module-header {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 6px;
   }
+  /* Module number badge — was a <button> in B3-tune-a; rebuilt as a
+     <span> in B3-tune-d since the outer header-btn is the click
+     target for opening module summary. Visual at rest unchanged. */
   .outline-module-num {
     width: 22px;
     height: 22px;
@@ -909,8 +949,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    border: none;
-    cursor: pointer;
     transition: background var(--duration-fast) var(--ease-sana),
                 box-shadow var(--duration-fast) var(--ease-sana);
   }
@@ -973,6 +1011,10 @@
     flex-direction: column;
     gap: 1px;
     padding-left: 8px;
+    /* B3-tune-d: 4px breathing room between the header button (hover
+       region extends to the meta row) and the first lesson row, so
+       hover hot-zones don't visually bleed into each other. */
+    margin-top: 4px;
   }
 
   .outline-lesson-row {
