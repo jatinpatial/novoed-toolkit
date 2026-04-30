@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Calendar, CheckCircle2, Clock, MessageSquare, Sparkles, Target, X } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle2, Clock, MessageSquare, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
 import type { CourseOutlineProposal, ProposedLesson, ProposedModule } from "./types";
 
 interface Props {
@@ -55,6 +55,57 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
     }));
   }
 
+  // polish-2b bug 4: add / delete affordances on the proposal card.
+  // All edits stay on the local draft until Build commits — same
+  // contract as the cell-edit pattern.
+  function addLesson(mi: number) {
+    patchModule(mi, (m) => ({
+      ...m,
+      lessons: [
+        ...m.lessons,
+        { title: "New lesson", durationMin: 10 },
+      ],
+    }));
+  }
+  function removeLesson(mi: number, li: number) {
+    setDraft((d) => {
+      const mod = d.modules[mi];
+      if (!mod || mod.lessons.length <= 1) return d;
+      return {
+        ...d,
+        modules: d.modules.map((m, i) =>
+          i === mi ? { ...m, lessons: m.lessons.filter((_, j) => j !== li) } : m,
+        ),
+      };
+    });
+  }
+  function addModule() {
+    setDraft((d) => ({
+      ...d,
+      modules: [
+        ...d.modules,
+        {
+          weekNumber: d.modules.length + 1,
+          title: `Module ${d.modules.length + 1}`,
+          summary: "",
+          objectives: [],
+          lessons: [{ title: "New lesson", durationMin: 10 }],
+        },
+      ],
+    }));
+  }
+  function removeModule(mi: number) {
+    setDraft((d) => {
+      if (d.modules.length <= 1) return d;
+      // Re-number weekNumbers on subsequent modules so 1-2-3 stays
+      // contiguous after a delete (e.g. removing module 2 of 4 leaves
+      // 1-3-4 stale week numbers if we don't renumber).
+      const remaining = d.modules.filter((_, i) => i !== mi);
+      const renumbered = remaining.map((m, i) => ({ ...m, weekNumber: i + 1 }));
+      return { ...d, modules: renumbered };
+    });
+  }
+
   return (
     <div className="card overflow-hidden border-2 border-brand-200">
       <div className="px-6 py-5 bg-gradient-to-br from-brand-50 to-white border-b border-brand-100">
@@ -106,7 +157,9 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
 
       <div className="px-6 py-5 space-y-4 max-h-[55vh] overflow-y-auto">
         {draft.modules.map((m, mi) => (
-          <div key={m.weekNumber} className="rounded-lg border border-ink-200 bg-white">
+          /* polish-2b bug 4: wrap each module card in `group` so the
+             trash icon on the header reveals on hover. */
+          <div key={mi} className="rounded-lg border border-ink-200 bg-white group/module">
             <div className="px-4 py-3 border-b border-ink-100 bg-ink-50/50">
               <div className="flex items-center gap-2.5">
                 <span className="w-7 h-7 rounded-md bg-ink-900 text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">
@@ -134,6 +187,23 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
                     />
                   </div>
                 </div>
+                {/* polish-2b bug 4: delete-module trash icon. Hidden at
+                    rest, fades in on module hover. Confirms before
+                    deleting (cascades to all the module's lessons). */}
+                {draft.modules.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Delete "${m.title}" and its ${m.lessons.length} lesson${m.lessons.length === 1 ? "" : "s"}?`)) {
+                        removeModule(mi);
+                      }
+                    }}
+                    title="Delete module"
+                    className="opacity-0 group-hover/module:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0 -mr-1"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -175,11 +245,17 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
                 </div>
                 <div className="space-y-1">
                   {m.lessons.map((l, li) => (
-                    <div key={li} className="flex items-baseline gap-2 text-xs text-ink-700">
+                    /* polish-2b bug 4: wrap each lesson row in a
+                       per-row group so the lesson trash reveals on
+                       row hover (not module hover). */
+                    <div
+                      key={li}
+                      className="flex items-baseline gap-2 text-xs text-ink-700 group/lesson rounded px-1 -mx-1 hover:bg-ink-50 transition-colors"
+                    >
                       <span className="font-bold text-ink-400 flex-shrink-0">
                         {m.weekNumber}.{li + 1}
                       </span>
-                      <span className="flex-1">
+                      <span className="flex-1 min-w-0">
                         <EditableField
                           value={stripPrefix(l.title, m.weekNumber, li + 1)}
                           onChange={(v) => patchLesson(mi, li, (ll) => ({ ...ll, title: v }))}
@@ -192,13 +268,47 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
                           {l.durationMin} min
                         </span>
                       )}
+                      {m.lessons.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Delete lesson "${stripPrefix(l.title, m.weekNumber, li + 1)}"?`)) {
+                              removeLesson(mi, li);
+                            }
+                          }}
+                          title="Delete lesson"
+                          className="opacity-0 group-hover/lesson:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
+                {/* polish-2b bug 4: add-lesson affordance — appends a new
+                    lesson to this module with a placeholder title. The
+                    lesson is immediately editable inline. */}
+                <button
+                  type="button"
+                  onClick={() => addLesson(mi)}
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-500 hover:text-brand-700 transition-colors"
+                >
+                  <Plus size={12} /> Add lesson
+                </button>
               </div>
             </div>
           </div>
         ))}
+
+        {/* polish-2b bug 4: add-module affordance — appends a new module
+            to the proposal. weekNumber is the new last position. */}
+        <button
+          type="button"
+          onClick={addModule}
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition"
+        >
+          <Plus size={13} /> Add module
+        </button>
       </div>
 
       <div className="px-6 py-4 border-t border-ink-100 bg-ink-50/30 flex items-center gap-3">
