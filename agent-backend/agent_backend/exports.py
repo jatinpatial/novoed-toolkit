@@ -603,11 +603,50 @@ def _page_break(doc: Document) -> None:
 
 
 def _render_text_block(doc: Document, block: BlockModel) -> None:
+    """Render a text block to .docx with markdown bold support (AI-1a).
+
+    Lesson Writer v2 (AI-1c) emits body paragraphs with strategic inline
+    `**bold**` markers — concepts, action verbs, named entities, decision
+    phrasing. We split each paragraph on the bold markers and emit
+    separate Runs with bold=True for the wrapped segments. Plain runs
+    inherit Trebuchet MS body (set on the Normal style).
+    """
     content = (block.data.content or "").strip()
     if not content:
         return
     for para in [p.strip() for p in content.split("\n\n") if p.strip()]:
-        _body(doc, para)
+        _body_with_bold(doc, para)
+
+
+# Markdown bold pattern — matches the JS-side renderInlineMd in
+# app/src/course/previewBlock.ts. Non-greedy, no internal asterisks.
+_BOLD_RE = re.compile(r"\*\*([^*]+?)\*\*")
+
+
+def _body_with_bold(doc: Document, text: str) -> None:
+    """Add a body paragraph, splitting on **markdown bold** markers.
+
+    Plain segments and bold segments emit separate runs in the same
+    paragraph. Run-level bold doesn't change font size/family — those
+    inherit from the Normal style (Trebuchet MS, set in
+    _set_docx_default_font).
+    """
+    p = doc.add_paragraph()
+    last_end = 0
+    for m in _BOLD_RE.finditer(text):
+        if m.start() > last_end:
+            r = p.add_run(text[last_end:m.start()])
+            r.font.size = Pt(11)
+            r.font.color.rgb = _BCG_INK
+        r = p.add_run(m.group(1))
+        r.bold = True
+        r.font.size = Pt(11)
+        r.font.color.rgb = _BCG_INK
+        last_end = m.end()
+    if last_end < len(text):
+        r = p.add_run(text[last_end:])
+        r.font.size = Pt(11)
+        r.font.color.rgb = _BCG_INK
 
 
 def _render_banner_block(doc: Document, block: BlockModel) -> None:

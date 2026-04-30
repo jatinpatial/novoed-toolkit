@@ -5,9 +5,29 @@ import type { BlockData } from "../course/types";
 import type { ChatEntry, ConnectionStatus, CourseOutlineProposal } from "./types";
 import { useAgentSocket } from "./useAgentSocket";
 
+/**
+ * WriterBlock — what the Lesson Writer agent emits in its write_lesson
+ * tool calls (AI-1a widening).
+ *
+ * Pre-AI-1a: `{ type, content }` only — content was the entire payload,
+ * which silently locked the writer to text blocks. Even when the agent
+ * confidently produced "banner" or "callout" types, only `content` made
+ * it through to BlockData and title/body/items got dropped.
+ *
+ * AI-1a widens this so structured blocks can carry their proper shape:
+ *   - text-only blocks: { type: "text", content: "Body…" }   (legacy)
+ *   - structured blocks: { type, data: { title, body, items, … } }   (new)
+ *
+ * Either `content` (text-only) or `data` (structured) must be present.
+ * The runtime (writeLesson in CourseStudio) merges them into BlockData
+ * accordingly. parseWriterBlocks in toolExecutor enforces the shape.
+ */
 export interface WriterBlock {
   type: string;
-  content: string;
+  /** Plain content for text-only blocks. Legacy shape; backward-compat. */
+  content?: string;
+  /** Structured block data — title, body, items, type variant, etc. */
+  data?: Partial<BlockData>;
 }
 
 // Subset of CaseStudy supplied by the agent — the slot's id is fixed

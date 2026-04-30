@@ -280,6 +280,21 @@ function parseLesson(raw: unknown, modIndex: number, lessonIndex: number): Propo
   return { title, durationMin, objectives };
 }
 
+/**
+ * parseWriterBlocks — validates the agent's write_lesson payload (AI-1a).
+ *
+ * Accepts two shapes per block:
+ *   { type, content }      — text-only (legacy; still the right shape for
+ *                            text/divider blocks where the content IS the
+ *                            payload)
+ *   { type, data: {...} }  — structured (banner, callout, accordion,
+ *                            flipcard, cards, stats, timeline, statement,
+ *                            quote, clickInstruction, sectionHeader, etc.)
+ *
+ * Exactly one of content / data must be present. If both arrive, prefer
+ * `data` and ignore `content` (structured wins; the agent shouldn't send
+ * both, but if it does we don't want silent data loss either way).
+ */
 function parseWriterBlocks(raw: unknown): WriterBlock[] {
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new Error("blocks must be a non-empty array");
@@ -290,8 +305,16 @@ function parseWriterBlocks(raw: unknown): WriterBlock[] {
     }
     const obj = b as Record<string, unknown>;
     const type = asString(obj.type, `block #${i + 1} type`);
-    const content = asString(obj.content, `block #${i + 1} content`);
-    return { type, content };
+    const hasContent = typeof obj.content === "string";
+    const hasData = typeof obj.data === "object" && obj.data !== null && !Array.isArray(obj.data);
+    if (!hasContent && !hasData) {
+      throw new Error(
+        `block #${i + 1} must have either 'content' (string) or 'data' (object)`,
+      );
+    }
+    const content = hasContent ? (obj.content as string) : undefined;
+    const data = hasData ? (obj.data as Partial<BlockData>) : undefined;
+    return { type, content, data };
   });
 }
 

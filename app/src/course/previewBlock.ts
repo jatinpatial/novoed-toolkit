@@ -1,6 +1,31 @@
 import { B, esc, type BrandKey } from "../brand/tokens";
 import type { Block } from "./types";
 
+/**
+ * Render text with inline markdown bolding (AI-1a).
+ *
+ * Order matters: HTML-escape FIRST (to neutralize anything that looks
+ * like a tag in the user's prose), THEN substitute `**bold**` for
+ * `<strong>...</strong>` so the inserted tags don't get re-escaped.
+ *
+ * Pattern `\*\*([^*]+?)\*\*`:
+ *   - Paired `**` markers
+ *   - Non-greedy match so "**a** then **b**" gives two runs, not one
+ *     spanning both
+ *   - `[^*]+?` (no internal asterisks) prevents weird nesting and
+ *     keeps math like "5 ** 3 ** 2" from triggering bizarre captures
+ *
+ * Italic / underline left out for AI-1a — text is the main consumer
+ * and bold is the only inline mark in the BCG U / Rise vocabulary.
+ * If italics become needed later, add `_..._` -> `<em>` here.
+ *
+ * Exported so other previewBlock branches (callout.body, banner.body)
+ * can use the same renderer for editorial-leaning content.
+ */
+export function renderInlineMd(text: string): string {
+  return esc(text).replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
+}
+
 export function previewBlock(blk: Block, brand: BrandKey): string {
   const b = B[brand] || B.bcgu;
   const d = blk.data || {};
@@ -8,7 +33,10 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
 
   switch (blk.type) {
     case "text":
-      return '<div style="font-size:13px;color:' + b.tx + ';line-height:1.8;white-space:pre-wrap;">' + esc(d.content || "") + "</div>";
+      // AI-1a: text content now respects **markdown bold**. Body
+      // paragraphs from Lesson Writer v2 carry strategic inline
+      // bolding (3-5 phrases per paragraph) for scanability.
+      return '<div style="font-size:13px;color:' + b.tx + ';line-height:1.8;white-space:pre-wrap;">' + renderInlineMd(d.content || "") + "</div>";
 
     case "video": {
       if (d.url) {
@@ -25,7 +53,7 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
     }
 
     case "banner":
-      return '<div style="background:' + b.grad + ';padding:22px 26px;border-radius:8px;"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">' + esc(d.title || "") + '</div><div style="font-size:13px;color:rgba(255,255,255,0.88);line-height:1.7;">' + esc(d.body || "") + "</div></div>";
+      return '<div style="background:' + b.grad + ';padding:22px 26px;border-radius:8px;"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">' + esc(d.title || "") + '</div><div style="font-size:13px;color:rgba(255,255,255,0.88);line-height:1.7;">' + renderInlineMd(d.body || "") + "</div></div>";
 
     case "callout": {
       const ct: Record<string, { bg: string; brd: string; ic: string }> = {
@@ -35,7 +63,7 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
         success: { bg: "#EBF5F0", brd: b.pri, ic: "✅" },
       };
       const c2 = ct[d.type || "tip"] || ct.tip;
-      return '<div style="display:flex;border-left:4px solid ' + c2.brd + ";background:" + c2.bg + ';padding:12px 16px;border-radius:0 8px 8px 0;gap:10px;"><span style="font-size:16px;flex-shrink:0;">' + c2.ic + '</span><div style="font-size:13px;color:' + b.tx + ';line-height:1.7;">' + esc(d.body || "") + "</div></div>";
+      return '<div style="display:flex;border-left:4px solid ' + c2.brd + ";background:" + c2.bg + ';padding:12px 16px;border-radius:0 8px 8px 0;gap:10px;"><span style="font-size:16px;flex-shrink:0;">' + c2.ic + '</span><div style="font-size:13px;color:' + b.tx + ';line-height:1.7;">' + renderInlineMd(d.body || "") + "</div></div>";
     }
 
     case "cards": {

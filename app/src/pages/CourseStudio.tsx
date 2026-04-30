@@ -556,10 +556,18 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           l.blocks = l.blocks.filter((b) => b.source !== "writer");
           replaced = before - l.blocks.length;
           for (const b of blocks) {
+            // AI-1a: if the agent passed structured `data`, use it
+            // verbatim (banner.title+body, callout.body+type, accordion.
+            // items, etc.). Fall back to { content } for text-only
+            // blocks. Pre-AI-1a always wrote { content: b.content },
+            // which dropped every structured field on the floor.
+            const blockData: BlockData = b.data
+              ? { ...b.data }
+              : { content: b.content ?? "" };
             l.blocks.push({
               id: rid(),
               type: b.type,
-              data: { content: b.content },
+              data: blockData,
               source: "writer",
             });
             added += 1;
