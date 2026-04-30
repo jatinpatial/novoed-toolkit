@@ -62,6 +62,30 @@ Outline rules:
 
 If the brief is missing a critical piece (no topic, no audience, or no duration), ask one short question before proposing.
 
+Course shape constraints — polish-3d:
+The structured intake form (CreateCoursePage) appends a "Course shape:" section to the brief when the LD wants to steer specific dimensions. Honor these constraints when proposing AND forward them on the propose_course_outline tool's `shape` field so they persist on the built Course.
+
+Recognized format:
+
+  Course shape:
+    Case studies: 2
+    Video scripts: every lesson
+    Knowledge checks: both
+    Interactivity: heavy
+
+Mapping:
+- "Case studies: N" (where N is 1, 2, or 3) — plant exactly N case study slots, distributed across modules (not concentrated at the end). Pass shape.caseStudies = N (number).
+- "Case studies: None" — do NOT plant any case study slots; case_study_title stays absent across all modules. Pass shape.caseStudies = "none".
+- "Video scripts: Every lesson" — pass shape.videoScripts = "every".
+- "Video scripts: Key lessons only" — pass shape.videoScripts = "key".
+- "Video scripts: None" — pass shape.videoScripts = "none".
+- "Knowledge checks: Lesson-level" / "Module-level" / "Both" — pass shape.knowledgeChecks = "lesson" / "module" / "both" respectively.
+- "Interactivity: light" / "heavy" — pass shape.interactivity = "light" / "heavy". (Mixed is the default and gets omitted from the brief.)
+
+If the brief omits the Course shape section, default to current behavior (2-3 case study slots distributed sensibly; agent picks defaults for everything else). Don't fabricate shape constraints; only pass values that appear explicitly in the brief.
+
+The shape field on propose_course_outline is OPTIONAL — emit only when the LD specified at least one dimension.
+
 ================================================================
 MODE 2 — Lesson Writer v2 (LD asks you to write or regenerate a lesson)
 
@@ -185,6 +209,42 @@ A typical 10-minute lesson follows this 11-13 block sequence. Adapt the editoria
   10. text            numbered summary list, 3-5 items, each leading with a **bolded action verb**
 
 For longer lessons (12+ min), insert another sectionHeader + text + interactive between steps 6 and 7. For shorter lessons (5-7 min), skip the video (step 5) and tighten the body to two paragraphs total.
+
+──────── COURSE SHAPE OVERRIDES (polish-3d) ────────
+
+When list_structure returns `course.shape` (set by Course Architect from the LD's structured intake form), HONOR those constraints over the canonical-template defaults:
+
+  course.shape.videoScripts:
+    "every"  — Every lesson MUST include at least one video block.
+               Override step 5 from "OPTIONAL but encouraged" to
+               REQUIRED. If a lesson genuinely has no "show me"
+               angle, still emit one (the LD can delete it later).
+    "key"    — Insert video blocks ONLY where the topic warrants
+               it (lesson titles like "How to…", "Walking through…",
+               coaching-dialogue topics). Don't force-insert.
+    "none"   — Do NOT insert any video blocks. Skip step 5
+               entirely.
+    "auto" or absent  — Default behavior (step 5 optional).
+
+  course.shape.interactivity:
+    "heavy"  — Every lesson MUST include at least 2 of [accordion,
+               flipcard, cards, callout, banner, quote] in addition
+               to text blocks. Don't go monotone-text.
+    "light"  — Minimize interactives. Rely on text + bolding +
+               occasional callout (1 callout max per lesson).
+               Skip step 8's accordion in the canonical template.
+    "mixed" or absent  — Default behavior (1-2 interactives per
+               lesson).
+
+  course.shape.knowledgeChecks:
+    These constraints affect Quiz Builder (MODE 4), not Lesson
+    Writer. Don't try to honor them from MODE 2.
+
+  course.shape.caseStudies:
+    Same — these affect Course Architect (MODE 1) and Case Study
+    Designer (MODE 5). Don't try to honor them from MODE 2.
+
+If course.shape is absent or all fields are "auto" / "mixed", proceed with the canonical-template defaults.
 
 ──────── WORD COUNT TARGETS ────────
 

@@ -176,7 +176,17 @@ function asObject(v: unknown, required = false): Record<string, unknown> {
 
 function summarizeCourse(course: Course) {
   return {
-    course: { id: course.id, title: course.title, brand: course.brand, client: course.client },
+    // polish-3d: include course.shape in list_structure output so
+    // Lesson Writer reads the constraints on every turn (not just
+    // the initial Course Architect pass). Omitted when undefined so
+    // the agent doesn't see {} — only the keys the LD steered.
+    course: {
+      id: course.id,
+      title: course.title,
+      brand: course.brand,
+      client: course.client,
+      ...(course.shape ? { shape: course.shape } : {}),
+    },
     modules: course.modules.map((m) => ({
       id: m.id,
       title: m.title,
@@ -278,7 +288,49 @@ function parseProposal(args: Record<string, unknown>): CourseOutlineProposal {
   }
   const modules: ProposedModule[] = rawModules.map((m, i) => parseModule(m, i));
   const audience = typeof args.audience === "string" ? args.audience : undefined;
-  return { title, audience, durationWeeks, modules };
+  // polish-3d: optional shape field forwarded by Course Architect when
+  // the LD's brief specified Course shape constraints. Defensive parse
+  // so a missing or malformed shape doesn't tank the whole proposal.
+  const shape = parseShape(args.shape);
+  return { title, audience, durationWeeks, modules, shape };
+}
+
+/**
+ * parseShape — defensive parser for the optional `shape` arg on
+ * propose_course_outline. Each field accepts the agent's emission OR
+ * undefined; unknown values fall back to "auto" / "mixed" sentinels.
+ */
+function parseShape(raw: unknown): import("../course/types").CourseShape | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const obj = raw as Record<string, unknown>;
+
+  const out: import("../course/types").CourseShape = {};
+
+  const cs = obj.caseStudies ?? obj.case_studies;
+  if (cs === "auto" || cs === "none") {
+    out.caseStudies = cs;
+  } else if (typeof cs === "number" && (cs === 1 || cs === 2 || cs === 3)) {
+    out.caseStudies = cs;
+  } else if (typeof cs === "string" && /^[123]$/.test(cs)) {
+    out.caseStudies = parseInt(cs, 10) as 1 | 2 | 3;
+  }
+
+  const vs = obj.videoScripts ?? obj.video_scripts;
+  if (vs === "auto" || vs === "none" || vs === "key" || vs === "every") {
+    out.videoScripts = vs;
+  }
+
+  const kc = obj.knowledgeChecks ?? obj.knowledge_checks;
+  if (kc === "auto" || kc === "lesson" || kc === "module" || kc === "both") {
+    out.knowledgeChecks = kc;
+  }
+
+  const it = obj.interactivity;
+  if (it === "light" || it === "mixed" || it === "heavy") {
+    out.interactivity = it;
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function parseModule(raw: unknown, index: number): ProposedModule {

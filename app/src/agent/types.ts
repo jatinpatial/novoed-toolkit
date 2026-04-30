@@ -40,4 +40,10 @@ export interface CourseOutlineProposal {
   audience?: string;
   durationWeeks: number;
   modules: ProposedModule[];
+  // polish-3d: course-shape constraints from the LD's structured brief.
+  // Course Architect parses "Course shape: …" sections from the brief
+  // and forwards the values via this field on propose_course_outline.
+  // buildCourseFromProposal copies them onto Course.shape so Lesson
+  // Writer reads them on subsequent turns via list_structure.
+  shape?: import("../course/types").CourseShape;
 }

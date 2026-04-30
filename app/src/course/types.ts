@@ -133,6 +133,34 @@ export interface Material {
   addedAt: number;
 }
 
+/**
+ * CourseShape — toggles the LD picks on the structured intake form
+ * (CreateCoursePage / polish-3d). Course Architect honors the values
+ * when proposing the outline; Lesson Writer honors them when writing
+ * each lesson's blocks. Persisted on the Course so the constraints
+ * survive across multiple agent turns.
+ *
+ * Each field has an "auto" sentinel meaning "agent picks the default."
+ * Omitted fields also default to auto behavior.
+ */
+export interface CourseShape {
+  /** Number of case-study slots Course Architect should plant.
+   *  "auto" = current default behavior (2-3 distributed sensibly). */
+  caseStudies?: "auto" | "none" | 1 | 2 | 3;
+  /** Where Lesson Writer should insert empty video blocks.
+   *  "auto" / "key" = default (only when topic warrants); "every" =
+   *  every lesson gets a video block; "none" = no video blocks. */
+  videoScripts?: "auto" | "none" | "key" | "every";
+  /** Quiz Builder scope — lesson-level KCs, module-level final
+   *  assessments, both, or auto (current behavior — both). */
+  knowledgeChecks?: "auto" | "lesson" | "module" | "both";
+  /** Density of interactive blocks per lesson.
+   *  light  = minimize interactives, rely on text + bolding.
+   *  mixed  = current default (1-2 interactives per lesson).
+   *  heavy  = 2+ interactives per lesson. */
+  interactivity?: "light" | "mixed" | "heavy";
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -143,6 +171,10 @@ export interface Course {
   // 2-3 case-study slots planted by Course Architect; filled later by
   // Case Study Designer. Empty entries (just id + title) are valid.
   caseStudies?: CaseStudy[];
+  // polish-3d: course-shape constraints from the structured intake
+  // form. Surfaced via list_structure so Lesson Writer reads the
+  // values on every turn (not just the initial one).
+  shape?: CourseShape;
 }
 
 export interface BlockType {

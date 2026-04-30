@@ -95,6 +95,11 @@ function buildCourseFromProposal(proposal: CourseOutlineProposal, brand: BrandKe
       decisionPoints: [],
       debriefPrompts: [],
     })),
+    // polish-3d: copy course-shape constraints from the proposal.
+    // Persisted on Course so Lesson Writer reads them on subsequent
+    // turns via list_structure (course.shape surfaced by
+    // summarizeCourse in toolExecutor.ts).
+    shape: proposal.shape,
   };
 }
 

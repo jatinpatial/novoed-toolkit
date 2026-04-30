@@ -51,6 +51,39 @@ const DURATION_OPTIONS: Array<{ value: string; label: string; briefLabel: string
   { value: "custom", label: "Custom",  briefLabel: "" /* uses customDuration */ },
 ];
 
+// polish-3d: course-shape toggle options. Each chip group has an
+// "auto" / "mixed" default that maps to the agent's current default
+// behavior; LDs only touch these when they want to steer the shape.
+type CaseStudiesValue = "auto" | "none" | "1" | "2" | "3";
+type VideoScriptsValue = "auto" | "none" | "key" | "every";
+type KnowledgeChecksValue = "auto" | "lesson" | "module" | "both";
+type InteractivityValue = "light" | "mixed" | "heavy";
+
+const CASE_STUDIES_OPTIONS: Array<{ value: CaseStudiesValue; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "1",    label: "1" },
+  { value: "2",    label: "2" },
+  { value: "3",    label: "3" },
+  { value: "auto", label: "Auto" },
+];
+const VIDEO_SCRIPTS_OPTIONS: Array<{ value: VideoScriptsValue; label: string }> = [
+  { value: "none",  label: "None" },
+  { value: "key",   label: "Key lessons" },
+  { value: "every", label: "Every lesson" },
+  { value: "auto",  label: "Auto" },
+];
+const KNOWLEDGE_CHECKS_OPTIONS: Array<{ value: KnowledgeChecksValue; label: string }> = [
+  { value: "lesson", label: "Lesson-level" },
+  { value: "module", label: "Module-level" },
+  { value: "both",   label: "Both" },
+  { value: "auto",   label: "Auto" },
+];
+const INTERACTIVITY_OPTIONS: Array<{ value: InteractivityValue; label: string }> = [
+  { value: "light", label: "Light" },
+  { value: "mixed", label: "Mixed" },
+  { value: "heavy", label: "Heavy" },
+];
+
 export default function CreateCoursePage() {
   const navigate = useNavigate();
   // Field state — each field is a controlled input. Brand defaults to
@@ -66,6 +99,12 @@ export default function CreateCoursePage() {
   const [goals, setGoals] = useState("");
   const [brand, setBrand] = useState<BrandKey>(activeBrand);
   const [notes, setNotes] = useState("");
+  // polish-3d: Course shape toggles. All default to auto/mixed so the
+  // LD doesn't have to touch them; agent picks sensible defaults.
+  const [caseStudies, setCaseStudies] = useState<CaseStudiesValue>("auto");
+  const [videoScripts, setVideoScripts] = useState<VideoScriptsValue>("auto");
+  const [knowledgeChecks, setKnowledgeChecks] = useState<KnowledgeChecksValue>("auto");
+  const [interactivity, setInteractivity] = useState<InteractivityValue>("mixed");
   // Source materials: Soon-flagged drop zone in C0b — no wiring yet
   // (deferred to the Phase 2 AI sprint's deck-drop ingestion).
 
@@ -99,6 +138,37 @@ export default function CreateCoursePage() {
 
     const sections: string[] = [lead];
     if (goals.trim()) sections.push(`\n\nGoals:\n${goals.trim()}`);
+
+    // polish-3d: append "Course shape:" block when any toggle is off
+    // its default. Auto/mixed values are omitted so the agent treats
+    // them as "agent picks." Course Architect's MODE 1 prompt and
+    // Lesson Writer's MODE 2 prompt both honor these constraints.
+    const shapeLines: string[] = [];
+    if (caseStudies !== "auto") {
+      const label = caseStudies === "none" ? "None" : caseStudies;
+      shapeLines.push(`  Case studies: ${label}`);
+    }
+    if (videoScripts !== "auto") {
+      const label =
+        videoScripts === "none" ? "None"
+        : videoScripts === "key" ? "Key lessons only"
+        : "Every lesson";
+      shapeLines.push(`  Video scripts: ${label}`);
+    }
+    if (knowledgeChecks !== "auto") {
+      const label =
+        knowledgeChecks === "lesson" ? "Lesson-level"
+        : knowledgeChecks === "module" ? "Module-level"
+        : "Both";
+      shapeLines.push(`  Knowledge checks: ${label}`);
+    }
+    if (interactivity !== "mixed") {
+      shapeLines.push(`  Interactivity: ${interactivity}`);
+    }
+    if (shapeLines.length > 0) {
+      sections.push("\n\nCourse shape:\n" + shapeLines.join("\n"));
+    }
+
     if (notes.trim()) sections.push(`\n\nNotes:\n${notes.trim()}`);
     const brief = sections.join("");
 
@@ -254,6 +324,47 @@ export default function CreateCoursePage() {
             </div>
           </FormField>
 
+          {/* ── polish-3d: Course shape section ─────────────────────
+              Four chip groups for steering Course Architect + Lesson
+              Writer. All default to auto/mixed; LDs only touch them
+              when they want to override. The "Course shape:" block
+              gets appended to the assembled brief only when at least
+              one toggle is off-default — auto/mixed values omit
+              from the brief so the agent uses its current behavior. */}
+          <div className="rounded-xl border border-ink-100 bg-ink-50/40 p-5 space-y-4">
+            <div>
+              <div className="text-sm font-bold text-ink-900 mb-1">Course shape</div>
+              <p className="text-xs text-ink-500">
+                Leave on Auto unless you want to steer the shape — agent picks sensible defaults.
+              </p>
+            </div>
+
+            <FormShapeChips
+              label="Case studies"
+              options={CASE_STUDIES_OPTIONS}
+              value={caseStudies}
+              onChange={setCaseStudies}
+            />
+            <FormShapeChips
+              label="Video scripts"
+              options={VIDEO_SCRIPTS_OPTIONS}
+              value={videoScripts}
+              onChange={setVideoScripts}
+            />
+            <FormShapeChips
+              label="Knowledge checks"
+              options={KNOWLEDGE_CHECKS_OPTIONS}
+              value={knowledgeChecks}
+              onChange={setKnowledgeChecks}
+            />
+            <FormShapeChips
+              label="Interactivity density"
+              options={INTERACTIVITY_OPTIONS}
+              value={interactivity}
+              onChange={setInteractivity}
+            />
+          </div>
+
           {/* ── Field 6: Source materials (Soon, drop zone placeholder) */}
           <FormField
             label="Source materials"
@@ -320,6 +431,50 @@ export default function CreateCoursePage() {
  * If a second form on a different page needs this pattern, lift to
  * shell/FormField.tsx then.
  */
+/**
+ * FormShapeChips — chip-row variant for the Course shape section
+ * (polish-3d). Inline label on the left, chip group on the right,
+ * sized tighter than the main FormField so the four toggle rows
+ * stack without dominating the form. Used only inside the Course
+ * shape card; not lifted to its own file because no other surface
+ * needs the pattern today.
+ */
+function FormShapeChips<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: Array<{ value: T; label: string }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <span className="text-xs font-semibold text-ink-700 w-36 flex-shrink-0">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1.5 flex-1">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={
+              value === opt.value
+                ? "form-chip form-chip-active text-[12px] py-1.5 px-3"
+                : "form-chip text-[12px] py-1.5 px-3"
+            }
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FormField({
   label,
   hint,
