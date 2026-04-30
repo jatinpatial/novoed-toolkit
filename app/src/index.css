@@ -721,6 +721,42 @@
     color: theme("colors.ink.500");
     margin: 8px 0 0;
   }
+  /* Section-header "See all" link reuses .entry-link styling. The
+     gap-widening hover on entry-link is scoped to .entry-card:hover
+     in the entry-cards block; replicate it here so the section-header
+     arrow scoots with the same feel. */
+  .section-header .entry-link:hover {
+    gap: 12px;
+  }
+
+  /* ── Recent-courses grid (Phase 2 #2 B2d) ────────────────────────────
+     Grid for the recent-work strip on the Dashboard. Each child is a
+     <CourseCardPhoto>; the parent class .stagger-children (defined
+     above as a utility) cascades animation-delay onto the first 8
+     children, so combining "courses stagger-children" gives the cards
+     a 60ms-spaced fade-up entrance.
+
+     Mockup anchor: docs/vision-mockup.html line 820. */
+  .courses {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  @media (min-width: 768px) {
+    .courses { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .courses { grid-template-columns: repeat(3, 1fr); }
+  }
+  /* Apply the entrance animation only to course-cards inside a
+     .stagger-children parent — the existing .stagger-children utility
+     sets animation-delay on the children but doesn't define what
+     animation to use. Scoping to .course-card so this rule doesn't
+     animate any other element a future surface might also wrap in
+     stagger-children. */
+  .stagger-children > .course-card {
+    animation: fade-up 600ms var(--ease-sana) both;
+  }
 
   /* ── Entry cards (Phase 2 #2 B2c) ────────────────────────────────────
      Three-card landing under the hero. Each card has:

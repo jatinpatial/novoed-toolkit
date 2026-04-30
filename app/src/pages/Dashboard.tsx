@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { MeshHero } from "../shell/MeshHero";
 import { HeroComposer } from "../shell/HeroComposer";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
+import { CourseCardPhoto } from "../components/CourseCardPhoto";
 import {
   WelcomeModal, hasSeenWelcome, markWelcomeSeen, clearWelcomeSeen,
 } from "../shell/WelcomeModal";
@@ -16,6 +17,44 @@ const KIND_LABEL: Record<Project["kind"], string> = {
   scorm: "Interactive",
   course: "Course",
 };
+
+/**
+ * Recent-courses cover preset list (B2d). The first two cards in the
+ * recent-work strip get Unsplash photographs with branded gradient
+ * overlays so the dashboard reads "real product" instead of "tile
+ * placeholders". Index 2+ falls through with no entry; <CourseCardPhoto>
+ * renders its built-in green-700 -> ink-900 fallback gradient.
+ *
+ * The Unsplash photos are referenced from the legacy mockup (PHARMA
+ * pharma/clinical setting + DIVERSE collaboration). Topic-aware photo
+ * picking would belong in the agent backend (Course Architect picks
+ * a relevant photo when drafting the course) — captured for the post-
+ * pivot AI sprint as "image/media sourcing per course cover."
+ *
+ * Tints overlay the photo via linear-gradient at 135deg from tintFrom
+ * (top-left) to tintTo (bottom-right). The first card uses the
+ * CourseCardPhoto defaults (green-700 alpha -> green-900 alpha) — same
+ * values, so we omit the props.
+ */
+const COVERS: Array<{ imageUrl: string; tintFrom?: string; tintTo?: string }> = [
+  {
+    // Pharma / clinical setting — the recurring brief in BCG U pilots
+    // (change management, leadership, transformation in pharma).
+    imageUrl:
+      "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&q=80",
+    // Defaults: rgba(0,107,63,0.85) -> rgba(0,59,34,0.92) (green-700
+    // alpha -> green-900 alpha). Matches the user spec exactly, so we
+    // omit tintFrom / tintTo and let CourseCardPhoto's defaults apply.
+  },
+  {
+    // Diverse-collaboration photo — neutral training/learning energy
+    // for cross-functional courses.
+    imageUrl:
+      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
+    tintFrom: "rgba(0, 133, 124, 0.85)", // teal-500 #00857C @0.85
+    tintTo:   "rgba(0, 107, 63, 0.92)",  // green-700 #006B3F @0.92
+  },
+];
 
 function relTime(ts: number): string {
   const d = Date.now() - ts;
@@ -30,31 +69,69 @@ function relTime(ts: number): string {
 }
 
 /**
+ * Walk a Project's nested course shape to count modules + lessons.
+ *
+ * Only course-kind projects have a `course` field; component / scorm
+ * projects return zeros. The optional chaining on `m.lessons?.length`
+ * is defensive — Course.Module.lessons is typed as required, but the
+ * data is loaded from localStorage and could be partially-shaped on
+ * old saves.
+ *
+ * Returns zeros for projects without a course shape (new project, no
+ * Course Architect run yet) so the meta row renderer can skip the
+ * module/lesson segments rather than show "0 modules · 0 lessons".
+ */
+function counts(project: Project): { modules: number; lessons: number } {
+  if (project.data.kind !== "course") {
+    return { modules: 0, lessons: 0 };
+  }
+  const modules = project.data.course.modules ?? [];
+  const lessonCount = modules.reduce(
+    (sum, m) => sum + (m.lessons?.length ?? 0),
+    0,
+  );
+  return { modules: modules.length, lessons: lessonCount };
+}
+
+/**
+ * Build the meta segments shown under the course title on a recent-
+ * work card. Module/lesson counts are skipped when zero (new course
+ * before Course Architect runs); relative time is always present.
+ */
+function metaFor(project: Project): string[] {
+  const c = counts(project);
+  const segments: string[] = [];
+  if (c.modules > 0) segments.push(`${c.modules} module${c.modules === 1 ? "" : "s"}`);
+  if (c.lessons > 0) segments.push(`${c.lessons} lesson${c.lessons === 1 ? "" : "s"}`);
+  segments.push(`Updated ${relTime(project.updatedAt)}`);
+  return segments;
+}
+
+/**
  * Dashboard — chat-first home (Phase 2 #1, redesigned in #2 B2).
  *
- * The hero composer is the primary entry point: type a brief, the
- * agent picks it up on /courses and runs Course Architect.
+ * Hero composer is the primary entry point: type a brief, the agent
+ * picks it up on /courses and runs Course Architect.
  *
- * B2a (this commit) wraps the hero block in <MeshHero> for the
- * animated mesh-blob backdrop, swaps the eyebrow / title / subtitle
- * to the mockup's left-aligned hero-content layout (glass-pill
- * eyebrow with pulse dot, display-sized title with gradient italic
- * "design" accent, 19px ink-700 subtitle), and switches AppShell to
- * fullBleed so the mesh runs edge-to-edge. Below-hero content
- * (entry cards + recent work) lives in a 1208px max-width section
- * wrapper.
+ * Phase 2 #2 B2 dashboard rebuild — full sub-commit chain:
+ *   B2a            hero shell (MeshHero wrap, display title with
+ *                  italic gradient "design", glass-pill eyebrow)
+ *   B2b            composer redesign (gradient border + AI orb +
+ *                  two-path CTA: Detailed brief + Design)
+ *   B2b-tune       dimmer orb glow, drop shine-sweep, darker mesh
+ *   B2b-tune-2     orb edge glow + green wash mesh + parallax
+ *   B2c            entry cards with 3D tilt + mouse-follow glow
+ *   B2d (this)     recent-courses strip via <CourseCardPhoto> +
+ *                  section header + pills realign
  *
- * The composer (HeroComposer), pills (TryAPromptPills), entry cards
- * (EntryCards), and recent-work strip stay structurally unchanged in
- * B2a — they still render but with their Phase 2 #1 visuals. Each
- * gets rebuilt in its own sub-commit:
- *   B2b — composer redesign (gradient border + shine + Sparkles orb
- *         + two-path CTA: Detailed brief + Design)
- *   B2c — entry cards with tilt + 3D mouse-follow glow
- *   B2d — recent-courses strip via <CourseCardPhoto> + pills polish
+ * Below-hero structure:
+ *   [section]  EntryCards (Three ways to start. -> 3 cards)
+ *   [section]  Recent work. -> CourseCardPhoto grid (3 cols on lg)
  *
- * Recent work survives below the hero — useful for returning users
- * who just want to jump back in.
+ * Recent-work tiles render via <CourseCardPhoto>; the first two get
+ * Unsplash photos from COVERS, the rest take the built-in fallback
+ * gradient. Module/lesson counts walk project.data.course.modules
+ * via the counts() / metaFor() helpers above.
  */
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -115,44 +192,46 @@ export default function Dashboard() {
       </MeshHero>
 
       {/* Below-hero sections — 1208px max-width per mockup section
-          shape. Entry cards + recent work stay on their Phase 2 #1
-          visuals here; each gets rebuilt in B2c / B2d. */}
+          shape. Both blocks share the .section-header pattern from
+          B2c (32px h2 + 15px sub). */}
       <div className="max-w-[1208px] mx-auto px-8 md:px-16 py-12">
         <EntryCards onFocusComposer={focusComposer} />
 
-        {/* Recent work */}
         {projects.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-ink-400" />
-                <h2 className="text-sm font-semibold text-ink-800">Recent work</h2>
+          <section className="mt-16">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Recent work.</h2>
+                <p className="section-sub">Pick up where you left off.</p>
               </div>
-              <Link to="/projects" className="text-xs font-medium text-brand-700 hover:text-brand-800 flex items-center gap-1">
-                All projects <ArrowRight size={12} />
+              <Link to="/projects" className="entry-link">
+                See all <ArrowRight size={14} strokeWidth={2.5} />
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recent.map((p) => <ProjectCard key={p.id} project={p} />)}
+            <div className="courses stagger-children">
+              {recent.map((project, i) => {
+                const cover = COVERS[i];
+                const href =
+                  project.kind === "course"
+                    ? `/courses?project=${project.id}`
+                    : `/infographics?project=${project.id}`;
+                return (
+                  <CourseCardPhoto
+                    key={project.id}
+                    title={project.name}
+                    meta={metaFor(project)}
+                    tag={KIND_LABEL[project.kind]}
+                    imageUrl={cover?.imageUrl}
+                    tintFrom={cover?.tintFrom}
+                    tintTo={cover?.tintTo}
+                    to={href}
+                  />
+                );
+              })}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </AppShell>
-  );
-}
-
-function ProjectCard({ project }: { project: Project }) {
-  const href = project.kind === "course" ? `/courses?project=${project.id}` : `/infographics?project=${project.id}`;
-  return (
-    <Link to={href} className="card card-hover p-4 block">
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`chip ${project.kind === "course" ? "chip-neutral" : project.kind === "scorm" ? "chip-amber" : "chip-brand"} text-[10px]`}>
-          {KIND_LABEL[project.kind]}
-        </span>
-        <span className="text-[10px] text-ink-400">{relTime(project.updatedAt)}</span>
-      </div>
-      <div className="text-sm font-semibold text-ink-900 truncate">{project.name}</div>
-    </Link>
   );
 }
