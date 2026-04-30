@@ -84,21 +84,19 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
             </div>
             <div className="composer-cta-row">
               {/*
-                Detailed brief  -  disabled-with-soon until C0 lands.
-                Per Q1 confirmation: opacity 0.55, no hover lift /
-                shine / border-color change, native title tooltip,
-                inline "Soon" pill matching EntryCards soonLabel style.
-                TODO(C0): re-enable + wire to navigate("/courses/new")
-                when the intake form ships.
+                Detailed brief  ->  /courses/new (the structured intake
+                form, C0a). Re-enabled in C0a; previously disabled-
+                with-soon since B2b. Same visual treatment as the
+                Design button (primary CTA pair); the structured form
+                is the path for LDs who want to think the inputs
+                through before letting Course Architect run.
               */}
               <button
                 type="button"
+                onClick={() => navigate("/courses/new")}
                 className="btn-cta-secondary"
-                disabled
-                title="Detailed brief intake — coming with the next release"
               >
                 Detailed brief <ArrowRight size={14} strokeWidth={2.5} />
-                <span className="composer-soon">Soon</span>
               </button>
               <button
                 type="button"

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import InfographicStudio from "./pages/InfographicStudio";
 import CourseStudio from "./pages/CourseStudio";
+import CreateCoursePage from "./pages/CreateCoursePage";
 import ScormPlayer from "./pages/ScormPlayer";
 import ProjectsLibrary from "./pages/ProjectsLibrary";
 import { BrandBodyAttribute } from "./shell/TopBar";
@@ -25,6 +26,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<Dashboard />} />
         <Route path="/infographics" element={<InfographicStudio />} />
         <Route path="/courses" element={<CourseStudio />} />
+        {/* C0: structured course-intake form. Wired from
+            HeroComposer's "Detailed brief →" button. Mounted before
+            the /courses route so /courses/new resolves before the
+            /courses param-only route fallthrough. */}
+        <Route path="/courses/new" element={<CreateCoursePage />} />
         <Route path="/player" element={<ScormPlayer />} />
         <Route path="/projects" element={<ProjectsLibrary />} />
         {/* Legacy routes */}
