@@ -1011,7 +1011,13 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
           const moduleActive = viewMode === "module" && am === mi;
           return (
           <div key={m.id} className="mb-1">
-            <div className={`px-3 pt-2 pb-1 flex items-center gap-1.5 group ${moduleActive ? "bg-brand-50/60 rounded-md mx-2" : ""}`}>
+            {/* B3b: outline-module-row provides the resting/hover/active
+                visual language (subtle bg + brand-tinted border on hover,
+                pre-applied on active). Inline Tailwind kept for layout
+                only (flex/gap). The bg-brand-50/60 + rounded-md + mx-2
+                that previously appeared only on active is now baked into
+                the .outline-module-active class. */}
+            <div className={`outline-module-row flex items-center gap-1.5 group ${moduleActive ? "outline-module-active" : ""}`}>
               <button
                 onClick={() => onSelectModule(mi)}
                 className={`w-5 h-5 flex-shrink-0 rounded text-[9px] font-bold flex items-center justify-center transition ${moduleActive ? "bg-brand-600 text-white" : "bg-ink-900 text-white hover:bg-brand-700"}`}
@@ -1054,7 +1060,12 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
             {m.lessons.map((l: any, li: number) => {
               const active = am === mi && al === li;
               return (
-                <div key={l.id} className={`group mx-2 rounded-md flex items-center gap-1.5 pl-7 pr-2 py-1.5 cursor-pointer ${active ? "bg-brand-50" : "hover:bg-ink-50"}`}
+                /* B3b: outline-lesson-row class provides motion-token
+                   transitions; outline-lesson-active adds a 2px brand-500
+                   left accent stripe via ::before (matches the global
+                   Sidebar nav-item-active pattern from B1). bg-brand-50
+                   active fill stays inline. */
+                <div key={l.id} className={`outline-lesson-row group mx-2 rounded-md flex items-center gap-1.5 pl-7 pr-2 py-1.5 cursor-pointer ${active ? "bg-brand-50 outline-lesson-active" : "hover:bg-ink-50"}`}
                   onClick={() => onSelect(mi, li)}
                 >
                   <span className={`text-[10px] font-bold flex-shrink-0 ${active ? "text-brand-700" : "text-ink-400"}`}>{mi + 1}.{li + 1}</span>

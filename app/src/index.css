@@ -696,6 +696,54 @@
     margin-left: 4px;
   }
 
+  /* ── Course Studio outline tree (Phase 2 #2 B3b) ─────────────────────
+     Module rows + lesson rows in the LeftSidebar's outline pane.
+     Module rows pick up subtle card depth (resting -> hover with a
+     brand-tinted border + subtle resting shadow); active lesson rows
+     get a 2px brand-500 left accent stripe matching the global
+     Sidebar's nav-item-active pattern (B1).
+
+     CSS rules co-located here rather than inlined as Tailwind so
+     the active::before pseudo-element stays centralized; existing
+     Tailwind classes on the JSX cover layout/typography. */
+  .outline-module-row {
+    margin: 0 8px;
+    padding: 8px 12px 4px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: background var(--duration-fast) var(--ease-sana),
+                border-color var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana);
+  }
+  .outline-module-row:hover:not(.outline-module-active) {
+    background: theme("colors.ink.50");
+    border-color: theme("colors.brand.100");
+    box-shadow: var(--shadow-resting);
+  }
+  .outline-module-active {
+    background: theme("colors.brand.50");
+    border-color: theme("colors.brand.200");
+  }
+
+  .outline-lesson-row {
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-sana),
+                color var(--duration-fast) var(--ease-sana);
+  }
+  /* 2px left accent stripe — matches the global Sidebar nav-item-
+     active treatment (B1) so the active surface signal reads the
+     same way across the app. */
+  .outline-lesson-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: theme("colors.brand.500");
+    border-radius: 0 2px 2px 0;
+  }
+
   /* ── Section headers (Phase 2 #2 B2c) ────────────────────────────────
      Used above each below-hero block on the Dashboard ("Three ways
      to start.", "Recent work."). Inline-end alignment lets a "See
