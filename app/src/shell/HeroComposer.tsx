@@ -120,12 +120,17 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
             </div>
           </div>
         </div>
-        {/* polish-2a bug 1: subtle text link to the structured form,
-            sized small enough that it doesn't compete with the primary
-            CTA but readable enough that an LD scanning the hero notices
-            the alternative path. */}
-        <div className="composer-secondary-link">
-          Or <Link to="/courses/new">fill in a structured brief →</Link>
+        {/* polish-3b: bumped from a tiny afterthought to a tinted-pill
+            link with a tagline. Still secondary to the primary "Design
+            course →" button — but no longer hidden. LDs see it as a
+            genuine alternative path. Tagline below clarifies what the
+            structured form collects (audience / duration / goals /
+            source materials). */}
+        <Link to="/courses/new" className="composer-secondary-link">
+          Or fill in a structured brief →
+        </Link>
+        <div className="composer-secondary-tagline">
+          Audience · duration · learning goals · source materials
         </div>
       </>
     );

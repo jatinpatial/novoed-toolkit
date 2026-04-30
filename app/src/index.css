@@ -693,28 +693,48 @@
     opacity: 0.85;
   }
 
-  /* polish-2a bug 1: subtle text link below the composer pointing to
-     the structured intake form (/courses/new). Replaces the
-     dual-button layout where "More structured" sat next to "Design"
-     and read as competing choices. The link sits centered under
-     the composer, sized small enough to defer to the primary
-     "Design course →" CTA but readable enough that an LD scanning
-     the hero notices the alternative path. */
+  /* polish-3b: structured-brief link bumped from tiny afterthought
+     to tinted-pill with a tagline. Still secondary to the primary
+     "Design course →" button — but no longer hidden. LDs see it as
+     a genuine alternative path, not an escape hatch. */
   .composer-secondary-link {
-    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    margin: 18px auto 0;
+    padding: 10px 22px;
+    background: theme("colors.brand.50");
+    color: var(--green-700);
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: var(--shadow-resting);
+    transition: transform var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana),
+                background var(--duration-fast) var(--ease-sana);
+  }
+  .composer-secondary-link:hover {
+    background: theme("colors.brand.100");
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+  }
+  /* Wrap the parent container so the link can use display: inline-flex
+     and still center on the page. The MeshHero content slot's width
+     comes from .mesh-hero-content (1080px max, mx-auto); this rule
+     centers the link within that. */
+  .mesh-hero-content > .composer-secondary-link {
+    display: flex;
+    justify-content: center;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .composer-secondary-tagline {
+    margin: 6px auto 0;
     text-align: center;
     font-size: 12px;
     color: theme("colors.ink.500");
-  }
-  .composer-secondary-link a {
-    color: var(--green-700);
-    font-weight: 600;
-    text-decoration: none;
-    transition: color var(--duration-fast) var(--ease-sana);
-  }
-  .composer-secondary-link a:hover {
-    color: var(--green-500);
-    text-decoration: underline;
+    letter-spacing: 0.01em;
   }
 
   /* Composer CTA buttons — separate selectors from the global .btn
