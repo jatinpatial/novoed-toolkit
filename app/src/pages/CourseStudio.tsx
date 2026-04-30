@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  Plus, X, MoreHorizontal, ArrowUp, ArrowDown, Trash2, Copy, Settings2, ChevronLeft, ChevronRight,
+  Plus, X, MoreHorizontal, ArrowUp, ArrowDown, ArrowRight, Trash2, Copy, Settings2, ChevronLeft, ChevronRight,
   Save, Check, Download, FileJson, FileText, Eye, Sparkles, MessageSquare, BookOpen, PlayCircle, Home, Type,
   Video, Image as ImageIcon, Rows3, Hash, ListChecks, Layers, Clock, HelpCircle, BarChart3, Minus, AlertCircle,
   Maximize2, Minimize2, LucideProps,
@@ -772,6 +772,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
             <LessonCanvas
               lesson={lesson}
               module={course.modules[am]}
+              course={course}
               brand={course.brand}
               am={am} al={al}
               onUpdateLesson={patchLesson}
@@ -783,6 +784,27 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
               onEditBlock={setEditingBlockId}
               insertAt={insertAt}
               setInsertAt={setInsertAt}
+              /* AI-1d: end-of-lesson Continue CTA navigation. Walks
+                 to the next lesson, or — when on the last lesson of
+                 the last module — loops back to lesson 1.1 with a
+                 celebration framing. */
+              onContinue={() => {
+                const currentMod = course.modules[am];
+                if (!currentMod) return;
+                const isLastLessonInModule = al >= currentMod.lessons.length - 1;
+                const isLastModule = am >= course.modules.length - 1;
+                setEditingBlockId(null);
+                if (!isLastLessonInModule) {
+                  setAl(al + 1);
+                } else if (!isLastModule) {
+                  setAm(am + 1);
+                  setAl(0);
+                } else {
+                  // Course completed — loop back to the first lesson.
+                  setAm(0);
+                  setAl(0);
+                }
+              }}
             />
           ) : (
             <div className="h-full flex items-center justify-center">
@@ -2092,7 +2114,7 @@ function SceneTable({
   );
 }
 
-function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt }: any) {
+function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLesson, onUpdateBlock, onAddBlock, onRemoveBlock, onMoveBlock, onDuplicateBlock, onEditBlock, insertAt, setInsertAt, onContinue }: any) {
   const { setOpen: setChatOpen, prefillInput } = useAgent();
   const hasWriterBlocks = lesson.blocks.some((b: Block) => b.source === "writer");
 
@@ -2111,20 +2133,42 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
     prefillInput(buildRegenerateQuestionPrefill(mod, al, questionIndex));
   }
 
+  // AI-1d: lesson position + total for the "LESSON N OF M" hero subtitle.
+  // Walks all modules to count global position; matches the NovoEd
+  // / Rise screenshot framing where N is the absolute lesson index
+  // across the whole course.
+  const totalLessons = course?.modules
+    ? course.modules.reduce((sum: number, m: Module) => sum + m.lessons.length, 0)
+    : 1;
+  const lessonAbsoluteIndex = course?.modules
+    ? course.modules
+        .slice(0, am)
+        .reduce((sum: number, m: Module) => sum + m.lessons.length, 0) + al
+    : 0;
+  const lessonPositionLabel = `Lesson ${lessonAbsoluteIndex + 1} of ${totalLessons}`;
+  const isLastLesson =
+    course?.modules
+      ? am === course.modules.length - 1 && al === course.modules[am].lessons.length - 1
+      : false;
+
   // B3-tune-c: meta strings — icons render alongside in the JSX.
+  // Module + dotted lesson reference still shown alongside "Lesson N of M".
   const lessonNumber = `${am + 1}.${al + 1}`;
   const moduleNumber = am + 1;
   const blockCountLabel = `${lesson.blocks.length} block${lesson.blocks.length !== 1 ? "s" : ""}`;
+  void lessonNumber;
+  void moduleNumber;
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
-      {/* B3-tune-c lesson header — eyebrow + bigger title + meta row
-          with three icon-prefixed segments. Replaces the bare
-          "LESSON" eyebrow + 32px title + flat meta from B3c. */}
-      <div className="mb-7">
+      {/* AI-1d: green-tinted hero band wrapping eyebrow + title + meta.
+          Visually separates the lesson chrome from the body blocks
+          below. Eyebrow flipped from "Module N · Lesson N.M" (B3-tune-c)
+          to "LESSON N OF M" per the BCG U / Rise pattern. */}
+      <div className="lesson-hero">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="lesson-eyebrow">
-            Module {moduleNumber} · Lesson {lessonNumber}
+          <div className="lesson-eyebrow uppercase tracking-wider">
+            {lessonPositionLabel}
           </div>
           {hasWriterBlocks && (
             <button
@@ -2247,10 +2291,11 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
         </>
       )}
 
-      {/* Knowledge check section — separate from blocks. Lives below the
-          lesson body. Empty state shows a CTA; filled state shows the
-          questions with per-question regen affordance. */}
-      <div className="mt-12">
+      {/* AI-1d: knowledge check section in a tinted-green section wrapper.
+          Visually demarcates the assessment block from lesson body —
+          matches Screenshot 4 from the BCG U pattern set. Inner
+          KnowledgeCheckSection unchanged. */}
+      <div className="kc-section">
         <KnowledgeCheckSection
           quiz={lesson.knowledgeCheck}
           onWrite={() => triggerKnowledgeCheck("write")}
@@ -2258,6 +2303,20 @@ function LessonCanvas({ lesson, module: mod, brand, am, al, onUpdateLesson, onUp
           onRegenerateQuestion={triggerQuestionRegen}
         />
       </div>
+
+      {/* AI-1d: end-of-lesson Continue CTA. On the last lesson of the
+          last module, the button copy flips to a celebration framing
+          (🎉 You completed the course) and loops back to lesson 1.1
+          when clicked. Otherwise advances to the next lesson. */}
+      <button
+        type="button"
+        onClick={() => onContinue?.()}
+        className="lesson-continue-cta"
+      >
+        {isLastLesson
+          ? <>🎉 You completed the course — back to start <ArrowRight size={16} strokeWidth={2.5} /></>
+          : <>Continue <ArrowRight size={16} strokeWidth={2.5} /></>}
+      </button>
     </div>
   );
 }

@@ -757,6 +757,64 @@
     transition: border-color var(--duration-base) var(--ease-sana);
   }
 
+  /* ── Lesson hero band (AI-1d) ────────────────────────────────────────
+     Green-tinted band wrapping the lesson chrome (eyebrow + title +
+     meta). Matches the BCG U / Rise per-lesson hero treatment —
+     visually separates "where you are" from the lesson body below.
+     B3-tune-c shipped these as a flat block; AI-1d puts them in a
+     branded card wrapper for a more designed feel. */
+  .lesson-hero {
+    background: rgba(0, 166, 81, 0.04);
+    border: 1px solid theme("colors.brand.100");
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+  }
+
+  /* Knowledge check section wrapper (AI-1d) — green-tinted wash with
+     more saturation than the lesson hero so the assessment area reads
+     as a distinct destination. Matches BCG U Screenshot 4 (light-green
+     section background for KCs). */
+  .kc-section {
+    margin-top: 40px;
+    padding: 28px 24px 32px;
+    background: rgba(0, 166, 81, 0.06);
+    border: 1px solid theme("colors.brand.100");
+    border-radius: 14px;
+  }
+
+  /* End-of-lesson Continue CTA (AI-1d) — full-width green-gradient
+     button. Last-of-last-lesson flips copy to a 🎉 celebration framing
+     and loops back to lesson 1.1 when clicked. */
+  .lesson-continue-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 40px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--green-500), var(--green-700));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 166, 81, 0.25);
+    transition: transform var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana);
+  }
+  .lesson-continue-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 166, 81, 0.35);
+  }
+  .lesson-continue-cta:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 14px rgba(0, 166, 81, 0.25);
+  }
+
   /* ── Lesson canvas chrome (Phase 2 #2 B3-tune-c) ─────────────────────
      Eyebrow + bigger title + icon-prefixed meta row. Replaces the
      bare "LESSON" eyebrow / 32px title / flat meta from B3c.
