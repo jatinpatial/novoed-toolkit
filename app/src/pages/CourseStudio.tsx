@@ -443,6 +443,36 @@ interface CanvasProps {
 function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   const [am, setAm] = useState(0);
   const [al, setAl] = useState(0);
+
+  // polish-3c: brief + autosend handler for navigations into an
+  // already-loaded course. Mirrors the CoursesHome handler from
+  // polish-2a, but runs when the course IS loaded — covers the
+  // /scripts/new -> save course -> navigate(/courses?project=X&brief=Y&autosend=1)
+  // flow. Without this, the brief sat in the URL but never reached
+  // the agent (CoursesHome's handler doesn't run with project loaded).
+  const [canvasParams, setCanvasParams] = useSearchParams();
+  const { setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus } = useAgent();
+  useEffect(() => {
+    const brief = canvasParams.get("brief");
+    const autosend = canvasParams.get("autosend") === "1";
+    if (!brief) return;
+    setChatOpen(true);
+    if (autosend) {
+      if (agentStatus !== "open") return; // wait for socket
+      sendMessage(brief);
+    } else {
+      prefillInput(brief);
+    }
+    setCanvasParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.delete("brief");
+        n.delete("autosend");
+        return n;
+      },
+      { replace: true },
+    );
+  }, [canvasParams, agentStatus, setCanvasParams, setChatOpen, prefillInput, sendMessage]);
   // Canvas mode. "lesson" shows the lesson editor; "module" shows the
   // module summary page (week/objectives/final assessment/case study).
   // Switched by clicking the module row vs a lesson row in the outline.

@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import InfographicStudio from "./pages/InfographicStudio";
 import CourseStudio from "./pages/CourseStudio";
 import CreateCoursePage from "./pages/CreateCoursePage";
+import CreateScriptPage from "./pages/CreateScriptPage";
 import ScormPlayer from "./pages/ScormPlayer";
 import ProjectsLibrary from "./pages/ProjectsLibrary";
 import { BrandBodyAttribute } from "./shell/TopBar";
@@ -31,6 +32,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             the /courses route so /courses/new resolves before the
             /courses param-only route fallthrough. */}
         <Route path="/courses/new" element={<CreateCoursePage />} />
+        {/* polish-3c: standalone Synthesia script intake. Submits
+            into a 1-module / 1-lesson / 1-video-block course that
+            CourseCanvas opens with the Scriptwriter brief auto-sent. */}
+        <Route path="/scripts/new" element={<CreateScriptPage />} />
         <Route path="/player" element={<ScormPlayer />} />
         <Route path="/projects" element={<ProjectsLibrary />} />
         {/* Legacy routes */}

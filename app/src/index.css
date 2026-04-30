@@ -737,6 +737,30 @@
     letter-spacing: 0.01em;
   }
 
+  /* polish-3c: tertiary entry path — Script Studio. Smaller than the
+     structured-brief pill so the hero hierarchy reads:
+       primary CTA       Design course →    (gradient button)
+       secondary pill    Or fill in...      (brand-50 wash + tagline)
+       tertiary text     Just a video...    (plain ink-500 + green link)
+     LDs who don't need a script never notice it; LDs who do see it
+     after scanning past the primary + secondary paths. */
+  .composer-tertiary-link {
+    margin: 14px auto 0;
+    text-align: center;
+    font-size: 12px;
+    color: theme("colors.ink.500");
+  }
+  .composer-tertiary-link a {
+    color: var(--green-700);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-sana);
+  }
+  .composer-tertiary-link a:hover {
+    color: var(--green-500);
+    text-decoration: underline;
+  }
+
   /* Composer CTA buttons — separate selectors from the global .btn
      so the composer treatment doesn't bleed onto every button in the
      app. Same shape (11px / 20px padding, 8px radius) but explicit. */

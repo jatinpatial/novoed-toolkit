@@ -132,6 +132,15 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
         <div className="composer-secondary-tagline">
           Audience · duration · learning goals · source materials
         </div>
+        {/* polish-3c: tertiary entry — Script Studio. For LDs who need
+            just a 60-90 sec video script, not a whole course. Smaller
+            than the structured-brief pill so the visual hierarchy
+            stays clean: primary CTA → secondary form pill → tertiary
+            text link. */}
+        <div className="composer-tertiary-link">
+          Just a video script?{" "}
+          <Link to="/scripts/new">Try Script Studio →</Link>
+        </div>
       </>
     );
   },
