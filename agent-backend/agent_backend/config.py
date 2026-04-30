@@ -108,8 +108,12 @@ Reach for these block types (write_lesson now accepts structured `data` per bloc
   cards               2-4 parallel concepts in a row. Each card has title + 1-2 sentence description. Use for "Three things to check before announcing", "Four reasons this typically fails", etc.
                       Shape: { type: "cards", data: { items: [{ title: "Frame", desc: "…" }, { title: "Sequence", desc: "…" }, { title: "Reinforce", desc: "…" }] } }
 
-  accordion           Expandable Q&A or grouped sections. Use for "Key learnings" recap at end-of-lesson OR for FAQ-style detail you want collapsed by default.
-                      Shape: { type: "accordion", data: { items: [{ title: "Learning 1: …", desc: "Detail that expands…" }, …] } }
+  video               Insert an empty video block when the content has a "show me, don't tell me" moment that an avatar would explain better than text — leader framing a hard announcement, walking through a mistake, demonstrating a coaching dialogue. Especially effective for senior-leader audiences who learn better from modeled behavior than abstract description. Empty block (no URL, no script) — the LD generates the Synthesia script later via MODE 3 (Synthesia Scriptwriter).
+                      Shape: { type: "video", data: {} }
+                      Use sparingly — at most 1 video per lesson, only when a text block can't carry the same meaning.
+
+  accordion           Expandable sections — perfect for end-of-section "Key learnings" wrap-ups (3-5 collapsible takeaways), FAQ-style explainers, or "common pitfalls" content. Title each accordion item with the takeaway-as-thesis (a complete sentence stating the lesson, not just a label) so the LD scanning the closed accordion gets the substance: "Trust is rebuilt one decision at a time, not in one announcement" — not "Trust" or "Building trust".
+                      Shape: { type: "accordion", data: { items: [{ title: "Trust is rebuilt one decision at a time, not in one announcement", desc: "Detail that expands…" }, …] } }
 
   flipcard            Click-to-flip review. 3-6 cards, front = term/question, back = definition/answer. Best for vocab review or quick concept check before a knowledge check.
                       Shape: { type: "flipcard", data: { items: [{ title: "Psychological safety", desc: "Belief that one won't be punished for speaking up." }, …] } }
@@ -125,7 +129,8 @@ Reach for these block types (write_lesson now accepts structured `data` per bloc
 
 DO NOT reach for:
   - quiz / poll inside write_lesson — those are Quiz Builder territory (MODE 4); the LD adds a knowledge check separately.
-  - image / video — these need URLs the LD provides; you don't have them.
+  - image — needs a URL the LD provides; you don't have one.
+  (video IS allowed — emit empty video blocks as described above; the LD generates the script later.)
 
 ──────── INLINE BOLDING STRATEGY ────────
 
@@ -165,20 +170,21 @@ Section headers carry one of these 12 icon names. The agent MUST pick from this 
 
 ──────── CANONICAL LESSON TEMPLATE ────────
 
-A typical 8-12 minute lesson follows this 9-12 block sequence. Adapt the editorial moments (banner / callout / quote) to topic fit; the skeleton stays the same:
+A typical 10-minute lesson follows this 11-13 block sequence. Adapt the editorial moments (banner / callout / quote) to topic fit; the skeleton stays the same:
 
-  1.  sectionHeader   "Objectives"            iconName: "target"
-  2.  text            numbered list, 2-4 items, each leading with a **bolded action verb**
-  3.  sectionHeader   "Body" or topic-specific  iconName: "brain" or "trendingUp"
-  4.  text            paragraph 1, 100-150 words, 3-5 **bolded phrases**
-  5.  banner / callout / quote                editorial moment that punctuates the section
-  6.  text            paragraph 2, 100-150 words, **bolded phrases**
+  1.  sectionHeader   "Why this matters" or topic-specific opener
+                                              iconName: "trendingUp" / "target"
+  2.  text            paragraph 1, 100-150 words, 3-5 **bolded phrases**
+  3.  banner / callout / quote                editorial moment that punctuates the section
+  4.  text            paragraph 2, 100-150 words, **bolded phrases**
+  5.  video           empty video block — when content has a "show me, don't tell me" angle. OPTIONAL BUT ENCOURAGED, especially for senior-leader audiences who learn better from modeled behavior than abstract description. Place where an avatar would explain better than text (leader framing a hard announcement, walking through a mistake, demonstrating a coaching dialogue). The LD generates the Synthesia script later via MODE 3.
+  6.  text            paragraph 3, 100-150 words, **bolded phrases**
   7.  clickInstruction (when next block is interactive)
-  8.  accordion / flipcard / cards / timeline   topic-fit interactive
+  8.  accordion       end-of-section "Key learnings" — 3-5 collapsible items. Title each item as a takeaway-thesis (complete sentence stating the lesson), not a label. Body expands the thesis with detail. flipcard / cards / timeline are also valid here when the topic fits — accordion is the default for "Key learnings" wrap-ups.
   9.  sectionHeader   "Key takeaways"         iconName: "check"
-  10. text            bulleted summary, 3-5 short items, **bolded core terms**
+  10. text            numbered summary list, 3-5 items, each leading with a **bolded action verb**
 
-For longer lessons (12+ min), insert another sectionHeader + text + interactive between steps 6 and 7. For shorter lessons (5-7 min), skip step 8's interactive and tighten the body to one paragraph.
+For longer lessons (12+ min), insert another sectionHeader + text + interactive between steps 6 and 7. For shorter lessons (5-7 min), skip the video (step 5) and tighten the body to two paragraphs total.
 
 ──────── WORD COUNT TARGETS ────────
 
