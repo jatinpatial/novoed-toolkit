@@ -30,7 +30,13 @@ export async function dispatchToolCall(
     }
     case "write_lesson": {
       const lessonId = asString(args.lesson_id, "lesson_id");
-      const blocks = parseWriterBlocks(args.blocks);
+      // polish-3a: runtime sanitizer rewrites text blocks that lead
+      // with a markdown heading line into a sectionHeader + stripped-
+      // text pair. Belt-and-suspenders defense — the prompt bans
+      // headings inside text content, but the sanitizer ensures that
+      // even when the agent slips, the LD never sees raw "## Title"
+      // rendered as text body.
+      const blocks = sanitizeWriterBlocks(parseWriterBlocks(args.blocks));
       const result = actions.writeLesson(lessonId, blocks);
       return {
         ok: true,
@@ -325,6 +331,83 @@ function parseLesson(raw: unknown, modIndex: number, lessonIndex: number): Propo
  * `data` and ignore `content` (structured wins; the agent shouldn't send
  * both, but if it does we don't want silent data loss either way).
  */
+/**
+ * sanitizeWriterBlocks — runtime defense against text blocks that
+ * lead with a markdown heading (polish-3a).
+ *
+ * Pattern caught:
+ *   { type: "text", content: "## Your mandate as change leader\n\nMost pharma..." }
+ *
+ * Rewrites to:
+ *   { type: "sectionHeader", data: { title: "Your mandate as change leader", iconName: "target" } }
+ *   { type: "text", content: "Most pharma..." }
+ *
+ * The prompt explicitly bans this pattern (see config.py MODE 2's
+ * Voice & grounding section). The sanitizer runs at the
+ * write_lesson dispatch boundary so even when the agent slips, the
+ * LD never sees raw heading markers rendered as body text.
+ *
+ * Only catches the leading heading — multi-heading text blocks slip
+ * through with second+ headings still as raw text. If the live test
+ * shows the agent emitting multiple headings inside a single text
+ * block, lift to a recursive splitter.
+ */
+function sanitizeWriterBlocks(blocks: WriterBlock[]): WriterBlock[] {
+  const out: WriterBlock[] = [];
+  for (const b of blocks) {
+    if (b.type !== "text" || !b.content) {
+      out.push(b);
+      continue;
+    }
+    // Match a leading heading line: "# Title", "## Title", … with
+    // optional trailing newline(s). Captures heading level + text.
+    const m = b.content.match(/^(#{1,6})\s+([^\r\n]+?)(?:\r?\n+|$)/);
+    if (!m) {
+      out.push(b);
+      continue;
+    }
+    const level = m[1].length;
+    const headingText = m[2].trim();
+    const stripped = b.content.slice(m[0].length).replace(/^[\r\n]+/, "");
+    out.push({
+      type: "sectionHeader",
+      data: { title: headingText, iconName: pickIconForHeading(headingText, level) },
+    });
+    if (stripped.length > 0) {
+      // Keep the original block's other fields (e.g. data) by spreading;
+      // override content with the stripped body.
+      out.push({ ...b, content: stripped });
+    }
+  }
+  return out;
+}
+
+/**
+ * pickIconForHeading — heuristic mapping from heading text + level to
+ * one of the 12 curated section icons (polish-3a). Keyword-first
+ * matching falls through to a level-default. Names match
+ * SECTION_ICON_NAMES in app/src/course/blockTypes.ts; out-of-set
+ * names get fallback rendering at the section-header component
+ * level.
+ */
+function pickIconForHeading(text: string, level: number): string {
+  const lower = text.toLowerCase();
+  if (/key.*takeaway|summary|recap|wrap.?up|conclud/.test(lower)) return "check";
+  if (/objective|goal|aim|outcome|mandate/.test(lower)) return "target";
+  if (/why.*matter|why.*this|impact|why.*need|stakes|cost/.test(lower)) return "trendingUp";
+  if (/reflect|consider|think.*about|discussion/.test(lower)) return "quote";
+  if (/example|show|case|demo|illustration/.test(lower)) return "lightbulb";
+  if (/note|caveat|important|watch.*for|pitfall|risk/.test(lower)) return "alertCircle";
+  if (/highlight|key.*insight|spotlight|standout/.test(lower)) return "sparkles";
+  if (/stakeholder|audience|role|people|team|cast/.test(lower)) return "users";
+  if (/learn|practice|apply|do|walkthrough/.test(lower)) return "pencil";
+  if (/concept|model|framework|theory/.test(lower)) return "brain";
+  if (/source|reference|further.*read|material/.test(lower)) return "bookOpen";
+  if (/time|duration|pacing|schedule/.test(lower)) return "clock";
+  // Level-based fallback when no keyword matches.
+  return level === 1 ? "target" : level === 2 ? "trendingUp" : "bookOpen";
+}
+
 function parseWriterBlocks(raw: unknown): WriterBlock[] {
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new Error("blocks must be a non-empty array");
