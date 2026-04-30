@@ -4,7 +4,12 @@ import {
   Plus, X, MoreHorizontal, ArrowUp, ArrowDown, Trash2, Copy, Settings2, ChevronLeft, ChevronRight,
   Save, Check, Download, FileJson, FileText, Eye, Sparkles, MessageSquare, BookOpen, PlayCircle, Home, Type,
   Video, Image as ImageIcon, Rows3, Hash, ListChecks, Layers, Clock, HelpCircle, BarChart3, Minus, AlertCircle,
-  Maximize2, Minimize2, LucideProps
+  Maximize2, Minimize2, LucideProps,
+  // AI-1b: section-header icon vocabulary. The 12 names map 1:1 to
+  // SECTION_ICON_NAMES in app/src/course/blockTypes.ts. Out-of-set
+  // names fall back to BookOpen at render time.
+  Target, Brain, Pencil, Quote, CheckCircle2, Lightbulb, TrendingUp, Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Sidebar } from "../shell/Sidebar";
 import { TopBar, useActiveBrand } from "../shell/TopBar";
@@ -2288,9 +2293,13 @@ function BlockInsertRow({ onPick, compact = false, expanded = false }: { onPick:
    BLOCK PICKER PANEL
    ═══════════════════════════════════════════════════════════════════════════ */
 function BlockPickerPanel({ onPick, onClose, expanded }: { onPick: (t: string) => void; onClose: () => void; expanded: boolean }) {
+  // AI-1b: added quote, clickInstruction, sectionHeader to the picker.
+  // Editorial group bundles the text-led blocks; Media is its own row
+  // for image/video; Data + Assessment unchanged.
   const categories: { label: string; ids: string[] }[] = [
-    { label: "Text & media", ids: ["text", "banner", "callout", "image", "video", "divider"] },
-    { label: "Data", ids: ["cards", "stats", "timeline", "accordion", "flipcard"] },
+    { label: "Editorial",  ids: ["text", "banner", "callout", "quote", "sectionHeader", "clickInstruction", "divider"] },
+    { label: "Media",      ids: ["image", "video"] },
+    { label: "Data",       ids: ["cards", "stats", "timeline", "accordion", "flipcard"] },
     { label: "Assessment", ids: ["quiz", "poll"] },
   ];
 
@@ -2335,7 +2344,10 @@ function BlockPickerPanel({ onPick, onClose, expanded }: { onPick: (t: string) =
    BLOCK CARD — one block on the canvas
    ═══════════════════════════════════════════════════════════════════════════ */
 function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMove, onDuplicate, onRemove }: any) {
-  const isSimple = ["text", "banner", "callout", "divider"].includes(block.type);
+  // AI-1b: new block types (quote, clickInstruction, sectionHeader)
+  // edit inline like text/banner/callout/divider — single-shape data,
+  // no items list to navigate.
+  const isSimple = ["text", "banner", "callout", "quote", "clickInstruction", "sectionHeader", "divider"].includes(block.type);
   const bt = BTYPES.find((x) => x.id === block.type);
   const previewHtml = useMemo(() => previewBlock(block, brand), [block, brand]);
 
@@ -2386,6 +2398,33 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
 /* ═══════════════════════════════════════════════════════════════════════════
    SIMPLE BLOCK INLINE EDITORS
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * SECTION_ICON_COMPONENTS — name -> lucide icon component map for the
+ * sectionHeader block (AI-1b). The 12 names come from
+ * SECTION_ICON_NAMES in app/src/course/blockTypes.ts. The agent's
+ * prompt (AI-1c) references these names exactly so it can't reach for
+ * an icon outside the curated set; unknown names fall back to BookOpen.
+ *
+ * Lives in CourseStudio.tsx because that's where SimpleBlockEditor and
+ * the LessonCanvas section-header rendering both consume it. If a
+ * second surface needs section icons, lift to course/sectionIcons.tsx.
+ */
+const SECTION_ICON_COMPONENTS: Record<string, LucideIcon> = {
+  target:      Target,
+  brain:       Brain,
+  pencil:      Pencil,
+  quote:       Quote,
+  check:       CheckCircle2,
+  clock:       Clock,
+  lightbulb:   Lightbulb,
+  bookOpen:    BookOpen,
+  sparkles:    Sparkles,
+  alertCircle: AlertCircle,
+  trendingUp:  TrendingUp,
+  users:       Users,
+};
+
 function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: BrandKey; onChange: (field: string, val: any) => void }) {
   const b = B[brand];
   const d = block.data || {};
@@ -2403,9 +2442,21 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
   }
 
   if (block.type === "banner") {
+    // AI-1b: banner gains an optional imageUrl. When set, the banner
+    // renders as a "statement" with the photo as background + brand-
+    // gradient as a tinted overlay; when unset, gradient-only (legacy).
+    // Per Q1 confirm: extend banner rather than build a separate
+    // Statement block type.
+    const bannerStyle = d.imageUrl
+      ? {
+          backgroundImage: `linear-gradient(135deg, ${b.priDk}cc, ${b.pri}99), url("${d.imageUrl}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+      : { background: b.grad };
     return (
-      <div className="rounded-lg overflow-hidden" style={{ background: b.grad }}>
-        <div className="p-6">
+      <div className="rounded-lg overflow-hidden" style={bannerStyle}>
+        <div className="p-6 min-h-[140px]">
           <input
             value={d.title || ""}
             onChange={(e) => onChange("title", e.target.value)}
@@ -2417,9 +2468,123 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
             onChange={(e) => onChange("body", e.target.value)}
             rows={2}
             placeholder="Supporting message"
-            className="w-full text-sm text-white/90 bg-transparent border-none outline-none resize-none placeholder:text-white/40"
+            className="w-full text-sm text-white/90 bg-transparent border-none outline-none resize-none placeholder:text-white/40 mb-3"
+          />
+          {/* Photo URL input — small caption-sized strip at the bottom.
+              Paste an Unsplash URL for the statement-style background. */}
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/15">
+            <ImageIcon size={12} className="text-white/60 flex-shrink-0" />
+            <input
+              value={d.imageUrl || ""}
+              onChange={(e) => onChange("imageUrl", e.target.value)}
+              placeholder="Optional photo URL (Unsplash, etc.)"
+              className="flex-1 min-w-0 text-[11px] text-white/80 bg-transparent border-none outline-none placeholder:text-white/40"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "quote") {
+    // AI-1b: pull quote with attribution. Body in italic ink-900 on a
+    // brand-50 wash with a brand-500 left accent bar. Optional round
+    // photo + name + role for the attribution row.
+    return (
+      <div className="rounded-r-lg border-l-[3px] flex gap-3.5 p-4" style={{ borderLeftColor: b.pri, background: b.priLt }}>
+        {d.attributionPhotoUrl && (
+          <img
+            src={d.attributionPhotoUrl}
+            alt={d.attribution || ""}
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+          />
+        )}
+        <div className="flex-1 min-w-0 space-y-2">
+          <textarea
+            value={d.body || ""}
+            onChange={(e) => onChange("body", e.target.value)}
+            rows={2}
+            placeholder="The quote itself."
+            className="w-full text-[15px] italic text-ink-900 bg-transparent border-none outline-none resize-none placeholder:text-ink-400 leading-relaxed"
+          />
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+            <input
+              value={d.attribution || ""}
+              onChange={(e) => onChange("attribution", e.target.value)}
+              placeholder="Speaker name"
+              className="text-xs font-bold text-ink-900 bg-transparent border-none outline-none placeholder:text-ink-400 min-w-0 flex-shrink"
+              style={{ width: `${Math.max((d.attribution?.length || 12), 12)}ch` }}
+            />
+            <input
+              value={d.attributionRole || ""}
+              onChange={(e) => onChange("attributionRole", e.target.value)}
+              placeholder="Role, Company"
+              className="text-xs text-ink-500 bg-transparent border-none outline-none placeholder:text-ink-400 min-w-0 flex-1"
+            />
+          </div>
+          <input
+            value={d.attributionPhotoUrl || ""}
+            onChange={(e) => onChange("attributionPhotoUrl", e.target.value)}
+            placeholder="Optional photo URL"
+            className="w-full text-[10px] text-ink-400 bg-transparent border-none outline-none placeholder:text-ink-300"
           />
         </div>
+      </div>
+    );
+  }
+
+  if (block.type === "clickInstruction") {
+    // AI-1b: italic green hint, sized for placement directly above
+    // an interactive. Inline editor mirrors the rendered look.
+    return (
+      <div className="flex items-center gap-2 py-1">
+        <span
+          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white text-[9px] font-bold flex-shrink-0"
+          style={{ background: b.pri }}
+        >
+          →
+        </span>
+        <input
+          value={d.content || ""}
+          onChange={(e) => onChange("content", e.target.value)}
+          placeholder="Click each card to reveal the answer."
+          className="flex-1 italic text-xs bg-transparent border-none outline-none placeholder:text-ink-300"
+          style={{ color: b.priDk }}
+        />
+      </div>
+    );
+  }
+
+  if (block.type === "sectionHeader") {
+    // AI-1b: icon-circle + title + accent rule. Icon picker uses the
+    // 12 curated names (SECTION_ICON_NAMES from blockTypes.ts).
+    const IconCmp = SECTION_ICON_COMPONENTS[d.iconName || "bookOpen"] ?? BookOpen;
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: b.priLt, color: b.pri }}
+        >
+          <IconCmp size={15} />
+        </div>
+        <input
+          value={d.title || ""}
+          onChange={(e) => onChange("title", e.target.value)}
+          placeholder="Section title"
+          className="text-sm font-bold text-ink-900 bg-transparent border-none outline-none placeholder:text-ink-400"
+          style={{ width: `${Math.max((d.title?.length || 14), 14)}ch` }}
+        />
+        <select
+          value={d.iconName || "bookOpen"}
+          onChange={(e) => onChange("iconName", e.target.value)}
+          className="text-[10px] text-ink-500 bg-white border border-ink-200 rounded px-1.5 h-6 outline-none focus:border-brand-500"
+          title="Section icon"
+        >
+          {Object.keys(SECTION_ICON_COMPONENTS).map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        <div className="flex-1 h-px" style={{ background: b.n2 }} />
       </div>
     );
   }

@@ -52,18 +52,68 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
       return '<div style="background:' + b.n1 + ";border-radius:8px;padding:28px;text-align:center;color:" + b.txL + ';font-size:12px;">🖼 Add an image URL in settings →</div>';
     }
 
-    case "banner":
-      return '<div style="background:' + b.grad + ';padding:22px 26px;border-radius:8px;"><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">' + esc(d.title || "") + '</div><div style="font-size:13px;color:rgba(255,255,255,0.88);line-height:1.7;">' + renderInlineMd(d.body || "") + "</div></div>";
+    case "banner": {
+      // AI-1b: optional imageUrl turns the banner into a "statement"
+      // — the photo as a CSS background plus the brand-gradient as a
+      // tinted overlay. Without imageUrl, banner stays gradient-only
+      // (legacy behavior unchanged). Per Q1 confirm: extend banner
+      // rather than build a separate Statement block type.
+      const bannerBg = d.imageUrl
+        ? `linear-gradient(135deg, ${b.priDk}cc, ${b.pri}99), url("${esc(d.imageUrl)}")`
+        : b.grad;
+      const bannerBgSize = d.imageUrl ? "background-size:cover;background-position:center;" : "";
+      return '<div style="background:' + bannerBg + ";" + bannerBgSize + 'padding:32px 28px;border-radius:8px;min-height:' + (d.imageUrl ? "180px" : "auto") + ';"><div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-0.01em;">' + esc(d.title || "") + '</div><div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.7;">' + renderInlineMd(d.body || "") + "</div></div>";
+    }
 
     case "callout": {
+      // AI-1b: added "note" 📋 variant per the BCG U / Rise vocabulary
+      // (Screenshot 3 — green-tinted box with "Note:" prefix). Other
+      // variants unchanged.
       const ct: Record<string, { bg: string; brd: string; ic: string }> = {
-        info: { bg: "#EBF5F0", brd: b.pri, ic: "ℹ️" },
-        tip: { bg: "#EBF5F0", brd: b.pri, ic: "💡" },
+        info:    { bg: "#EBF5F0", brd: b.pri,     ic: "ℹ️" },
+        tip:     { bg: "#EBF5F0", brd: b.pri,     ic: "💡" },
+        note:    { bg: "#EBF5F0", brd: b.pri,     ic: "📋" },
         warning: { bg: "#FFF8E6", brd: "#D4A017", ic: "⚠️" },
-        success: { bg: "#EBF5F0", brd: b.pri, ic: "✅" },
+        success: { bg: "#EBF5F0", brd: b.pri,     ic: "✅" },
       };
       const c2 = ct[d.type || "tip"] || ct.tip;
       return '<div style="display:flex;border-left:4px solid ' + c2.brd + ";background:" + c2.bg + ';padding:12px 16px;border-radius:0 8px 8px 0;gap:10px;"><span style="font-size:16px;flex-shrink:0;">' + c2.ic + '</span><div style="font-size:13px;color:' + b.tx + ';line-height:1.7;">' + renderInlineMd(d.body || "") + "</div></div>";
+    }
+
+    case "quote": {
+      // AI-1b: pull quote with attribution. Optional round photo on the
+      // left; quote body in italic ink-900 on a faint brand-tinted bg
+      // with a brand-500 left accent bar. Attribution row below in
+      // ink-500 caption type.
+      const photo = d.attributionPhotoUrl
+        ? '<img src="' + esc(d.attributionPhotoUrl) + '" alt="' + esc(d.attribution || "") + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+        : '';
+      const attrRow = (d.attribution || d.attributionRole)
+        ? '<div style="margin-top:10px;font-size:12px;color:' + b.txL + ';"><strong style="color:' + b.tx + ';">' + esc(d.attribution || "") + '</strong>' + (d.attributionRole ? '<span style="margin-left:8px;">' + esc(d.attributionRole) + '</span>' : '') + '</div>'
+        : '';
+      return '<div style="display:flex;gap:14px;align-items:flex-start;background:' + b.priLt + ';border-left:3px solid ' + b.pri + ';padding:18px 22px;border-radius:0 8px 8px 0;">' + photo + '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-style:italic;color:' + b.tx + ';line-height:1.6;">"' + renderInlineMd(d.body || "") + '"</div>' + attrRow + '</div></div>';
+    }
+
+    case "clickInstruction":
+      // AI-1b: small italic green hint sized for placement directly
+      // above an interactive (accordion / flipcard / cards / quiz).
+      // Single line, second-person, no markdown bolding (italics +
+      // brand-700 do the visual work).
+      return '<div style="font-size:12px;font-style:italic;color:' + b.priDk + ';padding:6px 0 4px;display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + b.pri + ';color:white;font-size:9px;font-style:normal;font-weight:700;text-align:center;line-height:14px;flex-shrink:0;">→</span>' + esc(d.content || "") + "</div>";
+
+    case "sectionHeader": {
+      // AI-1b: icon-circle + title + accent rule. Icons rendered as
+      // a unicode glyph stand-in in this HTML preview path; the
+      // canvas-side React renderer (SimpleBlockEditor) renders proper
+      // lucide icons. The 12 curated icon names are listed in
+      // SECTION_ICON_NAMES (blockTypes.ts).
+      const iconGlyphs: Record<string, string> = {
+        target: "◎", brain: "🧠", pencil: "✎", quote: "❝", check: "✓",
+        clock: "◷", lightbulb: "💡", bookOpen: "📖", sparkles: "✦",
+        alertCircle: "!", trendingUp: "↗", users: "👥",
+      };
+      const glyph = iconGlyphs[d.iconName || "bookOpen"] || iconGlyphs.bookOpen;
+      return '<div style="display:flex;align-items:center;gap:12px;margin:14px 0 8px;"><div style="width:32px;height:32px;border-radius:50%;background:' + b.priLt + ';color:' + b.pri + ';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">' + glyph + '</div><div style="font-size:15px;font-weight:700;color:' + b.tx + ';letter-spacing:-0.005em;">' + esc(d.title || "") + '</div><div style="flex:1;height:1px;background:' + b.n2 + ';"></div></div>';
     }
 
     case "cards": {

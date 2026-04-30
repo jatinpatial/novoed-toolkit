@@ -16,6 +16,22 @@ export interface BlockData {
   body?: string;
   type?: string;
   items?: BlockItem[];
+  // ── AI-1b additions ─────────────────────────────────────────────────
+  // Optional photo background for banner blocks. When set, banner
+  // renders as a "statement" with the image as a CSS background plus
+  // the existing brand-gradient overlay tinting it. When unset, banner
+  // renders gradient-only (legacy behavior unchanged).
+  imageUrl?: string;
+  // Quote block: the speaker's name + role for the attribution row,
+  // and an optional photo URL for the round avatar.
+  attribution?: string;
+  attributionRole?: string;
+  attributionPhotoUrl?: string;
+  // Section-header block: name of one of the curated lucide icons
+  // (see SECTION_ICON_NAMES in blockTypes.ts). Agents must choose
+  // from the curated set — anything else falls back to the default
+  // BookOpen icon at render time.
+  iconName?: string;
   // Synthesia script for video blocks. Authored by the Scriptwriter agent
   // and edited by the LD in the block drawer; never rendered in the
   // published lesson.
