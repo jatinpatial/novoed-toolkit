@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Mic } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
@@ -30,11 +30,60 @@ import type { Course } from "../course/types";
  * unchanged. Surface ≠ storage; the wrapper is invisible to the
  * agent.
  */
+/**
+ * ScriptStudioBoundary — error boundary wrapping the page so a render
+ * exception inside ScriptStudioInner / AgentProvider / AgentChat
+ * doesn't blank the screen (polish-5b). Logs to console for diagnosis,
+ * shows a recover-friendly fallback. Without this, a thrown error
+ * during the autosend handshake or syntheticCourse construction
+ * left the page completely white in live testing.
+ */
+class ScriptStudioBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Surface in the browser console so the user can paste the trace
+    // for diagnosis. Plain console.error so the React DevTools error
+    // overlay still surfaces too.
+    // eslint-disable-next-line no-console
+    console.error("[ScriptStudio] Render exception:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="max-w-3xl mx-auto py-12 text-center px-6">
+          <p className="text-sm font-bold text-ink-900 mb-2">
+            Script Studio hit a render error.
+          </p>
+          <p className="text-xs text-ink-500 mb-4">
+            Open the browser console (F12) for the stack trace, then
+            head back to the dashboard.
+          </p>
+          <pre className="text-[11px] text-ink-600 bg-ink-50 border border-ink-200 rounded p-3 text-left overflow-auto mb-4">
+            {String(this.state.error.message || this.state.error)}
+          </pre>
+          <Link to="/" className="btn-cta-primary inline-flex">
+            Back to dashboard
+          </Link>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function ScriptStudio() {
   return (
-    <AgentProvider>
-      <ScriptStudioInner />
-    </AgentProvider>
+    <ScriptStudioBoundary>
+      <AgentProvider>
+        <ScriptStudioInner />
+      </AgentProvider>
+    </ScriptStudioBoundary>
   );
 }
 
@@ -44,6 +93,16 @@ function ScriptStudioInner() {
   const navigate = useNavigate();
   const [activeBrand] = useActiveBrand();
   const [script, setScript] = useState<Script | null>(null);
+  // polish-5b: triedLoad gate handles the "script saved -> navigate ->
+  // mount -> first render BEFORE useEffect fires" micro-window where
+  // script would be null and we'd flash "Script not found." Setting
+  // triedLoad inside the effect ensures we render the loading state
+  // until the load actually completes (success or null).
+  const [triedLoad, setTriedLoad] = useState(false);
+  // loadAttempt — three retries at 100ms each to handle the
+  // localStorage propagation race in case the saveScript -> navigate
+  // -> mount sequence is somehow split across event-loop ticks.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const {
     setOpen: setChatOpen,
     prefillInput,
@@ -56,10 +115,19 @@ function ScriptStudioInner() {
   // changes so back-nav between scripts works cleanly.
   useEffect(() => {
     if (!id) return;
-    const refresh = () => setScript(getScript(id));
+    const refresh = () => {
+      const s = getScript(id);
+      setScript(s);
+      setTriedLoad(true);
+      if (!s && loadAttempt < 3) {
+        // polish-5b: schedule a retry in case the localStorage write
+        // hadn't propagated yet (rare but seen in live testing).
+        setTimeout(() => setLoadAttempt((a) => a + 1), 100);
+      }
+    };
     refresh();
     return subscribeScripts(refresh);
-  }, [id]);
+  }, [id, loadAttempt]);
 
   // Brief + autosend handler — mirrors CoursesHome / CourseCanvas.
   // When CreateScriptPage submits, it navigates here with brief +
@@ -237,6 +305,24 @@ function ScriptStudioInner() {
           >
             Draft a new script
           </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // polish-5b: loading vs. not-found split. Pre-fix, any null script
+  // rendered "Script not found." — including the micro-window between
+  // mount and the useEffect firing, AND during the localStorage
+  // propagation race. Now: while triedLoad is false OR we still have
+  // retries left, show a loading state. Only show "not found" once
+  // we've genuinely tried + retried + still got null.
+  const isStillLoading = !script && (!triedLoad || loadAttempt < 3);
+  if (isStillLoading) {
+    return (
+      <AppShell>
+        <div className="max-w-3xl mx-auto py-12 text-center">
+          <Mic className="mx-auto text-brand-500 mb-3 animate-pulse" size={28} />
+          <p className="text-sm text-ink-500">Opening script…</p>
         </div>
       </AppShell>
     );
