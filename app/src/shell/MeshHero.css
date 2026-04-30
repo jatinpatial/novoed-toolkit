@@ -28,10 +28,17 @@
   inset: -20%;
   pointer-events: none;
   z-index: 0;
-  /* Blur + saturate, NO brightness modifier — keeps the bright BCG
+  /* Blur + saturate, NO brightness modifier — keeps the saturated
      green tone confident, not muted-forest. */
   filter: blur(75px) saturate(1.15);
   opacity: 0.95;
+  /* B2b-tune-2 parallax — MeshHero.tsx writes --px / --py on mousemove
+     over the hero section. 12px max travel either axis; the transition
+     smooths the movement so the stage drifts toward the cursor instead
+     of snapping. Composes with the absolute inset above (transform
+     translates from the absolute position). */
+  transform: translate(var(--px, 0), var(--py, 0));
+  transition: transform 250ms ease-out;
 }
 
 .mesh-blob {
@@ -40,20 +47,24 @@
   mix-blend-mode: multiply;
 }
 
-/* Blob palette — B2b-tune darkens toward the legacy index.html
- * saturated-dark-green look. The bright BCG green of A5 read as
- * neon under the new composer + entry surfaces; the legacy reference
- * lands at a deeper saturated tone with one bright accent for
- * liveliness rather than wall-to-wall brightness.
+/* Blob palette — evolved across two tune commits to land on a
+ * uniformly green wash with depth, not multi-color abstract mesh.
  *
- *   blob-1  green-700  (740px)  — saturated dark anchor (was green-500)
- *   blob-2  teal-700   (620px)  — deep teal accent (was teal-500)
- *   blob-3  yellow     (500px)  — kept; opacity 0.35 -> 0.25 so the
- *                                  yellow reads as background warmth,
- *                                  not a foreground splash
- *   blob-4  green-500  (480px)  — KEPT bright; the single live accent
- *                                  the composition needs
- *   blob-5  green-900  (420px)  — deepest depth anchor (was teal-700)
+ * B2b-tune-2 shifted blobs 2 + 5 off teal/dark-green toward greens
+ * so the composition reads as "BCG green wash with depth" rather
+ * than "green-with-teal-accents". One bright accent (blob-4) stays
+ * to keep the wash alive.
+ *
+ *   blob-1  green-700  (740px)  — saturated dark anchor
+ *   blob-2  green-600  (620px)  — mid-saturation green (was teal-700,
+ *                                  before that teal-500 in A5)
+ *   blob-3  yellow     (500px)  — kept; opacity 0.18 — barely-there
+ *                                  warmth (A5 0.35 -> tune 0.25 -> tune-2 0.18)
+ *   blob-4  green-500  (480px)  — KEPT bright; single live accent
+ *   blob-5  green-700  (420px)  — depth anchor (was green-900,
+ *                                  before that teal-700 in A5;
+ *                                  green-900 felt too murky once the
+ *                                  rest of the palette unified green)
  */
 .blob-1 {
   width: 740px; height: 740px;
@@ -64,7 +75,7 @@
 }
 .blob-2 {
   width: 620px; height: 620px;
-  background: radial-gradient(circle, var(--teal-700) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-600) 0%, transparent 70%);
   top: 10%; right: -8%;
   animation: blob-drift-2 26s ease-in-out infinite;
   opacity: 0.95;
@@ -73,7 +84,7 @@
   width: 500px; height: 500px;
   background: radial-gradient(circle, #FFC72C 0%, transparent 70%);
   bottom: -15%; left: 30%;
-  opacity: 0.25; /* B2b-tune: was 0.35 — dial yellow back so it reads as warmth */
+  opacity: 0.18; /* B2b-tune-2: 0.25 -> 0.18 — yellow now barely-there warmth */
   animation: blob-drift-3 30s ease-in-out infinite;
 }
 .blob-4 {
@@ -85,7 +96,7 @@
 }
 .blob-5 {
   width: 420px; height: 420px;
-  background: radial-gradient(circle, var(--green-900) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--green-700) 0%, transparent 70%);
   bottom: 20%; right: 25%;
   animation: blob-drift-5 24s ease-in-out infinite;
   opacity: 0.9;
@@ -102,11 +113,12 @@
   75%      { transform: translate(80px, -50px) scale(0.9); }
 }
 @keyframes blob-drift-3 {
-  /* B2b-tune: opacity values dropped from 0.5 / 0.65 to 0.35 / 0.45
-     so the perceived yellow stays in proportion to the new static
-     0.25 — same pulse ratio, dimmer baseline. */
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
-  50%      { transform: translate(-150px, -80px) scale(1.2); opacity: 0.45; }
+  /* B2b-tune-2: opacity range dropped 0.35/0.45 -> 0.25/0.32 to
+     stay proportional with the new static 0.18 (same pulse ratio,
+     dimmer baseline). Yellow now reads as barely-there ambient
+     warmth, not a foreground splash. */
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.25; }
+  50%      { transform: translate(-150px, -80px) scale(1.2); opacity: 0.32; }
 }
 @keyframes blob-drift-4 {
   0%, 100% { transform: translate(0, 0) scale(1); }

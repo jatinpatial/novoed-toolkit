@@ -39,8 +39,9 @@
   --duration-slow: 350ms;
 
   --green-500: #00A651;       /* BCG official bright green */
+  --green-600: #00904A;       /* mid-saturation green (B2b-tune-2; mesh blob-2 swap) */
   --green-700: #006B3F;
-  --green-900: #003B22;       /* deep depth anchor (B2b-tune; mesh blob-5) */
+  --green-900: #003B22;       /* deep depth anchor (B2b-tune; reserved) */
   --teal-400:  #2BAFA3;       /* BCG-aligned teal — lighter accent */
   --teal-500:  #00857C;       /* BCG-aligned teal — primary accent */
   --teal-700:  #005C56;       /* BCG-aligned teal — deep accent */
@@ -55,12 +56,13 @@
      avatar in B4 (when that surface lands). Lifted to :root so both
      components reach for the same values.
 
-     B2b-tune dimmed the glow ~50% — the original 80px / 0.45 +
-     28px / 0.3 read as a halo "spotlight" against the new darker
-     mesh; the muted version sits right next to the orb instead of
-     blooming across the composer. */
+     Glow tuning history:
+       B2b        80px @0.45 + 28px @0.3   (initial — read as spotlight)
+       B2b-tune   28px @0.22 + 10px @0.18  (~50% dim — still bloomed)
+       B2b-tune-2 18px @0.18 single layer  (just hints green at edges)
+  */
   --orb-gradient: radial-gradient(circle at 30% 30%, #6FD49A, #00A651 40%, #006B3F 80%);
-  --shadow-orb:   0 0 28px rgba(0,166,81,0.22), 0 0 10px rgba(0,166,81,0.18);
+  --shadow-orb:   0 0 18px rgba(0,166,81,0.18);
 }
 
 /* ─── Animation keyframes ─────────────────────────────────────────────────────

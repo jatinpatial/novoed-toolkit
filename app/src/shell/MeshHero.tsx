@@ -1,33 +1,78 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import "./MeshHero.css";
 
 /**
- * MeshHero — animated mesh-gradient hero stage (Phase 2 #2 A5).
+ * MeshHero — animated mesh-gradient hero stage (Phase 2 #2 A5,
+ * tuned in B2b / B2b-tune / B2b-tune-2).
  *
  * Presentational-only wrapper. Owns the chrome (5 mesh blobs + noise
  * grain + SVG constellation + 6 floating decorative shapes); consumer
  * slots eyebrow / title / subtitle / composer as `children` inside.
  *
- * Color tone: bright BCG green per the legacy index.html reference,
- * NOT the darker forest from the latest mockup revision. Two
- * green-500 blobs anchor; teal accents + yellow + teal-700 add depth.
- * If saturation reads too hot in browser review, easy follow-up to
- * dial blob-1 down — start bright, pull back if needed.
+ * Color tone evolution: A5 launched bright BCG green; B2b-tune
+ * darkened toward saturated dark green per the legacy index.html;
+ * B2b-tune-2 unified the palette to a green wash (teal blobs swapped
+ * to greens) with one bright accent (blob-4) keeping the composition
+ * alive. Filter unchanged across tunes — blur 75px + saturate 1.15,
+ * no brightness modifier.
  *
- * Hardcoded today (no props). When a second hero surface emerges
- * (module summary, course preview), refactor to `<MeshHero
- * blobs={[…]}>` API. Premature abstraction is more cost than benefit
- * with one consumer.
+ * Parallax (B2b-tune-2): a mousemove handler on the hero section
+ * writes --px / --py CSS vars on the .mesh-stage div, translating
+ * the whole blob layer up to 12px in either axis toward the cursor.
+ * Subtle by design — drifts the mesh under the content, never jacks
+ * the page. Reset on mouseleave so the stage settles back to center
+ * instead of holding the last-known offset.
+ *
+ * Hardcoded today (no props beyond children). When a second hero
+ * surface emerges (module summary, course preview), refactor to
+ * `<MeshHero blobs={[…]}>` API. Premature abstraction is more cost
+ * than benefit with one consumer.
  */
 interface MeshHeroProps {
   children: ReactNode;
 }
 
 export function MeshHero({ children }: MeshHeroProps) {
+  const heroRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    const stage = stageRef.current;
+    if (!hero || !stage) return;
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = hero.getBoundingClientRect();
+      // Normalize cursor position to -0.5 ... +0.5 across each axis,
+      // then scale to ±6px (so total travel is 12px end-to-end —
+      // the soft cap signed off in B2b-tune-2; anything bigger reads
+      // as "the page moved" rather than "the mesh breathed").
+      const cx = (e.clientX - rect.left) / rect.width - 0.5;
+      const cy = (e.clientY - rect.top) / rect.height - 0.5;
+      stage.style.setProperty("--px", `${cx * 12}px`);
+      stage.style.setProperty("--py", `${cy * 12}px`);
+    };
+    const handleLeave = () => {
+      // Without this, the stage holds the last offset when the cursor
+      // exits the hero — the parallax should center on idle, not
+      // freeze where the cursor last was.
+      stage.style.setProperty("--px", "0px");
+      stage.style.setProperty("--py", "0px");
+    };
+
+    hero.addEventListener("mousemove", handleMove);
+    hero.addEventListener("mouseleave", handleLeave);
+    return () => {
+      hero.removeEventListener("mousemove", handleMove);
+      hero.removeEventListener("mouseleave", handleLeave);
+    };
+  }, []);
+
   return (
-    <section className="mesh-hero">
-      {/* Five animated mesh-gradient blobs */}
-      <div className="mesh-stage" aria-hidden="true">
+    <section className="mesh-hero" ref={heroRef}>
+      {/* Five animated mesh-gradient blobs — translated by the
+          parallax handler via --px / --py on .mesh-stage. */}
+      <div className="mesh-stage" aria-hidden="true" ref={stageRef}>
         <div className="mesh-blob blob-1" />
         <div className="mesh-blob blob-2" />
         <div className="mesh-blob blob-3" />
