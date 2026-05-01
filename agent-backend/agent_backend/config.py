@@ -18,7 +18,34 @@ if GIT_BASH_PATH:
 # was launched.
 os.environ.pop("ANTHROPIC_API_KEY", None)
 
-ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
+# CORS allowlist for the FastAPI HTTP routes (/health, /parse,
+# /export/*). The /ws WebSocket endpoint isn't subject to CORS at the
+# protocol level, so this only gates the HTTP routes the frontend
+# fetches alongside the WS connection.
+#
+# Default supports both:
+#   - http://localhost:5173    Vite dev server (local development)
+#   - https://bcgu.github.io   GitHub Pages production deploy
+#                              (per the deploy.yml workflow at repo root)
+#
+# Override via env: comma-separated list, e.g.
+#   ALLOWED_ORIGINS=http://localhost:5173,https://staging.example.com
+#
+# Backward compat: if the legacy ALLOWED_ORIGIN env var is set
+# (single value), it gets prepended to the list so existing
+# .env files keep working.
+_origins_env = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,https://bcgu.github.io",
+)
+ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+_legacy_origin = os.getenv("ALLOWED_ORIGIN")
+if _legacy_origin and _legacy_origin not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.insert(0, _legacy_origin)
+
+# Legacy alias — kept so any third-party tool importing this name
+# from older code keeps working. main.py consumes the plural list.
+ALLOWED_ORIGIN = ALLOWED_ORIGINS[0]
 
 SYSTEM_PROMPT = """You are an AI companion inside BCG U Studio that helps BCG U Learning Designers design and fill in courses. You operate in one of two modes per turn — pick the mode from the LD's request.
 

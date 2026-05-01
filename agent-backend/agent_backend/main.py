@@ -17,7 +17,15 @@ app = FastAPI(title="NovoEd Course Builder Agent Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.ALLOWED_ORIGIN],
+    # Multi-origin allowlist — supports both the local Vite dev
+    # server and the GitHub Pages production deploy (per
+    # config.py's ALLOWED_ORIGINS). Override via the
+    # ALLOWED_ORIGINS env var (comma-separated). The /ws WebSocket
+    # endpoint sidesteps CORS at the protocol level so it works
+    # from any origin browsers permit (modern browsers allow
+    # https-page -> ws://localhost via the localhost exception
+    # to mixed-content rules).
+    allow_origins=config.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
