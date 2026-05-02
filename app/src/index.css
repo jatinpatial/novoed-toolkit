@@ -1351,6 +1351,14 @@
     color: theme("colors.brand.700");
     font-variant-numeric: tabular-nums;
   }
+  /* polish-7a: ETA suffix appended to the count. Slightly lighter
+     so the count + ETA read as one continuous line without competing
+     for the eye. The "·" middle dot separator is rendered inline by
+     the JSX. */
+  .build-progress-band-eta {
+    color: theme("colors.brand.600");
+    font-weight: 500;
+  }
 
   .outline-add-lesson {
     margin: 4px 0 0 8px;

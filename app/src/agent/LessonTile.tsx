@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { useAgent } from "./AgentContext";
 import type { BuildProgressKind, OrchestratorTargetStatus } from "./types";
@@ -108,6 +109,19 @@ export function LessonTile({
  */
 export function BuildProgressBand() {
   const { orchestratorState, lastBuildProgress } = useAgent();
+
+  // polish-7a: capture per-lesson durations as lesson_completed events
+  // arrive. Local component state — when phase flips to non-building
+  // the band unmounts, which automatically resets this for the next
+  // build. No need for a context-level slice.
+  const [durationsMs, setDurationsMs] = useState<number[]>([]);
+  useEffect(() => {
+    if (lastBuildProgress?.kind !== "lesson_completed") return;
+    const dur = lastBuildProgress.payload.durationMs;
+    if (typeof dur !== "number" || !isFinite(dur) || dur <= 0) return;
+    setDurationsMs((prev) => [...prev, dur]);
+  }, [lastBuildProgress]);
+
   if (orchestratorState.phase !== "building") return null;
 
   const total = orchestratorState.totalLessons;
@@ -116,6 +130,21 @@ export function BuildProgressBand() {
   ).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const phaseLabel = phaseLabelFor(lastBuildProgress?.kind);
+
+  // polish-7a: rolling-avg ETA. Show only after 1 lesson has actually
+  // completed (no pre-data ETA — would be a guess). Use the average
+  // over all observed durations rather than just the most recent —
+  // smooths out a single fast or slow lesson skewing the projection.
+  // Hidden when the build is paused / cancelled (band already hides
+  // on those phases anyway, but be explicit).
+  const remaining = Math.max(0, total - done);
+  const etaText =
+    durationsMs.length > 0 && remaining > 0
+      ? formatEta(
+          (durationsMs.reduce((s, d) => s + d, 0) / durationsMs.length) *
+            remaining,
+        )
+      : null;
 
   return (
     <div className="build-progress-band" role="status" aria-live="polite">
@@ -129,10 +158,43 @@ export function BuildProgressBand() {
         <span className="build-progress-band-phase">{phaseLabel}</span>
         <span className="build-progress-band-count">
           {done} of {total} lesson{total === 1 ? "" : "s"} ({pct}%)
+          {etaText && (
+            <span className="build-progress-band-eta">
+              {" · "}
+              {etaText}
+            </span>
+          )}
         </span>
       </div>
     </div>
   );
+}
+
+/**
+ * Round-up wall-time formatter. Always overestimates rather than
+ * underestimating — the LD's expectation set by an ETA should be
+ * conservative so the build feels faster than promised, not slower.
+ *
+ *   < 60s  → "~Ns remaining"   (rounded up to nearest 5s)
+ *   < 60m  → "~N min remaining"
+ *   else   → "~Nh Mm remaining"
+ */
+function formatEta(ms: number): string {
+  if (!isFinite(ms) || ms <= 0) return "";
+  const totalSec = Math.ceil(ms / 1000);
+  if (totalSec < 60) {
+    const rounded = Math.ceil(totalSec / 5) * 5;
+    return `~${rounded}s remaining`;
+  }
+  const totalMin = Math.ceil(totalSec / 60);
+  if (totalMin < 60) {
+    return `~${totalMin} min remaining`;
+  }
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  return minutes === 0
+    ? `~${hours}h remaining`
+    : `~${hours}h ${minutes}m remaining`;
 }
 
 function phaseLabelFor(kind: BuildProgressKind | undefined): string {
