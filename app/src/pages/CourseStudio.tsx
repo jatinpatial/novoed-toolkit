@@ -25,6 +25,7 @@ import { deleteProject, getProject, listProjects, saveProject, subscribeProjects
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
+import { BuildProgressBand, LessonTile } from "../agent/LessonTile";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
 
@@ -867,6 +868,11 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
             the user toggles the brand (B3d wires <body data-brand>),
             giving an instant visible signal of the active theme. */}
         <div className="flex-1 min-w-0 overflow-y-auto lesson-canvas-pane">
+          {/* sprint-2-2: aggregate build-progress band. Sticky at the
+              top of THIS pane so it scrolls with the lesson body but
+              stays visible. Returns null at rest — only renders when
+              orchestratorState.phase === "building". */}
+          <BuildProgressBand />
           {viewMode === "module" && mod ? (
             <ModuleSummary
               module={mod}
@@ -1168,6 +1174,14 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
       <div className="flex-1 overflow-y-auto py-2">
         {course.modules.map((m: any, mi: number) => {
           const moduleActive = viewMode === "module" && am === mi;
+          // sprint-2-2: precompute the absolute lesson index for the
+          // first lesson in this module so the inner map can
+          // calculate `moduleStartIdx + li` per row. The orchestrator
+          // state's lessonStates dict is keyed by absolute index
+          // across the whole course (locked, sprint-2-1).
+          const moduleStartIdx = course.modules
+            .slice(0, mi)
+            .reduce((sum: number, prev: any) => sum + prev.lessons.length, 0);
           return (
           /* B3-tune-a + B3-tune-d: each module + its lessons wrapped
              in an outline-module-card. The module HEADER (badge +
@@ -1251,7 +1265,11 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                     <span className={`text-[13px] flex-1 truncate ${active ? "text-brand-700 font-semibold" : "text-ink-700"}`}>
                       {l.title.replace(/^\d+\.\d+\s*/, "")}
                     </span>
-                    <span className="outline-lesson-count-chip">{l.blocks.length}</span>
+                    {/* sprint-2-2: LessonTile overlays the block-count
+                        chip with build state during orchestration.
+                        Falls back to the legacy chip at idle. Read-only
+                        in 2-2 — the row's onSelect still fires. */}
+                    <LessonTile absoluteIndex={moduleStartIdx + li} blockCount={l.blocks.length} />
                     {m.lessons.length > 1 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); if (confirm("Delete lesson?")) removeLesson(mi, li); }}
