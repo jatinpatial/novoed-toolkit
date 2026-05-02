@@ -34,7 +34,17 @@ class Session:
         # chat stays responsive during a build (locked fork #3, independent
         # queues). Orchestrator messages are routed via asyncio.create_task
         # below so they fan out from the chat router.
-        self.orchestrator = BuildOrchestrator(send=self._send)
+        #
+        # sprint-2-3: orchestrator gets the SAME bridge as the main session.
+        # ToolBridge call_ids are global UUIDs (see bridge.py line 30) so
+        # tool_result routing-by-id Just Works across sessions — the FE
+        # doesn't care which session originated a tool_call. This also
+        # means write_lesson / list_structure / etc. from the orchestrator's
+        # mini-sessions hit the same FE actions (registered by CourseCanvas)
+        # as the main chat path. Path parity = no behavior divergence
+        # between manual ("write Lesson 3" via Studio Copilot) and
+        # orchestrated (the build loop). Locked fork #2.
+        self.orchestrator = BuildOrchestrator(send=self._send, bridge=self.bridge)
 
     async def _send(self, payload: dict[str, Any]) -> None:
         await self.ws.send_text(json.dumps(payload))
