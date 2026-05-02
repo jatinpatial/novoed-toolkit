@@ -210,7 +210,7 @@ function CourseStudioInner() {
 function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [params, setParams] = useSearchParams();
-  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus } = useAgent();
+  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, sendBuildFullCourse } = useAgent();
 
   // Brief handoff from the Dashboard hero composer (Phase 2 #1c) +
   // /courses/new structured intake form (C0).
@@ -305,6 +305,27 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     toast("Course built — fill in the lessons next");
   }
 
+  // sprint-2-1: Build full course — same shell as handleBuild, then
+  // immediately fires build_full_course on the WS so the orchestrator
+  // runs sequential mini-sessions per lesson / KC / case-study slot.
+  // Sprint-2-1 ships the wire only — the orchestrator answers with a
+  // `not_implemented` build_progress event for now. Sprint-2-3 swaps
+  // the stub for the real lesson loop.
+  function handleBuildFull(edited?: CourseOutlineProposal) {
+    const proposalToBuild = edited ?? outlineProposal;
+    if (!proposalToBuild) return;
+    const course = buildCourseFromProposal(proposalToBuild, brand);
+    const id = uid();
+    saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
+    clearOutlineProposal();
+    onOpen(course, id);
+    // Fire-and-forget — the BE orchestrator pushes build_state /
+    // build_progress events back as work proceeds; AgentContext
+    // mirrors them into orchestratorState for the UI to read.
+    sendBuildFullCourse(course, course.shape);
+    toast("Building full course — track progress in Studio Copilot");
+  }
+
   // AI-1-polish-C bug 9: dismiss the proposal AND open the chat with
   // a "Refine the outline: " prefill. For structural changes the LD
   // can't easily make via inline cell edits — merge modules, change
@@ -365,6 +386,10 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
               <CourseOutlineProposalCard
                 proposal={outlineProposal}
                 onBuild={handleBuild}
+                /* sprint-2-1: only expose the full-course build button
+                   when the agent socket is open. Backend offline →
+                   button hidden so the LD doesn't fire into a void. */
+                onBuildFull={agentStatus === "open" ? handleBuildFull : undefined}
                 onDiscard={clearOutlineProposal}
                 onRefine={handleRefine}
               />

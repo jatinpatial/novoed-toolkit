@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentActions } from "./AgentContext";
-import type { ClientMessage, ConnectionStatus, ServerMessage } from "./types";
+import type {
+  BuildProgressKind,
+  ClientMessage,
+  ConnectionStatus,
+  OrchestratorState,
+  ServerMessage,
+} from "./types";
 import { dispatchToolCall } from "./toolExecutor";
 
 interface UseAgentSocketArgs {
@@ -10,10 +16,13 @@ interface UseAgentSocketArgs {
   onToolCall: (name: string, args: Record<string, unknown>) => void;
   onError: (message: string) => void;
   onDone: () => void;
+  // ── sprint-2-1: orchestrator event hooks ───────────────────────────
+  onBuildState: (state: OrchestratorState) => void;
+  onBuildProgress: (kind: BuildProgressKind, payload: Record<string, unknown>) => void;
 }
 
 export function useAgentSocket(args: UseAgentSocketArgs) {
-  const { url, getActions, onAssistantText, onToolCall, onError, onDone } = args;
+  const { url } = args;
   const wsRef = useRef<WebSocket | null>(null);
   const callbacksRef = useRef(args);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -29,7 +38,19 @@ export function useAgentSocket(args: UseAgentSocketArgs) {
       wsRef.current = ws;
       setStatus("connecting");
 
-      ws.onopen = () => setStatus("open");
+      ws.onopen = () => {
+        setStatus("open");
+        // sprint-2-1: rehydrate orchestrator state on every (re)connect
+        // so the FE picks up where the backend left off after a refresh
+        // or transient disconnect. Backend is the single source of
+        // truth (locked fork #3).
+        try {
+          ws.send(JSON.stringify({ type: "get_orchestrator_state" } satisfies ClientMessage));
+        } catch {
+          // best-effort — if the send fails the build_state we receive
+          // on the next interaction will catch us up anyway.
+        }
+      };
 
       ws.onmessage = async (e) => {
         let msg: ServerMessage;
@@ -60,6 +81,14 @@ export function useAgentSocket(args: UseAgentSocketArgs) {
           cb.onDone();
         } else if (msg.type === "error") {
           cb.onError(msg.message);
+        } else if (msg.type === "build_state") {
+          cb.onBuildState(msg.state);
+        } else if (msg.type === "build_progress") {
+          // Strip the discriminator fields; the rest is per-kind payload
+          // (lessonIdx, lessonId, message, error, etc.). Caller decides
+          // how to merge into UI state.
+          const { type: _t, kind, ...payload } = msg;
+          cb.onBuildProgress(kind, payload as Record<string, unknown>);
         }
       };
 
@@ -89,15 +118,25 @@ export function useAgentSocket(args: UseAgentSocketArgs) {
     };
   }, [url]);
 
-  const sendUserMessage = useCallback((text: string) => {
+  // Generic raw send — used by orchestrator helpers below. Returns
+  // false if the socket isn't open so callers can surface a friendly
+  // error instead of silently dropping the message.
+  const sendRaw = useCallback((msg: ClientMessage): boolean => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       callbacksRef.current.onError("not connected to agent backend");
-      return;
+      return false;
     }
-    const msg: ClientMessage = { type: "user_message", text };
     ws.send(JSON.stringify(msg));
+    return true;
   }, []);
 
-  return { status, sendUserMessage };
+  const sendUserMessage = useCallback(
+    (text: string) => {
+      sendRaw({ type: "user_message", text });
+    },
+    [sendRaw],
+  );
+
+  return { status, sendUserMessage, sendRaw };
 }

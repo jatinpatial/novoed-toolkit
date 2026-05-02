@@ -1,8 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { CaseStudy, Course, QuizQuestion } from "../course/types";
+import type { CaseStudy, Course, CourseShape, QuizQuestion } from "../course/types";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
-import type { ChatEntry, ConnectionStatus, CourseOutlineProposal } from "./types";
+import type {
+  BuildProgressKind,
+  ChatEntry,
+  ConnectionStatus,
+  CourseOutlineProposal,
+  OrchestratorState,
+} from "./types";
 import { useAgentSocket } from "./useAgentSocket";
 
 /**
@@ -78,6 +84,22 @@ export interface AgentActions {
 // Cleared when the user sends a new message.
 export type AgentTarget = { kind: "script"; blockId: string };
 
+// sprint-2-1: empty-state default for the orchestrator slice, used
+// when the FE first connects (before the BE replies to the
+// rehydration query) and after a clear. Shape matches the wire
+// snapshot exactly so consumers can read it without null checks.
+const EMPTY_ORCHESTRATOR_STATE: OrchestratorState = {
+  phase: "idle",
+  lessonStates: {},
+  kcStates: {},
+  csStates: {},
+  lastCompletedLessonIdx: null,
+  totalLessons: 0,
+  totalKcs: 0,
+  totalCss: 0,
+  lastError: null,
+};
+
 interface AgentContextValue {
   status: ConnectionStatus;
   messages: ChatEntry[];
@@ -104,6 +126,25 @@ interface AgentContextValue {
   pendingInput: string | null;
   prefillInput: (text: string) => void;
   clearPendingInput: () => void;
+  // ── sprint-2-1: orchestrator slice ────────────────────────────────
+  // Backend is the single source of truth (locked fork #3). The FE
+  // mirrors via build_state events; AgentChat / LessonTile read this
+  // slice directly. The lastBuildProgress field is kept around so
+  // sprint-2-2 can render the most recent progress event verbatim
+  // (e.g. "lesson_started: lesson 4 of 13").
+  orchestratorState: OrchestratorState;
+  lastBuildProgress: { kind: BuildProgressKind; payload: Record<string, unknown> } | null;
+  /** Kick off a full-course build. Backend orchestrator runs sequential
+      mini-sessions per lesson / KC / case-study slot. */
+  sendBuildFullCourse: (course: Course, shape?: CourseShape) => void;
+  /** Resume a paused build from the given lesson index (sprint-2-7). */
+  resumeBuild: (startFrom: number) => void;
+  /** Set cancellation flag — the build halts at the next phase boundary. */
+  cancelBuild: () => void;
+  /** Re-fetch the BE's orchestrator snapshot (FE rehydration). The
+      socket auto-fires this on every (re)connect; this exposes a
+      manual refresh handle for diagnostic use. */
+  refreshOrchestratorState: () => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -123,6 +164,16 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const prefillInput = useCallback((text: string) => setPendingInput(text), []);
   const clearPendingInput = useCallback(() => setPendingInput(null), []);
 
+  // sprint-2-1: orchestrator slice. Initialized to the empty state
+  // and replaced wholesale on each build_state event from the BE.
+  // lastBuildProgress holds the most recent build_progress event so
+  // sprint-2-2's LessonTile + aggregate progress band can render
+  // step-level animations between full state snapshots.
+  const [orchestratorState, setOrchestratorState] = useState<OrchestratorState>(EMPTY_ORCHESTRATOR_STATE);
+  const [lastBuildProgress, setLastBuildProgress] = useState<
+    { kind: BuildProgressKind; payload: Record<string, unknown> } | null
+  >(null);
+
   const appendMessage = useCallback((entry: ChatEntry) => {
     setMessages((prev) => [...prev, entry]);
   }, []);
@@ -137,7 +188,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const { status, sendUserMessage } = useAgentSocket({
+  const { status, sendUserMessage, sendRaw } = useAgentSocket({
     url: WS_URL,
     getActions: () => actionsRef.current,
     onAssistantText: (text) => {
@@ -174,6 +225,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setIsThinking(false);
       setCurrentTool(null);
     },
+    onBuildState: (state) => {
+      setOrchestratorState(state);
+    },
+    onBuildProgress: (kind, payload) => {
+      setLastBuildProgress({ kind, payload });
+    },
   });
 
   const sendMessage = useCallback(
@@ -205,6 +262,30 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // ── sprint-2-1: orchestrator action helpers ──────────────────────
+  // Each helper is a thin wrapper around sendRaw that ships a typed
+  // ClientMessage. Action effects show up in the UI via build_state /
+  // build_progress events the BE pushes back; we don't optimistically
+  // mutate orchestratorState here (BE = source of truth).
+  const sendBuildFullCourse = useCallback(
+    (course: Course, shape?: CourseShape) => {
+      sendRaw({ type: "build_full_course", course, shape });
+    },
+    [sendRaw],
+  );
+  const resumeBuild = useCallback(
+    (startFrom: number) => {
+      sendRaw({ type: "build_full_course_resume", startFrom });
+    },
+    [sendRaw],
+  );
+  const cancelBuild = useCallback(() => {
+    sendRaw({ type: "build_cancel" });
+  }, [sendRaw]);
+  const refreshOrchestratorState = useCallback(() => {
+    sendRaw({ type: "get_orchestrator_state" });
+  }, [sendRaw]);
+
   const value = useMemo<AgentContextValue>(
     () => ({
       status,
@@ -223,8 +304,35 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       pendingInput,
       prefillInput,
       clearPendingInput,
+      orchestratorState,
+      lastBuildProgress,
+      sendBuildFullCourse,
+      resumeBuild,
+      cancelBuild,
+      refreshOrchestratorState,
     }),
-    [status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, sendMessage, registerActions, outlineProposal, clearOutlineProposal, pendingInput, prefillInput, clearPendingInput],
+    [
+      status,
+      messages,
+      isThinking,
+      currentTool,
+      lastTarget,
+      openLastTarget,
+      open,
+      sendMessage,
+      registerActions,
+      outlineProposal,
+      clearOutlineProposal,
+      pendingInput,
+      prefillInput,
+      clearPendingInput,
+      orchestratorState,
+      lastBuildProgress,
+      sendBuildFullCourse,
+      resumeBuild,
+      cancelBuild,
+      refreshOrchestratorState,
+    ],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

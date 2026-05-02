@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { BookOpen, Calendar, CheckCircle2, Clock, MessageSquare, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle2, Clock, MessageSquare, Plus, Rocket, Sparkles, Target, Trash2, X } from "lucide-react";
 import type { CourseOutlineProposal, ProposedLesson, ProposedModule } from "./types";
 
 interface Props {
   proposal: CourseOutlineProposal;
-  /** Build the course from the (possibly-edited) proposal. */
+  /** Build the empty course shell from the (possibly-edited) proposal. */
   onBuild: (edited: CourseOutlineProposal) => void;
+  /** sprint-2-1: build the shell AND kick off the orchestrator to fill
+      every lesson, knowledge check, and case-study slot end-to-end.
+      Optional — when omitted (or backend isn't connected) the button
+      is hidden so the LD doesn't see a dead control. */
+  onBuildFull?: (edited: CourseOutlineProposal) => void;
   onDiscard: () => void;
   /** AI-1-polish-C bug 9: Refine in chat — dismiss the card and open
       chat with a "Refine the outline: " prefill so the LD can ask the
@@ -33,7 +38,7 @@ interface Props {
  *                     structural changes
  *   Build this course commits the local draft to a real course
  */
-export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefine }: Props) {
+export function CourseOutlineProposalCard({ proposal, onBuild, onBuildFull, onDiscard, onRefine }: Props) {
   // AI-1-polish-C bug 8: local editable copy of the proposal. Initialized
   // from the prop; the prop never re-keys this state because React
   // keeps the same component instance across re-renders. Edits are
@@ -324,7 +329,9 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
 
       <div className="px-6 py-4 border-t border-ink-100 bg-ink-50/30 flex items-center gap-3">
         <div className="text-xs text-ink-500 flex-1">
-          Click any cell to edit. <strong className="text-ink-700">Build</strong> commits your edits as a real course; <strong className="text-ink-700">Refine in chat</strong> sends you back to Studio Copilot for structural changes.
+          Click any cell to edit. <strong className="text-ink-700">Build shell</strong> commits the
+          structure; <strong className="text-ink-700">Build full course</strong> also drafts every lesson,
+          knowledge check, and case study end-to-end.
         </div>
         <button onClick={onDiscard} className="btn-secondary btn-sm">
           Discard
@@ -332,9 +339,18 @@ export function CourseOutlineProposalCard({ proposal, onBuild, onDiscard, onRefi
         <button onClick={onRefine} className="btn-secondary btn-sm">
           <MessageSquare size={14} /> Refine in chat
         </button>
-        <button onClick={() => onBuild(draft)} className="btn-primary btn-sm">
-          <Sparkles size={14} /> Build this course
+        <button onClick={() => onBuild(draft)} className="btn-secondary btn-sm">
+          <Sparkles size={14} /> Build shell
         </button>
+        {/* sprint-2-1: full-course build button. Hidden when no
+            onBuildFull is wired (e.g. backend disconnected) so the LD
+            doesn't see a dead control. The shell-only Build above
+            remains the safe baseline. */}
+        {onBuildFull && (
+          <button onClick={() => onBuildFull(draft)} className="btn-primary btn-sm">
+            <Rocket size={14} /> Build full course
+          </button>
+        )}
       </div>
     </div>
   );
