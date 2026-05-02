@@ -47,8 +47,72 @@ const CYCLING_PHRASES = [
   "Brewing the next bit",
   "Cooking up something good",
 ];
+
+// polish-6a: per-tool phrase reels. Once a single tool call has been
+// running long enough that the static toolLabel reads as "stuck"
+// (~10 sec), swap to a cycling reel that signals what step of the
+// tool's work is happening right now. Each entry should read as
+// what the agent is mid-doing — present continuous, no period.
+//
+// The render adds a trailing "…" to the label, so phrases here end
+// without punctuation. Phrase order should roughly follow the
+// natural arc of the tool (open → middle → close) so even a fast
+// scan reads as progress, not random chatter.
+//
+// Tools without an entry in this map keep their static toolLabel
+// across the whole tool run — fine for short tools (regenerate_question,
+// add_module). Add a new key here when a tool starts feeling slow.
+const TOOL_STATUS_PHRASES: Record<string, string[]> = {
+  write_lesson: [
+    "Drafting the hook",
+    "Choosing examples",
+    "Adding callouts",
+    "Building the accordion",
+    "Writing key takeaways",
+    "Wrapping the lesson",
+  ],
+  propose_course_outline: [
+    "Mapping the learning arc",
+    "Sequencing the modules",
+    "Sizing each lesson",
+    "Planting case-study slots",
+  ],
+  write_script: [
+    "Sketching the open",
+    "Pacing the scenes",
+    "Writing the narration",
+    "Layering in visuals",
+    "Tightening the close",
+  ],
+  write_knowledge_check: [
+    "Picking the concepts",
+    "Drafting the stems",
+    "Writing distractors",
+    "Adding explanations",
+  ],
+  design_case_study: [
+    "Setting the scenario",
+    "Casting the protagonist",
+    "Sequencing the decisions",
+    "Wiring the choices",
+  ],
+  read_materials: [
+    "Scanning the source",
+    "Extracting the key points",
+    "Connecting the threads",
+  ],
+};
+
 const ALMOST_THERE_THRESHOLD_MS = 25_000;
 const PHRASE_CYCLE_MS = 7_000;
+// polish-6a: only swap from the static tool label to the cycling
+// per-tool reel once the tool has been running this long. Short tool
+// calls (< 10s) still see their familiar one-line label and never
+// flicker through phrases. 10s is a sweet spot empirically — long
+// enough that the static label has started to feel stale, short
+// enough that the LD sees the reel for at least one phrase before
+// the tool returns.
+const TOOL_PHRASE_THRESHOLD_MS = 10_000;
 
 export function AgentChat() {
   const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal } = useAgent();
@@ -419,10 +483,17 @@ export function AgentInflightIndicator({
 }) {
   const { isThinking, currentTool, status } = useAgent();
 
-  // Cycling state — phrase index + turn-start tracking. Same logic
-  // that lived in AgentChat's header pre-polish-5c, just relocated.
+  // Cycling state — phrase index + turn / tool start tracking. Same
+  // logic that lived in AgentChat's header pre-polish-5c, just
+  // relocated. polish-6a adds toolStartedAtRef + a tool-change reset
+  // so the per-tool reel is timed against the tool, not the whole
+  // turn (so a 30s turn that fires a 4s tool doesn't immediately
+  // flip into the reel before the tool's static label has even
+  // landed for the LD).
   const [phraseIndex, setPhraseIndex] = useState(0);
   const turnStartedAtRef = useRef<number | null>(null);
+  const toolStartedAtRef = useRef<number | null>(null);
+  const lastToolRef = useRef<string | null>(null);
   const [, forceTick] = useState(0); // re-render to recompute elapsed
 
   useEffect(() => {
@@ -432,13 +503,32 @@ export function AgentInflightIndicator({
       forceTick((t) => t + 1);
     } else if (!isThinking && turnStartedAtRef.current !== null) {
       turnStartedAtRef.current = null;
+      toolStartedAtRef.current = null;
+      lastToolRef.current = null;
     }
   }, [isThinking]);
 
+  // polish-6a: reset the cycle whenever the active tool changes, so
+  // each tool starts fresh at phrase 0 (read as "this new step is
+  // beginning") rather than mid-reel from the previous tool. Also
+  // resets when currentTool flips back to null (between tools).
+  useEffect(() => {
+    if (currentTool !== lastToolRef.current) {
+      lastToolRef.current = currentTool;
+      toolStartedAtRef.current = currentTool ? Date.now() : null;
+      setPhraseIndex(0);
+      forceTick((t) => t + 1);
+    }
+  }, [currentTool]);
+
   useEffect(() => {
     if (!isThinking) return;
+    // The modulo is applied at render time against whichever array
+    // is active (tool reel vs CYCLING_PHRASES), so this just
+    // monotonically increments — it doesn't need to know which array
+    // it's cycling. Keeps the logic dead simple across tool changes.
     const timer = setInterval(() => {
-      setPhraseIndex((i) => (i + 1) % CYCLING_PHRASES.length);
+      setPhraseIndex((i) => i + 1);
       forceTick((t) => t + 1);
     }, PHRASE_CYCLE_MS);
     return () => clearInterval(timer);
@@ -448,14 +538,31 @@ export function AgentInflightIndicator({
 
   const elapsedMs =
     turnStartedAtRef.current !== null ? Date.now() - turnStartedAtRef.current : 0;
+  const toolElapsedMs =
+    toolStartedAtRef.current !== null ? Date.now() - toolStartedAtRef.current : 0;
 
-  // Tool label always wins when a tool is active. Otherwise cycle
-  // unless we've crossed the "Almost there" threshold.
-  const label = currentTool
-    ? toolLabel(currentTool)
-    : elapsedMs >= ALMOST_THERE_THRESHOLD_MS
-      ? "Almost there"
-      : CYCLING_PHRASES[phraseIndex];
+  // polish-6a: label resolution.
+  //   Tool active + reel mapped + tool elapsed ≥ threshold
+  //     → cycle through the per-tool reel (e.g. "Drafting the hook")
+  //   Tool active otherwise (short call, or no reel mapped)
+  //     → static toolLabel (legacy behavior — "Writing lesson content")
+  //   No tool, turn elapsed ≥ threshold
+  //     → "Almost there" (long-tail signal)
+  //   No tool otherwise
+  //     → cycle through generic CYCLING_PHRASES
+  let label: string;
+  if (currentTool) {
+    const reel = TOOL_STATUS_PHRASES[currentTool];
+    if (reel && toolElapsedMs >= TOOL_PHRASE_THRESHOLD_MS) {
+      label = reel[phraseIndex % reel.length];
+    } else {
+      label = toolLabel(currentTool);
+    }
+  } else if (elapsedMs >= ALMOST_THERE_THRESHOLD_MS) {
+    label = "Almost there";
+  } else {
+    label = CYCLING_PHRASES[phraseIndex % CYCLING_PHRASES.length];
+  }
 
   const wrapperClass = centered
     ? "agent-inflight-card"
