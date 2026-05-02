@@ -60,6 +60,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Literal
@@ -344,12 +345,15 @@ class BuildOrchestrator:
             self._state.lesson_states[t.idx] = "done"
             self._state.last_completed_lesson_idx = t.idx
             await self._emit_state()
-            # sprint-2-3: cost-metric extension on lesson_completed
-            # payload (locked, in-conversation). LessonTile tooltip in
-            # 2-10b will surface "Lesson 4: 2,341 tokens, ~$0.05" from
-            # these fields; the completion toast will aggregate
-            # across all lessons. Free data — capturing it here costs
-            # nothing extra over the stdout log we'd write anyway.
+            # sprint-2-3 + polish-7d: cost-metric extension on
+            # lesson_completed. polish-7d fixes the "tokens_in=13"
+            # bug — the SDK's `input_tokens` field is *uncached only*;
+            # most of our 8K system prompt + course state lands in
+            # cache_read_input_tokens (file-loaded prompt is cached).
+            # The headline tokensIn now SUMS uncached + cache-read +
+            # cache-creation so the LD sees the full effective prompt.
+            # Breakdown surfaces separately for cost-analysis tooling.
+            metrics = _extract_usage(usage)
             await self._emit_progress("lesson_completed", {
                 "idx": t.idx,
                 "title": t.title,
@@ -358,16 +362,27 @@ class BuildOrchestrator:
                 "lessonIdx": t.lesson_idx,
                 "durationMs": duration_ms,
                 "initMs": init_ms,
-                "tokensIn": _safe_int(usage.get("input_tokens") or usage.get("inputTokens")),
-                "tokensOut": _safe_int(usage.get("output_tokens") or usage.get("outputTokens")),
-                "model": usage.get("model"),
+                # Headline numbers — what tooltip + aggregate toast read.
+                "tokensIn": metrics["tokens_in_total"],
+                "tokensOut": metrics["tokens_out"],
+                "model": metrics["model"],
+                # Breakdown — for cost analysis. cache reads are
+                # ~10% the price of uncached input on Anthropic's
+                # pricing, so the breakdown matters for $-estimation.
+                "tokensInUncached": metrics["tokens_in_uncached"],
+                "tokensInCacheRead": metrics["tokens_in_cache_read"],
+                "tokensInCacheCreation": metrics["tokens_in_cache_creation"],
             })
             log.info(
-                "lesson %d done — %dms (init %dms) tokens in=%s out=%s model=%s",
+                "lesson %d done — %dms (init %dms) tokens in=%s "
+                "(uncached=%s cache_read=%s cache_creation=%s) out=%s model=%s",
                 t.idx, duration_ms, init_ms,
-                usage.get("input_tokens") or usage.get("inputTokens"),
-                usage.get("output_tokens") or usage.get("outputTokens"),
-                usage.get("model"),
+                metrics["tokens_in_total"],
+                metrics["tokens_in_uncached"],
+                metrics["tokens_in_cache_read"],
+                metrics["tokens_in_cache_creation"],
+                metrics["tokens_out"],
+                metrics["model"],
             )
 
         # Loop ended without cancel/error → completed.
@@ -504,3 +519,71 @@ def _safe_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+# polish-7d: env fallback for the model name. The SDK's ResultMessage
+# usage dict doesn't surface `model` reliably across versions; if the
+# event-side reads come up empty we fall back to whatever the user
+# configured for the SDK to use. Read at call time so an env reload
+# (rare in dev) takes effect without a process restart.
+def _model_from_env() -> str | None:
+    return (
+        os.environ.get("CLAUDE_MODEL")
+        or os.environ.get("ANTHROPIC_MODEL")
+        or os.environ.get("CLAUDE_AGENT_MODEL")
+        or None
+    )
+
+
+def _extract_usage(usage: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the SDK's usage dict into the fields lesson_completed
+    surfaces. polish-7d fixes the "tokens_in=13" + "model=None"
+    surprises from sprint-2-3's first live run.
+
+    The SDK's `usage` dict mirrors the Anthropic API conventions:
+      input_tokens                — uncached prompt tokens this turn
+      cache_read_input_tokens     — prompt tokens served from prompt
+                                    cache (cheap)
+      cache_creation_input_tokens — prompt tokens written into cache
+                                    this turn
+      output_tokens               — generated tokens
+
+    Pre-polish-7d we read input_tokens alone, which surfaced "13" for
+    a turn whose effective prompt was 8K+ — most of it cache-read.
+    The headline `tokens_in_total` now sums all three input components
+    so the LD sees real prompt size; the breakdown is preserved for
+    cost-modeling (cache reads are ~10% the price of uncached input
+    on Anthropic's pricing).
+
+    Field-name handling is permissive — both snake_case and camelCase
+    are tolerated since SDK transport layers occasionally normalize
+    either way.
+    """
+    def _read(*keys: str) -> int | None:
+        for k in keys:
+            if k in usage and usage[k] is not None:
+                v = _safe_int(usage[k])
+                if v is not None:
+                    return v
+        return None
+
+    uncached = _read("input_tokens", "inputTokens") or 0
+    cache_read = _read("cache_read_input_tokens", "cacheReadInputTokens") or 0
+    cache_creation = (
+        _read("cache_creation_input_tokens", "cacheCreationInputTokens") or 0
+    )
+    out = _read("output_tokens", "outputTokens")
+    total_in = uncached + cache_read + cache_creation
+
+    model = usage.get("model") or _model_from_env()
+
+    return {
+        "tokens_in_total": total_in if total_in > 0 else None,
+        "tokens_in_uncached": uncached if uncached > 0 else None,
+        "tokens_in_cache_read": cache_read if cache_read > 0 else None,
+        "tokens_in_cache_creation": (
+            cache_creation if cache_creation > 0 else None
+        ),
+        "tokens_out": out,
+        "model": model,
+    }
