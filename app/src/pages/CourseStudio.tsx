@@ -2550,6 +2550,12 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
   // edit inline like text/banner/callout/divider — single-shape data,
   // no items list to navigate.
   const isSimple = ["text", "banner", "callout", "quote", "clickInstruction", "sectionHeader", "divider"].includes(block.type);
+  // polish-6c: accordion gets interactive expand/collapse on the
+  // canvas instead of the static-HTML preview. Other complex blocks
+  // (cards / flipcard / timeline / quiz / poll / stats) still use the
+  // dangerouslySetInnerHTML preview path until each gets its own
+  // interactive treatment.
+  const isInteractiveAccordion = block.type === "accordion";
   const bt = BTYPES.find((x) => x.id === block.type);
   const previewHtml = useMemo(() => previewBlock(block, brand), [block, brand]);
 
@@ -2588,11 +2594,129 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
         <div className="p-5">
           {isSimple ? (
             <SimpleBlockEditor block={block} brand={brand} onChange={onInlineEdit} />
+          ) : isInteractiveAccordion ? (
+            /* polish-6c: clickable accordion. Title rows toggle the
+               item open/closed; clicks on the body bubble up to the
+               wrapper's onOpenEditor (so clicking outside a title row
+               still opens the drawer for editing — same affordance as
+               other complex blocks). */
+            <div onClick={onOpenEditor} className="cursor-pointer">
+              <InteractiveAccordion block={block} brand={brand} />
+            </div>
           ) : (
             <div onClick={onOpenEditor} className="cursor-pointer" dangerouslySetInnerHTML={{ __html: previewHtml }} />
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * polish-6c: interactive accordion preview for the lesson canvas.
+ *
+ * Pre-polish-6c the lesson canvas rendered accordions as static HTML
+ * (previewBlock.ts case "accordion") — first item visually open, rest
+ * closed, no click handlers. Live testing flagged this as a regression
+ * the LD expected accordions to actually toggle in the canvas, since
+ * the proposal card hint "click to expand" implies it.
+ *
+ * Visual matches previewBlock.ts case "accordion" exactly so the
+ * non-interactive version (used in JSON exports / printable previews)
+ * stays consistent. Only the canvas surface gets the interactive
+ * treatment.
+ *
+ * Click-bubbling rules (locked spec): title-row click toggles open
+ * state and stops the event so the parent's onOpenEditor doesn't
+ * fire. Body click bubbles up — clicking the open body still opens
+ * the drawer for editing. That gives the LD: title row to expand,
+ * body / outside to edit.
+ */
+function InteractiveAccordion({ block, brand }: { block: Block; brand: BrandKey }) {
+  const items = (block.data?.items || []) as { title?: string; desc?: string }[];
+  const b = B[brand];
+  // Keep the first item open by default to match the previous static
+  // preview's first-item-open behavior — LDs are used to that frame.
+  const [openSet, setOpenSet] = useState<Set<number>>(new Set([0]));
+
+  function toggle(i: number, e: React.MouseEvent) {
+    // Stop the event so the BlockCard's onOpenEditor doesn't also
+    // fire (we want toggle-only on title-row clicks).
+    e.stopPropagation();
+    setOpenSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  const visible = items.slice(0, 3);
+  const hiddenCount = Math.max(0, items.length - 3);
+
+  return (
+    <div>
+      {visible.map((it, i) => {
+        const isOpen = openSet.has(i);
+        return (
+          <div
+            key={i}
+            style={{
+              border: `1px solid ${b.n2}`,
+              borderRadius: 7,
+              marginBottom: 5,
+              overflow: "hidden",
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => toggle(i, e)}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: b.tx,
+                background: isOpen ? b.priLt : b.wh,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+              aria-expanded={isOpen}
+            >
+              <span>{it.title}</span>
+              <span aria-hidden="true">{isOpen ? "▲" : "▼"}</span>
+            </button>
+            {isOpen && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  fontSize: 12,
+                  color: b.txL,
+                  lineHeight: 1.7,
+                }}
+              >
+                {it.desc || ""}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {hiddenCount > 0 && (
+        <div
+          style={{
+            fontSize: 10,
+            color: b.txL,
+            textAlign: "center",
+            paddingTop: 4,
+          }}
+        >
+          +{hiddenCount} more section{hiddenCount === 1 ? "" : "s"}
+        </div>
+      )}
     </div>
   );
 }
