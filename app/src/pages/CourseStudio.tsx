@@ -19,6 +19,7 @@ import { Button } from "../ui/Button";
 import { B, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock, renderTextBlockBody } from "../course/previewBlock";
+import { renderInlineMd } from "../course/renderInlineMarkdown";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
 import type { Block, BlockData, BlockItem, CaseStudy, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
@@ -2698,9 +2699,14 @@ function InteractiveAccordion({ block, brand }: { block: Block; brand: BrandKey 
                   color: b.txL,
                   lineHeight: 1.7,
                 }}
-              >
-                {it.desc || ""}
-              </div>
+                /* polish-6b: render **bold** markdown in accordion bodies.
+                   renderInlineMd HTML-escapes first, so the dangerouslySet
+                   call here is safe against tag-injection from authored
+                   content. */
+                dangerouslySetInnerHTML={{
+                  __html: renderInlineMd(it.desc || ""),
+                }}
+              />
             )}
           </div>
         );
@@ -2940,12 +2946,14 @@ function SimpleBlockEditor({ block, brand, onChange }: { block: Block; brand: Br
                 </button>
               ))}
             </div>
-            <textarea
-              value={d.body || ""}
-              onChange={(e) => onChange("body", e.target.value)}
-              rows={2}
-              placeholder="Your message..."
-              className="w-full text-sm text-ink-800 bg-transparent border-none outline-none resize-none placeholder:text-ink-400"
+            {/* polish-6b: focus-toggle for callout body. Same pattern
+                as TextBlockEditor — blurred state shows the rendered
+                markdown (so **bold** displays bold instead of literal
+                asterisks); click to swap to a plain textarea for
+                editing. */}
+            <CalloutBodyEditor
+              body={d.body || ""}
+              onChange={(val) => onChange("body", val)}
             />
           </div>
         </div>
@@ -3028,6 +3036,62 @@ function TextBlockEditor({
       onClick={() => setEditing(true)}
       className="text-[15px] leading-relaxed text-ink-900 cursor-text text-block-render"
       dangerouslySetInnerHTML={{ __html: renderTextBlockBody(content) }}
+    />
+  );
+}
+
+/**
+ * polish-6b: callout body editor — same focus-toggle pattern as
+ * TextBlockEditor. Blurred state shows the rendered body (so
+ * **bold** displays as actual bold), focused state swaps to a plain
+ * textarea so the LD types raw markdown. Pre-polish-6b the body
+ * always rendered as a textarea, so callout bodies showed literal
+ * asterisks on the canvas.
+ *
+ * Lives outside SimpleBlockEditor so the editing state survives
+ * SimpleBlockEditor re-renders (e.g. when the LD toggles the
+ * Info/Tip/Warning/Success type chip — that mutates props but
+ * shouldn't kick the LD out of the textarea mid-edit).
+ */
+function CalloutBodyEditor({
+  body,
+  onChange,
+}: {
+  body: string;
+  onChange: (val: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <textarea
+        value={body}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        rows={Math.max(2, body.split("\n").length)}
+        placeholder="Your message..."
+        autoFocus
+        className="w-full text-sm text-ink-800 bg-transparent border-none outline-none resize-none placeholder:text-ink-400"
+      />
+    );
+  }
+
+  if (!body) {
+    return (
+      <div
+        onClick={() => setEditing(true)}
+        className="text-sm text-ink-400 cursor-text"
+      >
+        Your message…
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setEditing(true)}
+      className="text-sm text-ink-800 cursor-text"
+      dangerouslySetInnerHTML={{ __html: renderInlineMd(body) }}
     />
   );
 }

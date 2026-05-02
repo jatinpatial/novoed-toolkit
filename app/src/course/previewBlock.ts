@@ -1,30 +1,12 @@
 import { B, esc, type BrandKey } from "../brand/tokens";
 import type { Block } from "./types";
+import { renderInlineMd } from "./renderInlineMarkdown";
 
-/**
- * Render text with inline markdown bolding (AI-1a).
- *
- * Order matters: HTML-escape FIRST (to neutralize anything that looks
- * like a tag in the user's prose), THEN substitute `**bold**` for
- * `<strong>...</strong>` so the inserted tags don't get re-escaped.
- *
- * Pattern `\*\*([^*]+?)\*\*`:
- *   - Paired `**` markers
- *   - Non-greedy match so "**a** then **b**" gives two runs, not one
- *     spanning both
- *   - `[^*]+?` (no internal asterisks) prevents weird nesting and
- *     keeps math like "5 ** 3 ** 2" from triggering bizarre captures
- *
- * Italic / underline left out for AI-1a — text is the main consumer
- * and bold is the only inline mark in the BCG U / Rise vocabulary.
- * If italics become needed later, add `_..._` -> `<em>` here.
- *
- * Exported so other previewBlock branches (callout.body, banner.body)
- * can use the same renderer for editorial-leaning content.
- */
-export function renderInlineMd(text: string): string {
-  return esc(text).replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
-}
+// polish-6b: re-export so existing call sites that import { renderInlineMd }
+// from "../course/previewBlock" keep working. The canonical home is now
+// renderInlineMarkdown.ts — adopting that import directly is preferred for
+// new code.
+export { renderInlineMd };
 
 /**
  * renderTextBlockBody — full text-block render with line structure
@@ -175,7 +157,10 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
     }
 
     case "accordion": {
-      const acc = items.slice(0, 3).map((it, i) => '<div style="border:1px solid ' + b.n2 + ';border-radius:7px;margin-bottom:5px;overflow:hidden;"><div style="padding:10px 14px;font-size:12px;font-weight:600;color:' + b.tx + ";background:" + (i === 0 ? b.priLt : b.wh) + ';display:flex;justify-content:space-between;">' + esc(it.title) + "<span>" + (i === 0 ? "▲" : "▼") + "</span></div>" + (i === 0 ? '<div style="padding:10px 14px;font-size:12px;color:' + b.txL + ';line-height:1.7;">' + esc(it.desc || "") + "</div>" : "") + "</div>").join("");
+      // polish-6b: accordion item descriptions now respect **bold**
+      // markdown (was esc-only). Titles stay esc'd — single-line
+      // labels don't need inline marks.
+      const acc = items.slice(0, 3).map((it, i) => '<div style="border:1px solid ' + b.n2 + ';border-radius:7px;margin-bottom:5px;overflow:hidden;"><div style="padding:10px 14px;font-size:12px;font-weight:600;color:' + b.tx + ";background:" + (i === 0 ? b.priLt : b.wh) + ';display:flex;justify-content:space-between;">' + esc(it.title) + "<span>" + (i === 0 ? "▲" : "▼") + "</span></div>" + (i === 0 ? '<div style="padding:10px 14px;font-size:12px;color:' + b.txL + ';line-height:1.7;">' + renderInlineMd(it.desc || "") + "</div>" : "") + "</div>").join("");
       return acc + (items.length > 3 ? '<div style="font-size:10px;color:' + b.txL + ';text-align:center;padding-top:4px;">+' + (items.length - 3) + " more sections</div>" : "");
     }
 
