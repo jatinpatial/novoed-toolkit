@@ -25,7 +25,7 @@ import { deleteProject, getProject, listProjects, saveProject, subscribeProjects
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
-import { BuildProgressBand, LessonTile } from "../agent/LessonTile";
+import { BuildCompletionConfetti, BuildProgressBand, LessonTile } from "../agent/LessonTile";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
 
@@ -873,6 +873,12 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
               stays visible. Returns null at rest — only renders when
               orchestratorState.phase === "building". */}
           <BuildProgressBand />
+          {/* polish-7c: course_completed celebration. Returns null —
+              effect-host that fires confetti when the build's real
+              course_completed progress event arrives. Suppressed on
+              page-refresh rehydration (BE doesn't emit the progress
+              event on rehydrate, only build_state). */}
+          <BuildCompletionConfetti />
           {viewMode === "module" && mod ? (
             <ModuleSummary
               module={mod}

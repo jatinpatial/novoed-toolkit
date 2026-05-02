@@ -13,6 +13,7 @@
     "typecheck:e2e": "tsc --noEmit -p ../e2e/tsconfig.json"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "fflate": "^0.8.2",
     "lucide-react": "^1.8.0",
     "react": "^18.3.1",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^25.6.0",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",

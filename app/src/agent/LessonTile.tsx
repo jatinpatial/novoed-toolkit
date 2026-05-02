@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 import { Check } from "lucide-react";
 import { useAgent } from "./AgentContext";
 import type { BuildProgressKind, OrchestratorTargetStatus } from "./types";
@@ -205,4 +206,86 @@ function phaseLabelFor(kind: BuildProgressKind | undefined): string {
   if (kind === "course_export_ready") return "Exporting Word doc…";
   if (kind === "course_completed") return "Wrapping up…";
   return "Building course…";
+}
+
+/**
+ * polish-7c: confetti burst on course_completed.
+ *
+ * Returns null — this is an effect-host component. Mount it
+ * alongside BuildProgressBand inside the canvas pane; it watches
+ * lastBuildProgress and fires a brand-colored burst when the build
+ * actually completes.
+ *
+ * Critically, only `course_completed` fires the confetti — NOT a
+ * build_state with phase=completed. The BE only emits the progress
+ * event during the actual build run; on page rehydration it pushes
+ * build_state alone (no progress event). So a refresh after the
+ * build finished doesn't re-trigger the celebration. The
+ * firedForBuildRef double-guard belt-and-suspenders against any
+ * duplicate event delivery.
+ *
+ * Two-tap pattern (150 particles spread 80 → 200ms → 50 particles
+ * spread 60) gives a satisfying bloom + secondary pop without
+ * overstaying its welcome. Brand-aware colors via the runtime
+ * --brand-500 / --brand-700 cascade vars, so BCG vs BCG U vs Client
+ * each get their own palette automatically.
+ */
+export function BuildCompletionConfetti() {
+  const { lastBuildProgress } = useAgent();
+  const firedForBuildRef = useRef(false);
+
+  useEffect(() => {
+    if (!lastBuildProgress) return;
+    // Reset the fire-once latch when a new build begins. course_started
+    // doesn't exist as a kind today; lesson_started on idx 0 is the
+    // de-facto build-start signal.
+    if (
+      lastBuildProgress.kind === "lesson_started" &&
+      lastBuildProgress.payload.idx === 0
+    ) {
+      firedForBuildRef.current = false;
+      return;
+    }
+    if (lastBuildProgress.kind !== "course_completed") return;
+    if (firedForBuildRef.current) return;
+    firedForBuildRef.current = true;
+    fireBurst();
+  }, [lastBuildProgress]);
+
+  return null;
+}
+
+function fireBurst(): void {
+  // Read the runtime brand cascade vars at fire time so the palette
+  // matches whatever brand the LD has toggled (BCG / BCG U / Client).
+  // Defaults guard against the rare case where vars are unset (early
+  // app boot). Whites mixed in for sparkle.
+  const root = getComputedStyle(document.documentElement);
+  const brand500 = root.getPropertyValue("--brand-500").trim() || "#29BA74";
+  const brand700 = root.getPropertyValue("--brand-700").trim() || "#1B7A4F";
+  const colors = [brand500, brand700, "#ffffff"];
+
+  // First burst — wide bloom from screen center.
+  confetti({
+    particleCount: 150,
+    spread: 80,
+    origin: { x: 0.5, y: 0.55 },
+    colors,
+    startVelocity: 35,
+    scalar: 0.9,
+    ticks: 200,
+  });
+  // Second pop — tighter, fires 200ms after the first for a layered
+  // feel (claude.ai-style double-tap).
+  window.setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { x: 0.5, y: 0.55 },
+      colors,
+      startVelocity: 28,
+      scalar: 0.8,
+      ticks: 180,
+    });
+  }, 200);
 }
