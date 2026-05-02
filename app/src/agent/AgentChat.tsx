@@ -115,7 +115,7 @@ const PHRASE_CYCLE_MS = 7_000;
 const TOOL_PHRASE_THRESHOLD_MS = 10_000;
 
 export function AgentChat() {
-  const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal } = useAgent();
+  const { status, messages, isThinking, currentTool, lastTarget, openLastTarget, open, setOpen, sendMessage, pendingInput, clearPendingInput, outlineProposal, orchestratorState } = useAgent();
   const [draft, setDraft] = useState("");
   // AI-1-polish-A bug 4: closing-state flag for the slide-right fade-out
   // animation when a major artifact (proposal card) takes the stage.
@@ -123,6 +123,11 @@ export function AgentChat() {
   const [closing, setClosing] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // polish-7b: remember whether the chat was open when the build
+  // started, so we can restore it when the build ends. Captured on
+  // the transition INTO "building" and read on the transition OUT.
+  // null means "no build in flight" — never trigger restore.
+  const priorOpenForBuildRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -143,6 +148,50 @@ export function AgentChat() {
     }, 250);
     return () => clearTimeout(timer);
   }, [outlineProposal, open, setOpen]);
+
+  // polish-7b: auto-collapse the chat panel during a full-course
+  // build, restore it when the build ends. The chat panel sits
+  // fixed-positioned over the right ~360px of the canvas; during a
+  // 5-25 minute build the LD wants to scroll through tiles + lessons
+  // freely without that overlay blocking lesson content.
+  //
+  // Mechanics:
+  //   - Capture `open` on the transition INTO "building". Don't touch
+  //     it on every render of the building phase — that would force-
+  //     close if the LD manually opens chat mid-build to ask a
+  //     question.
+  //   - On the transition OUT of "building" (idle / completed /
+  //     cancelled / paused / failed), restore IF the chat is
+  //     currently closed AND it was open when the build started.
+  //     Never force-close on completion — if the LD opened chat
+  //     during the build, leave it open (their explicit action wins).
+  useEffect(() => {
+    const phase = orchestratorState.phase;
+    if (phase === "building") {
+      if (priorOpenForBuildRef.current === null) {
+        // First detection of building → capture state, collapse if open.
+        priorOpenForBuildRef.current = open;
+        if (open) {
+          setClosing(true);
+          const timer = setTimeout(() => {
+            setOpen(false);
+            setClosing(false);
+          }, 250);
+          return () => clearTimeout(timer);
+        }
+      }
+    } else {
+      // Out of building. Restore only on the transition (priorOpen ref
+      // was set), and only if currently closed — preserves any
+      // mid-build manual open.
+      if (priorOpenForBuildRef.current !== null) {
+        if (priorOpenForBuildRef.current && !open) {
+          setOpen(true);
+        }
+        priorOpenForBuildRef.current = null;
+      }
+    }
+  }, [orchestratorState.phase, open, setOpen]);
 
   useEffect(() => {
     if (pendingInput == null) return;
