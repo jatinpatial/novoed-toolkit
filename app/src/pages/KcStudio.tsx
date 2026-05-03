@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Brain, Check, Download } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
-import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
+import { AgentChat } from "../agent/AgentChat";
 import { useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
+import { StudioBuildLoader } from "../shell/StudioBuildLoader";
 import { getKc, saveKc, subscribeKcs, type Kc } from "../store/kcs";
 import type { Course, QuizQuestion } from "../course/types";
 
@@ -300,16 +301,21 @@ export default function KcStudio() {
 
         {/* Body — building / failed / questions */}
         {isBuilding && (
-          <div className="card p-10 text-center">
-            <Brain className="mx-auto text-brand-500 mb-3" size={32} />
-            <h3 className="text-h3 text-ink-900 mb-2">Studio Copilot is writing your questions…</h3>
-            <p className="text-sm text-ink-500 max-w-md mx-auto mb-4">
-              Reading your source materials, calibrating difficulty, drafting plausible distractors. Usually 1-2 minutes.
-            </p>
-            <div className="agent-inflight-card-wrap">
-              <AgentInflightIndicator centered />
-            </div>
-          </div>
+          <StudioBuildLoader
+            heading="Studio Copilot is writing your questions…"
+            subhead="Reading source materials, calibrating difficulty, drafting plausible distractors. Usually 60-90 seconds."
+            phrases={[
+              "Reading the source",
+              "Picking the concepts",
+              "Drafting the stems",
+              "Crafting questions that stick",
+              "Calibrating difficulty",
+              "Writing distractors that tempt",
+              "Adding rationales",
+              "Tightening the wording",
+            ]}
+            estimateMs={75_000}
+          />
         )}
 
         {isFailed && (

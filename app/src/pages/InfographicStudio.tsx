@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BarChart3, Download } from "lucide-react";
 import html2canvas from "html2canvas";
 import { AppShell } from "../shell/AppShell";
-import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
+import { AgentChat } from "../agent/AgentChat";
 import { useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
+import { StudioBuildLoader } from "../shell/StudioBuildLoader";
 import {
   getInfographic,
   saveInfographic,
@@ -236,16 +237,20 @@ export default function InfographicStudio() {
         </div>
 
         {isBuilding && (
-          <div className="card p-10 text-center">
-            <BarChart3 className="mx-auto text-brand-500 mb-3" size={32} />
-            <h3 className="text-h3 text-ink-900 mb-2">Studio Copilot is composing your infographic…</h3>
-            <p className="text-sm text-ink-500 max-w-md mx-auto mb-4">
-              Reading source materials, picking icons, tightening the wording. Usually about a minute.
-            </p>
-            <div className="agent-inflight-card-wrap">
-              <AgentInflightIndicator centered />
-            </div>
-          </div>
+          <StudioBuildLoader
+            heading="Studio Copilot is composing your infographic…"
+            subhead="Reading the source, sketching the layout, picking icons, tightening the wording."
+            phrases={[
+              "Reading the source",
+              "Sketching the layout",
+              "Mapping the structure",
+              "Picking the right icons",
+              "Tightening the wording",
+              "Balancing the visual hierarchy",
+              "Adding the final polish",
+            ]}
+            estimateMs={90_000}
+          />
         )}
 
         {isFailed && (

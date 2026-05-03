@@ -1453,48 +1453,50 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 );
               })}
             </div>
-            {/* polish-16c + polish-16d: module-level extras as outline
-                rows. Order is pedagogical: Case Study (application) FIRST,
-                then KC (assessment). Pre-16d the order was reversed —
-                LDs read the placement as "test before practice" which
-                inverts the learning arc. */}
-            {(m.knowledgeCheck || m.caseStudyId) && (
-              <div className="outline-extras">
-                {m.caseStudyId && (() => {
-                  const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
-                  if (!cs) return null;
-                  const designed = (cs.context || "").trim().length > 0 || (cs.stakeholders || []).length > 0;
-                  return (
-                    <div
-                      className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
-                        viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
-                      }`}
-                      onClick={() => onSelectModule(mi)}
-                      title={designed ? `Case study: ${cs.title}` : `Case study (planted, not yet designed): ${cs.title}`}
-                    >
-                      <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[CS]</span>
-                      <span className={`text-[13px] flex-1 truncate italic ${designed ? "text-ink-700" : "text-ink-400"}`}>
-                        {cs.title}
-                      </span>
-                      <CaseStudyTile caseStudyId={cs.id} designed={designed} />
-                    </div>
-                  );
-                })()}
-                {m.knowledgeCheck && m.knowledgeCheck.questions && m.knowledgeCheck.questions.length > 0 && (
+            {/* Track-R / R3: module-level extras with explicit
+                visual separation. CS gets its own block; KC gets its
+                own block. Each is wrapped with a dashed divider so
+                the LD reads them as distinct sections, not as
+                appendices to the lesson list.
+                Order is pedagogical: Case Study (application) FIRST,
+                then KC (assessment). */}
+            {m.caseStudyId && (() => {
+              const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
+              if (!cs) return null;
+              const designed = (cs.context || "").trim().length > 0 || (cs.stakeholders || []).length > 0;
+              return (
+                <div className="outline-extras outline-extras-cs">
+                  <div className="outline-extras-label">Case study</div>
                   <div
                     className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
                       viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
                     }`}
                     onClick={() => onSelectModule(mi)}
-                    title="Module final assessment"
+                    title={designed ? `Case study: ${cs.title}` : `Case study (planted, not yet designed): ${cs.title}`}
                   >
-                    <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[KC]</span>
-                    <span className="text-[13px] flex-1 truncate text-ink-700 italic">
-                      Final assessment · {m.knowledgeCheck.questions.length} question{m.knowledgeCheck.questions.length === 1 ? "" : "s"}
+                    <span className={`text-[13px] flex-1 truncate italic ${designed ? "text-ink-700" : "text-ink-400"}`}>
+                      {cs.title}
                     </span>
-                    <ModuleKcTile moduleId={m.id} />
+                    <CaseStudyTile caseStudyId={cs.id} designed={designed} />
                   </div>
-                )}
+                </div>
+              );
+            })()}
+            {m.knowledgeCheck && m.knowledgeCheck.questions && m.knowledgeCheck.questions.length > 0 && (
+              <div className="outline-extras outline-extras-kc">
+                <div className="outline-extras-label">Knowledge check</div>
+                <div
+                  className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
+                    viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
+                  }`}
+                  onClick={() => onSelectModule(mi)}
+                  title="Module final assessment"
+                >
+                  <span className="text-[13px] flex-1 truncate text-ink-700 italic">
+                    Final assessment · {m.knowledgeCheck.questions.length} question{m.knowledgeCheck.questions.length === 1 ? "" : "s"}
+                  </span>
+                  <ModuleKcTile moduleId={m.id} />
+                </div>
               </div>
             )}
             {!isBuilding && (

@@ -1201,8 +1201,20 @@ def _render_toc(doc: Document, course: CourseModel) -> None:
 def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) -> None:
     _h3(doc, f"{scope_label} — {len(quiz.questions)} question{'s' if len(quiz.questions) != 1 else ''}")
     for i, q in enumerate(quiz.questions, start=1):
+        # Track-R / R2: bump pre-question spacing so adjacent questions
+        # don't visually run together. User feedback after the live KC
+        # download: questions felt cramped. Adding ~14pt before each
+        # stem (and an empty paragraph after the previous question's
+        # rationale / hints) gives the page rhythm.
+        if i > 1:
+            spacer = doc.add_paragraph()
+            spacer_run = spacer.add_run("")
+            spacer_run.font.size = Pt(6)
         # Question stem
         p = doc.add_paragraph()
+        p_format = p.paragraph_format
+        p_format.space_before = Pt(14)
+        p_format.space_after = Pt(4)
         r1 = p.add_run(f"{i}. ")
         r1.bold = True
         r1.font.size = Pt(11)
