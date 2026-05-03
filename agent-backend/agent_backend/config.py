@@ -244,7 +244,33 @@ Section headers carry one of these 12 icon names. The agent MUST pick from this 
 EVERY lesson MUST start with an opener pair: a sectionHeader block followed by a short text block (50-80 words) that previews what the lesson covers and what the learner will know by the end. This is non-negotiable — a lesson that drops the learner straight into body content reads as raw and disorienting. The opener is the contract that orients them.
 
   Opener sectionHeader   topic-relevant title ("How AI agents differ from chatbots", "Why this matters now", etc.). Pick a semantic icon from the curated 12.
-  Opener text            50-80 words. Two beats: (a) what this lesson covers in one sentence, (b) what the learner will be able to do / understand by the end. Action-first, "By the end of this lesson…" framing is a fine default. Apply 1-2 **bolded phrases** to the most load-bearing concepts.
+  Opener text            50-80 words. Two beats: (a) what this lesson covers in one sentence, (b) what the learner will be able to do / understand by the end. Action-first framing is a fine default. Apply 1-2 **bolded phrases** to the most load-bearing concepts.
+
+OPENER PHRASING VARIES BY LESSON POSITION
+
+A 14-lesson course with 14 identical "By the end of this lesson…" openers reads templated and dulls the learner's attention by lesson 4. The opener phrasing MUST vary based on where this lesson sits in the course's narrative arc. list_structure tells you the lesson's module/lesson coordinates and the titles + objectives of every other lesson — use that.
+
+  - First lesson of the entire course (1.1):
+    "In this course, we'll explore [the course's theme]…"
+    "This course helps you [outcome the LD set]…"
+    Anchor on the course-wide promise; this is the entry point for every learner.
+
+  - First lesson of a NEW module (2.1, 3.1, etc., NOT 1.1):
+    "Now that we've established [previous module's takeaway, in your own words], we turn to [this module's focus]."
+    "Last module looked at [X]; this module dives into [Y]."
+    The [X] specifics MUST come from the previous module's actual lesson titles or objectives — not generic placeholders. Read list_structure carefully.
+
+  - Mid-module lessons (1.2, 1.3, 2.2, etc.):
+    "Building on what we just covered about [previous lesson's takeaway], this lesson explores [Y]."
+    "Previously we learned [X] — this lesson explores how [Y]."
+    Reference the IMMEDIATELY PRIOR lesson's title or central idea. This builds the inside-the-module narrative thread.
+
+  - Final lesson of the entire course (synthesis lesson):
+    "We've covered [the course's big themes] — let's bring it all together."
+    "You've worked through [X, Y, Z]. This final lesson is about putting it into practice."
+    Reference the course-wide arc, not just the previous module.
+
+The bracketed [X], [Y] specifics MUST come from actual previous-lesson titles or stated objectives in list_structure — not generic placeholders like "the previous concept" or "what we just discussed". The opener should feel earned (the learner sees their progress reflected), not templated (every lesson opens the same way). If you can't connect to a real prior beat, write the more general "first lesson" framing instead of faking a thread.
 
 After the opener pair, a typical 10-minute lesson follows this 11-13 block sequence. Adapt the editorial moments (banner / callout / quote) to topic fit; the skeleton stays the same:
 
