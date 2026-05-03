@@ -20,6 +20,11 @@ export interface StudioUser {
   name: string;
   joinedAt: number;
   version: 1;
+  /** Track-Q: tour-completed flag. Skippable 4-step tour shows
+   *  after the name is captured on first visit; once dismissed
+   *  (whether by skipping or completing), this is set so the LD
+   *  doesn't see it again on subsequent visits. */
+  tourCompleted?: boolean;
 }
 
 const KEY = "studio.user";
@@ -41,10 +46,15 @@ export function getUser(): StudioUser | null {
 }
 
 export function saveUser(name: string): StudioUser {
+  // Preserve tourCompleted across re-saves so a name edit (rare but
+  // possible via Reset profile → re-enter) doesn't reset the tour
+  // for an already-onboarded user.
+  const existing = getUser();
   const user: StudioUser = {
     name: name.trim(),
-    joinedAt: Date.now(),
+    joinedAt: existing?.joinedAt ?? Date.now(),
     version: 1,
+    tourCompleted: existing?.tourCompleted,
   };
   try {
     localStorage.setItem(KEY, JSON.stringify(user));
@@ -53,6 +63,24 @@ export function saveUser(name: string): StudioUser {
     /* ignore — privacy mode etc. */
   }
   return user;
+}
+
+/**
+ * Track-Q: mark the welcome tour as completed (or skipped). Idempotent
+ * — repeat calls are no-ops. Doesn't affect the user's name or
+ * joinedAt.
+ */
+export function markTourCompleted(): void {
+  const existing = getUser();
+  if (!existing) return;
+  if (existing.tourCompleted) return;
+  const updated: StudioUser = { ...existing, tourCompleted: true };
+  try {
+    localStorage.setItem(KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("studio-user-changed"));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function clearUser(): void {

@@ -2040,6 +2040,366 @@
   .ig-timeline-marker .ig-icon { color: white; }
   .ig-timeline-content { flex: 1; min-width: 0; padding-top: 2px; }
 
+  /* Track-Q: WelcomeModal — three-stage Netflix-style flow.
+     Splash → Name → Tour. Background gradient + floating orbs
+     animate behind each stage; stage-specific cards fade-in on
+     top.
+
+     The .welcome-modal[stage] class controls per-stage variations
+     (background intensity, orb opacity). Cards have their own
+     entrance animations (slide-up for name, scale-in for tour). */
+  .welcome-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .welcome-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      var(--brand-700, #1B7A4F) 0%,
+      var(--brand-500, #29BA74) 50%,
+      var(--brand-700, #1B7A4F) 100%
+    );
+    overflow: hidden;
+    transition: opacity 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-stage-name .welcome-bg,
+  .welcome-stage-tour .welcome-bg {
+    opacity: 0.08;
+  }
+  .welcome-stage-name::before,
+  .welcome-stage-tour::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: theme("colors.ink.50");
+    z-index: 0;
+  }
+  .welcome-orb {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    filter: blur(60px);
+    animation: welcome-orb-float 10s ease-in-out infinite;
+  }
+  .welcome-orb-1 {
+    width: 320px; height: 320px;
+    top: -80px; left: -80px;
+    animation-delay: 0s;
+  }
+  .welcome-orb-2 {
+    width: 260px; height: 260px;
+    bottom: 10%; right: 8%;
+    animation-delay: -3s;
+  }
+  .welcome-orb-3 {
+    width: 380px; height: 380px;
+    bottom: -120px; left: 30%;
+    animation-delay: -6s;
+  }
+  .welcome-close {
+    position: absolute;
+    top: 18px;
+    right: 20px;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border: none;
+    color: theme("colors.ink.700");
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-close:hover {
+    background: white;
+  }
+
+  /* Splash stage — centered logo + wordmark + tagline. */
+  .welcome-splash {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: white;
+    animation: welcome-splash-in 1200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  .welcome-splash-logo {
+    display: block;
+    margin: 0 auto 22px;
+    height: 64px;
+    filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.3));
+  }
+  .welcome-splash-wordmark {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: white;
+    margin-bottom: 8px;
+  }
+  .welcome-splash-wordmark-bcgu {
+    font-weight: 900;
+  }
+  .welcome-splash-wordmark-studio {
+    font-weight: 200;
+    font-style: italic;
+    opacity: 0.92;
+  }
+  .welcome-splash-tagline {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.02em;
+  }
+
+  /* Card shell — used by Name + Tour stages. */
+  .welcome-card {
+    position: relative;
+    z-index: 1;
+    background: white;
+    border-radius: 22px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    padding: 36px 40px 32px;
+    max-width: 520px;
+    width: 92%;
+    animation: welcome-card-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .welcome-card-logo {
+    display: block;
+    margin: 0 auto 18px;
+    height: 32px;
+  }
+
+  /* Name stage. */
+  .welcome-card-name { text-align: center; }
+  .welcome-typed-heading {
+    font-size: 30px;
+    font-weight: 800;
+    color: theme("colors.ink.900");
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-block;
+    border-right: 2px solid theme("colors.brand.500");
+    animation:
+      welcome-type 700ms steps(7, end) both,
+      welcome-cursor 700ms 700ms forwards;
+  }
+  .welcome-typed-sub {
+    font-size: 14px;
+    color: theme("colors.ink.500");
+    margin: 0 0 24px;
+    animation: welcome-fade-in 600ms 700ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  .welcome-name-form {
+    text-align: left;
+    animation: welcome-slide-up 500ms 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .welcome-name-input {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid theme("colors.ink.200");
+    border-radius: 12px;
+    font-size: 16px;
+    color: theme("colors.ink.900");
+    transition: border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+  }
+  .welcome-name-input:focus {
+    border-color: theme("colors.brand.500");
+    box-shadow: 0 0 0 4px theme("colors.brand.100");
+  }
+  .welcome-privacy-note {
+    display: block;
+    font-size: 11.5px;
+    color: theme("colors.ink.500");
+    font-style: italic;
+    margin-top: 8px;
+  }
+  .welcome-name-cta {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(
+      135deg,
+      var(--brand-500, #29BA74),
+      var(--brand-700, #1B7A4F)
+    );
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 16px rgba(0, 166, 81, 0.30);
+    transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-name-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0, 166, 81, 0.40);
+  }
+
+  /* Tour stage. */
+  .welcome-card-tour {
+    max-width: 580px;
+    padding: 36px 40px 28px;
+  }
+  .welcome-tour-greeting {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: theme("colors.brand.700");
+    margin-bottom: 18px;
+  }
+  .welcome-tour-step {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .welcome-tour-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: theme("colors.brand.50");
+    color: theme("colors.brand.700");
+    margin-bottom: 14px;
+  }
+  .welcome-tour-step-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: theme("colors.ink.400");
+    margin-bottom: 6px;
+  }
+  .welcome-tour-heading {
+    font-size: 22px;
+    font-weight: 800;
+    color: theme("colors.ink.900");
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+  }
+  .welcome-tour-body {
+    font-size: 14px;
+    color: theme("colors.ink.700");
+    line-height: 1.55;
+    margin: 0 0 12px;
+    max-width: 44ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .welcome-tour-caption {
+    font-size: 12px;
+    color: theme("colors.ink.500");
+    font-style: italic;
+  }
+  .welcome-tour-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .welcome-tour-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: theme("colors.brand.50");
+    border: 1px solid theme("colors.brand.200");
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: theme("colors.brand.800");
+  }
+  .welcome-tour-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid theme("colors.ink.100");
+    padding-top: 18px;
+  }
+  .welcome-tour-skip,
+  .welcome-tour-back {
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: theme("colors.ink.500");
+    cursor: pointer;
+    padding: 6px 8px;
+    transition: color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-tour-skip:hover,
+  .welcome-tour-back:hover {
+    color: theme("colors.ink.900");
+  }
+  .welcome-tour-dots {
+    display: inline-flex;
+    gap: 6px;
+  }
+  .welcome-tour-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: theme("colors.ink.300");
+    transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-tour-dot-active {
+    background: theme("colors.brand.500");
+    transform: scale(1.25);
+  }
+  .welcome-tour-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .welcome-tour-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: linear-gradient(
+      135deg,
+      var(--brand-500, #29BA74),
+      var(--brand-700, #1B7A4F)
+    );
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 166, 81, 0.25);
+    transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .welcome-tour-next:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 166, 81, 0.35);
+  }
+
   /* Track-H / H3: HelpDrawer typography. Tight, scannable copy
      since this is reference material the LD pulls open mid-task. */
   .help-content h3 {
@@ -3010,6 +3370,36 @@
 }
 .animate-slide-in-right {
   animation: slide-in-right 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Track-Q: WelcomeModal animations. */
+@keyframes welcome-orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(40px, -30px) scale(1.1); }
+}
+@keyframes welcome-splash-in {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes welcome-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes welcome-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes welcome-slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes welcome-type {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes welcome-cursor {
+  to { border-right-color: transparent; }
 }
 
 /* Chat message arrival animation (B3-tune-a) — paired with .msg-tool

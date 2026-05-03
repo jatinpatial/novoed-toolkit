@@ -1,29 +1,42 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Sparkles, Video, X } from "lucide-react";
-import { getUser, saveUser } from "../store/user";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight, BarChart3, BookOpen, ClipboardCheck,
+  FileUp, Sparkles, Video, X,
+} from "lucide-react";
+import { getUser, markTourCompleted, saveUser } from "../store/user";
 
 /**
- * First-load welcome modal (Phase 2 #1f, rebuilt in Track-H).
+ * First-load welcome modal (Track-Q full redesign).
  *
- * Track-H rewrite:
- *   1. Collects the LD's name (first-name preferred) into the local
- *      studio.user record. TopBar reads it for the avatar + greeting.
- *   2. Frames BCG U Studio as a 4-Studio suite (Course / Script /
- *      KC / Infographic) — matches the SuiteTiles on the dashboard
- *      so the onboarding-to-home transition is continuous.
- *   3. Reinforces the "no cloud, no sign-up" privacy contract under
- *      the input so LDs feel safe naming themselves.
+ * Three-stage flow inspired by Netflix-style onboarding:
  *
- * Trigger:
- *   - First-load: studio.user unset → modal opens automatically.
- *   - Manual: SidebarFooter "Help & how it works" → Dashboard's
- *     reopenWelcome() clears the seen flag + opens the modal.
+ *   Stage SPLASH    Brand splash. BCG U logo + "BCG U Studio"
+ *                   wordmark fade + scale in over 1.6s. Particle
+ *                   orbs animate in the background. Auto-advances
+ *                   to NAME after 1800ms.
  *
- * Submit behavior:
- *   - Saves studio.user, marks welcome seen, dismisses modal.
- *   - If LD just clicks the X without entering a name, modal still
- *     dismisses (markWelcomeSeen) but no user is saved — TopBar
- *     shows a "Sign in" link to re-open.
+ *   Stage NAME      Welcome screen. Background lightens; "Welcome"
+ *                   types out character-by-character; subtitle
+ *                   fades in. Name input slides up from bottom.
+ *                   Submit auto-advances to TOUR (or directly to
+ *                   close if tour was completed in a prior visit).
+ *
+ *   Stage TOUR      Skippable 4-step tour:
+ *                     1. Choose your Studio
+ *                     2. Drop source material
+ *                     3. One click, full content
+ *                     4. Refine, export, ship
+ *                   Each step has a heading, body, and visual.
+ *                   Skip / Next / Start designing CTAs.
+ *
+ * Triggers
+ *   - First-load: studio.user unset → opens at SPLASH.
+ *   - Returning user (studio.user set, tourCompleted unset): opens
+ *     at TOUR (their choice to finish what they didn't last time).
+ *   - Manual reopen via SidebarFooter / Avatar menu: opens at NAME
+ *     so the LD can edit their name; tour stage skipped if already
+ *     completed.
  */
 
 const FLAG_KEY = "bcgu_studio_welcome_seen_v1";
@@ -57,148 +70,326 @@ interface WelcomeModalProps {
   onClose: () => void;
 }
 
-const STUDIO_ROWS: { icon: typeof BookOpen; title: string; description: string }[] = [
+type Stage = "splash" | "name" | "tour";
+
+const TOUR_STEPS: {
+  icon: typeof BookOpen;
+  heading: string;
+  body: string;
+  caption: string;
+}[] = [
+  {
+    icon: Sparkles,
+    heading: "Choose your Studio",
+    body: "Course, Script, KC, or Infographic. Each Studio is purpose-built for one kind of output.",
+    caption: "Start with the right tool for what you want to build.",
+  },
+  {
+    icon: FileUp,
+    heading: "Drop your source material",
+    body: "PDFs, decks, Word docs. The agent reads what you upload and grounds your content in your material — not generic L&D.",
+    caption: "Your frameworks, your language. Drafted into the format you picked.",
+  },
   {
     icon: BookOpen,
-    title: "Course Studio",
-    description: "Build a full multi-week course from a brief or source material.",
+    heading: "One click, full content",
+    body: "Walk away. Come back to a fully drafted course with lessons, knowledge checks, and case studies. ~$2 per course.",
+    caption: "Watch the progress band fill while you grab coffee.",
   },
   {
-    icon: Video,
-    title: "Script Studio",
-    description: "Generate Synthesia-ready video scripts.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "KC Studio",
-    description: "Standalone knowledge checks from any source.",
-  },
-  {
-    icon: BarChart3,
-    title: "Infographic Studio",
-    description: "Visual summaries from source material.",
+    icon: ArrowRight,
+    heading: "Refine, export, ship",
+    body: "Edit any block. Export to Word or PNG. Paste into NovoEd. Done.",
+    caption: "All your work stays on this computer. No cloud, no sign-up.",
   },
 ];
 
-export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
-  // Pre-fill from existing user record so a re-open of the modal
-  // (via SidebarFooter "Help & how it works") shows what's saved.
-  const [name, setName] = useState(() => getUser()?.name ?? "");
-  const inputRef = useRef<HTMLInputElement | null>(null);
+const STUDIO_PILLS: {
+  icon: typeof BookOpen;
+  label: string;
+}[] = [
+  { icon: BookOpen, label: "Course" },
+  { icon: Video, label: "Script" },
+  { icon: ClipboardCheck, label: "KC" },
+  { icon: BarChart3, label: "Infographic" },
+];
 
+export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
+  // Initial stage: splash for first-load (no user yet) or name for
+  // returning users without a saved tour. Manual reopen lands on
+  // NAME so the LD can edit their info.
+  const [stage, setStage] = useState<Stage>(() => {
+    const u = getUser();
+    if (!u) return "splash";
+    if (!u.tourCompleted) return "tour";
+    return "name";
+  });
+  const [name, setName] = useState(() => getUser()?.name ?? "");
+  const [tourStep, setTourStep] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  // Splash auto-advance — 1800ms gives the fade + scale animation
+  // time to complete plus a beat to read the wordmark.
+  useEffect(() => {
+    if (!open) return;
+    if (stage !== "splash") return;
+    const t = setTimeout(() => setStage("name"), 1800);
+    return () => clearTimeout(t);
+  }, [open, stage]);
+
+  // Auto-focus the input when the NAME stage is active.
+  useEffect(() => {
+    if (!open) return;
+    if (stage !== "name") return;
+    const t = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(t);
+  }, [open, stage]);
+
+  // Esc dismisses everywhere (saves whatever's filled in so far).
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (name.trim().length > 0 && !getUser()) saveUser(name);
+        markTourCompleted();
+        onClose();
+      }
     }
     window.addEventListener("keydown", onKey);
-    // Auto-focus the name input when the modal opens — primary
-    // action on first visit is "tell us your name".
-    requestAnimationFrame(() => inputRef.current?.focus());
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, name, onClose]);
 
   if (!open) return null;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleNameSubmit() {
     if (name.trim().length > 0) {
       saveUser(name);
     }
+    // If the user already completed the tour in a prior session,
+    // skip directly to close. Otherwise advance to the tour.
+    const u = getUser();
+    if (u?.tourCompleted) {
+      onClose();
+    } else {
+      setStage("tour");
+    }
+  }
+
+  function finishTour() {
+    markTourCompleted();
     onClose();
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-ink-950/40 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose}
+      className={`welcome-modal welcome-stage-${stage}`}
+      role="dialog"
+      aria-modal="true"
     >
-      <div
-        className="bg-white rounded-2xl shadow-elevated max-w-xl w-full overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+      {/* Always-on background gradient with floating orbs. The
+          gradient + orb intensity transitions per stage via CSS
+          on .welcome-modal[stage]. */}
+      <div className="welcome-bg" aria-hidden="true">
+        <div className="welcome-orb welcome-orb-1" />
+        <div className="welcome-orb welcome-orb-2" />
+        <div className="welcome-orb welcome-orb-3" />
+      </div>
+
+      {/* Top-right close. Hidden during splash. */}
+      {stage !== "splash" && (
+        <button
+          onClick={() => {
+            if (name.trim().length > 0 && !getUser()) saveUser(name);
+            markTourCompleted();
+            onClose();
+          }}
+          className="welcome-close"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+      )}
+
+      {stage === "splash" && <SplashStage />}
+      {stage === "name" && (
+        <NameStage
+          inputRef={inputRef}
+          name={name}
+          setName={setName}
+          onSubmit={handleNameSubmit}
+        />
+      )}
+      {stage === "tour" && (
+        <TourStage
+          step={tourStep}
+          onNext={() => {
+            if (tourStep < TOUR_STEPS.length - 1) setTourStep(tourStep + 1);
+            else finishTour();
+          }}
+          onBack={() => setTourStep(Math.max(0, tourStep - 1))}
+          onSkip={finishTour}
+          onFinish={finishTour}
+          name={getUser()?.name ?? name}
+        />
+      )}
+    </div>
+  );
+}
+
+function SplashStage() {
+  return (
+    <div className="welcome-splash">
+      <img
+        src={`${import.meta.env.BASE_URL}bcg-u-logo-light.png`}
+        alt="BCG U"
+        className="welcome-splash-logo"
+      />
+      <div className="welcome-splash-wordmark">
+        <span className="welcome-splash-wordmark-bcgu">BCG U</span>{" "}
+        <span className="welcome-splash-wordmark-studio">Studio</span>
+      </div>
+      <div className="welcome-splash-tagline">
+        AI-powered course design
+      </div>
+    </div>
+  );
+}
+
+function NameStage({
+  inputRef,
+  name,
+  setName,
+  onSubmit,
+}: {
+  inputRef: React.MutableRefObject<HTMLInputElement | null>;
+  name: string;
+  setName: (n: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="welcome-card welcome-card-name">
+      <img
+        src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
+        alt="BCG U"
+        className="welcome-card-logo"
+      />
+      <h2 className="welcome-typed-heading">Welcome</h2>
+      <p className="welcome-typed-sub">Let's get you set up.</p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+        className="welcome-name-form"
       >
-        {/* Header */}
-        <div className="px-7 pt-7 pb-5 relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 rounded-md text-ink-400 hover:text-ink-700 hover:bg-ink-100 flex items-center justify-center"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-          {/* Track-P / P3: BCG U logo at the top of the welcome
-              modal. Replaces the generic Sparkles tile so the LD
-              sees the brand mark immediately. */}
-          <img
-            src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
-            alt="BCG U"
-            className="block h-7 mb-3"
+        <label className="block w-full">
+          <span className="block text-xs font-bold uppercase tracking-wider text-ink-500 mb-2">
+            What should we call you?
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your first name"
+            className="welcome-name-input"
           />
-          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1.5">
-            Welcome to BCG U Studio
-          </div>
-          <h2 className="text-xl font-bold text-ink-900 mb-2 leading-snug">
-            An AI-powered course-building suite, built for BCG U Learning Designers.
-          </h2>
+          <span className="welcome-privacy-note">
+            Stays on your computer. No cloud account, no sign-up.
+          </span>
+        </label>
+        <button type="submit" className="welcome-name-cta">
+          Continue <ArrowRight size={16} strokeWidth={2.5} />
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function TourStage({
+  step,
+  onNext,
+  onBack,
+  onSkip,
+  onFinish,
+  name,
+}: {
+  step: number;
+  onNext: () => void;
+  onBack: () => void;
+  onSkip: () => void;
+  onFinish: () => void;
+  name: string;
+}) {
+  const navigate = useNavigate();
+  const current = TOUR_STEPS[step];
+  const Icon = current.icon;
+  const isLast = step === TOUR_STEPS.length - 1;
+  const greeting = name ? `Hi ${name.split(/\s+/)[0]} —` : "Hi —";
+
+  return (
+    <div className="welcome-card welcome-card-tour">
+      <div className="welcome-tour-greeting">{greeting} here's how this works.</div>
+
+      <div className="welcome-tour-step">
+        <div className="welcome-tour-icon">
+          <Icon size={28} strokeWidth={2} />
         </div>
+        <div className="welcome-tour-step-label">
+          Step {step + 1} of {TOUR_STEPS.length}
+        </div>
+        <h3 className="welcome-tour-heading">{current.heading}</h3>
+        <p className="welcome-tour-body">{current.body}</p>
+        <div className="welcome-tour-caption">{current.caption}</div>
 
-        {/* Name input */}
-        <form onSubmit={handleSubmit} className="px-7 pb-2">
-          <label className="block">
-            <div className="text-sm font-semibold text-ink-900 mb-1.5">
-              What should we call you?
-            </div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your first name"
-              className="w-full px-3 h-11 rounded-lg border border-ink-200 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition"
-            />
-            <div className="text-[11px] text-ink-500 mt-1.5 italic">
-              Stays on your computer — no cloud account, no sign-up.
-            </div>
-          </label>
-        </form>
-
-        {/* Suite framing */}
-        <div className="px-7 py-5">
-          <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-3">
-            Four Studios. One workflow.
-          </div>
-          <div className="space-y-2.5">
-            {STUDIO_ROWS.map((s) => {
-              const Icon = s.icon;
+        {/* Visual — Studio pill row on step 1, otherwise generic
+            decorative band. Keeps the visual energy without
+            requiring per-step illustrations. */}
+        {step === 0 && (
+          <div className="welcome-tour-pills">
+            {STUDIO_PILLS.map((s) => {
+              const PIcon = s.icon;
               return (
-                <div key={s.title} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
-                    <Icon size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-ink-900 mb-0.5">{s.title}</div>
-                    <div className="text-xs text-ink-600 leading-relaxed">
-                      {s.description}
-                    </div>
-                  </div>
+                <div key={s.label} className="welcome-tour-pill">
+                  <PIcon size={16} strokeWidth={2} />
+                  <span>{s.label}</span>
                 </div>
               );
             })}
           </div>
-          <div className="mt-4 text-xs text-ink-600 leading-relaxed border-t border-ink-100 pt-3">
-            Drop a deck, brief, or PDF on any Studio. The agent reads it and
-            grounds your content in your material.
-          </div>
-        </div>
+        )}
+      </div>
 
-        {/* Footer CTA */}
-        <div className="px-7 pb-7 pt-2 flex items-center justify-end gap-3">
+      <div className="welcome-tour-controls">
+        <button onClick={onSkip} className="welcome-tour-skip">
+          Skip
+        </button>
+        <div className="welcome-tour-dots" aria-hidden="true">
+          {TOUR_STEPS.map((_, i) => (
+            <span
+              key={i}
+              className={`welcome-tour-dot${i === step ? " welcome-tour-dot-active" : ""}`}
+            />
+          ))}
+        </div>
+        <div className="welcome-tour-nav">
+          {step > 0 && (
+            <button onClick={onBack} className="welcome-tour-back">
+              Back
+            </button>
+          )}
           <button
-            onClick={handleSubmit}
-            type="submit"
-            className="inline-flex items-center gap-1.5 px-5 h-10 rounded-lg bg-brand-gradient text-white text-sm font-semibold shadow-sm hover:shadow-md transition"
+            onClick={() => {
+              if (isLast) {
+                onFinish();
+                navigate("/courses/new");
+                return;
+              }
+              onNext();
+            }}
+            className="welcome-tour-next"
           >
-            Get started <ArrowRight size={14} strokeWidth={2.5} />
+            {isLast ? "Start designing" : "Next"} <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>
       </div>
