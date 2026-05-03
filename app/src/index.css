@@ -1303,28 +1303,37 @@
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
   }
 
-  /* sprint-2-2: aggregate build-progress band. Sticky to the top of
-     the lesson canvas pane (its scrolling parent), so it stays
-     visible while the LD scrolls through whatever lesson is active.
-     Returns null at rest — only present during phase === "building". */
+  /* sprint-2-2 + polish-8c: aggregate build-progress band. Sticky
+     to the top of the lesson canvas pane (its scrolling parent),
+     so it stays visible while the LD scrolls through whatever
+     lesson is active. Returns null at rest — only present during
+     phase === "building".
+     polish-8c bumped padding (16px top, 18px bottom — was 10/12)
+     and the text up one font-size (13px — was 11). Fill bar
+     bumped to 10px (was 6) so the visual weight of the band
+     matches a 5-25 minute wait the LD shouldn't miss. */
   .build-progress-band {
     position: sticky;
     top: 0;
     z-index: 10;
     background: theme("colors.brand.50");
-    border-bottom: 1px solid theme("colors.brand.100");
-    padding: 10px 24px 12px;
+    border-bottom: 2px solid theme("colors.brand.200");
+    padding: 16px 28px 18px;
     /* Light backdrop blur so any sticky overlap with content below
        reads as a layer rather than a hard edge. Cheap, browser-side. */
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    /* polish-8c: subtle elevation so the band reads as a layer
+       above the canvas content rather than just a tinted strip. */
+    box-shadow: 0 2px 8px rgba(0, 166, 81, 0.08);
   }
   .build-progress-band-track {
     width: 100%;
-    height: 6px;
+    height: 10px;
     background: theme("colors.brand.100");
     border-radius: 999px;
     overflow: hidden;
+    position: relative;
   }
   .build-progress-band-fill {
     height: 100%;
@@ -1335,14 +1344,33 @@
     );
     border-radius: 999px;
     transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* polish-8c: shimmer animation across the fill so the band
+       reads as ALIVE while a lesson is being written (otherwise
+       a 2-minute static fill looks like a frozen UI). The shimmer
+       is a translating linear-gradient overlay; opacity stays low
+       so it doesn't compete with the actual fill color. */
+    position: relative;
+    overflow: hidden;
+  }
+  .build-progress-band-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    animation: progress-band-shimmer 2.4s linear infinite;
   }
   .build-progress-band-text {
-    margin-top: 6px;
+    margin-top: 10px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
-    font-size: 11px;
+    gap: 14px;
+    font-size: 13px;
     line-height: 1.3;
   }
   .build-progress-band-phase {
@@ -1351,7 +1379,7 @@
     letter-spacing: 0.01em;
   }
   .build-progress-band-count {
-    font-weight: 500;
+    font-weight: 600;
     color: theme("colors.brand.700");
     font-variant-numeric: tabular-nums;
   }
@@ -2176,6 +2204,14 @@
 @keyframes orb-glow {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50%      { opacity: 0.7; transform: scale(1.2); }
+}
+
+/* polish-8c: shimmer pass over the build-progress fill bar. Read
+   as "alive, working" during the long fills between lesson
+   completions. Translates a soft white gradient left → right. */
+@keyframes progress-band-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* Chat message arrival animation (B3-tune-a) — paired with .msg-tool
