@@ -2551,12 +2551,12 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
   // edit inline like text/banner/callout/divider — single-shape data,
   // no items list to navigate.
   const isSimple = ["text", "banner", "callout", "quote", "clickInstruction", "sectionHeader", "divider"].includes(block.type);
-  // polish-6c: accordion gets interactive expand/collapse on the
-  // canvas instead of the static-HTML preview. Other complex blocks
-  // (cards / flipcard / timeline / quiz / poll / stats) still use the
-  // dangerouslySetInnerHTML preview path until each gets its own
-  // interactive treatment.
+  // polish-6c + polish-9b: accordion + flipcard get interactive
+  // treatment on the canvas. Other complex blocks (cards / timeline
+  // / quiz / poll / stats) still use the dangerouslySetInnerHTML
+  // preview path until each gets its own interactive treatment.
   const isInteractiveAccordion = block.type === "accordion";
+  const isInteractiveFlipcard = block.type === "flipcard";
   const bt = BTYPES.find((x) => x.id === block.type);
   const previewHtml = useMemo(() => previewBlock(block, brand), [block, brand]);
 
@@ -2603,6 +2603,14 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
                other complex blocks). */
             <div onClick={onOpenEditor} className="cursor-pointer">
               <InteractiveAccordion block={block} brand={brand} />
+            </div>
+          ) : isInteractiveFlipcard ? (
+            /* polish-9b: clickable flipcards. Each card's click
+               toggles its front/back state via 3D flip. Clicks on
+               whitespace between cards bubble up to onOpenEditor —
+               same drawer affordance as other complex blocks. */
+            <div onClick={onOpenEditor} className="cursor-pointer">
+              <InteractiveFlipcard block={block} brand={brand} />
             </div>
           ) : (
             <div onClick={onOpenEditor} className="cursor-pointer" dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -2721,6 +2729,167 @@ function InteractiveAccordion({ block, brand }: { block: Block; brand: BrandKey 
           }}
         >
           +{hiddenCount} more section{hiddenCount === 1 ? "" : "s"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * polish-9b: interactive flipcard preview for the lesson canvas.
+ *
+ * Pre-polish-9b the canvas rendered flipcards via the same static
+ * HTML preview as JSON exports — front face only, "Tap to flip"
+ * label that didn't actually do anything. Live testing flagged this
+ * as the same regression class as the static accordion.
+ *
+ * Front face: brand gradient + white title text + small "Tap to
+ * flip" caption. Back face: white surface + dark body text. CSS
+ * 3D flip via rotateY(180deg) on a transform-style:preserve-3d
+ * inner container, with backface-visibility:hidden so only one
+ * face shows at a time. 350ms transition feels snappy without
+ * being jarring.
+ *
+ * Click bubbling: card click toggles + stops propagation; whitespace
+ * between cards bubbles up to onOpenEditor for drawer editing
+ * (same affordance as other complex blocks).
+ */
+function InteractiveFlipcard({ block, brand }: { block: Block; brand: BrandKey }) {
+  const items = (block.data?.items || []) as { title?: string; desc?: string }[];
+  const b = B[brand];
+  const [flipped, setFlipped] = useState<Set<number>>(new Set());
+
+  function toggle(i: number, e: React.MouseEvent) {
+    e.stopPropagation();
+    setFlipped((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  const visible = items.slice(0, 6);
+
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {visible.map((it, i) => {
+        const isFlipped = flipped.has(i);
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={(e) => toggle(i, e)}
+            style={{
+              width: 140,
+              height: 110,
+              perspective: 1000,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+            }}
+            aria-label={
+              isFlipped
+                ? `${it.title || "card"} — back, click to flip`
+                : `${it.title || "card"} — front, click to flip`
+            }
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                transformStyle: "preserve-3d",
+                transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
+                transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+              }}
+            >
+              {/* Front face — brand gradient + title */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: b.grad,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  padding: 12,
+                  gap: 6,
+                  WebkitBackfaceVisibility: "hidden",
+                  backfaceVisibility: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#fff",
+                    textAlign: "center",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {it.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: "rgba(255,255,255,0.7)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Tap to flip
+                </div>
+              </div>
+              {/* Back face — white surface + body */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: b.wh,
+                  borderRadius: 10,
+                  border: `1px solid ${b.n2}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 12,
+                  WebkitBackfaceVisibility: "hidden",
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: b.tx,
+                    textAlign: "center",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {it.desc || ""}
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+      {items.length > visible.length && (
+        <div
+          style={{
+            width: "100%",
+            fontSize: 10,
+            color: b.txL,
+            textAlign: "center",
+            paddingTop: 4,
+          }}
+        >
+          +{items.length - visible.length} more card
+          {items.length - visible.length === 1 ? "" : "s"}
         </div>
       )}
     </div>
