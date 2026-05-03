@@ -475,6 +475,14 @@ interface CanvasProps {
 function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   const [am, setAm] = useState(0);
   const [al, setAl] = useState(0);
+  // polish-9e: scroll the lesson canvas pane to top whenever the
+  // active lesson changes — both via the Continue CTA AND via outline-
+  // row clicks. Pre-polish-9e the pane held the previous lesson's
+  // scroll position, so navigating to lesson 2 mid-lesson left the
+  // LD on the new lesson's body section instead of its opener. The
+  // ref is attached to .lesson-canvas-pane below; the effect smooth-
+  // scrolls on (am, al, viewMode) change.
+  const canvasPaneRef = useRef<HTMLDivElement | null>(null);
 
   // polish-3c: brief + autosend handler for navigations into an
   // already-loaded course. Mirrors the CoursesHome handler from
@@ -509,6 +517,15 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   // module summary page (week/objectives/final assessment/case study).
   // Switched by clicking the module row vs a lesson row in the outline.
   const [viewMode, setViewMode] = useState<"lesson" | "module">("lesson");
+
+  // polish-9e: scroll the canvas pane back to top on every lesson /
+  // module change. Smooth so it reads as "moved to next lesson"
+  // rather than a hard cut. Skipped on the very first mount (the
+  // ref hasn't attached yet at that point — initial-render scroll
+  // top is already 0).
+  useEffect(() => {
+    canvasPaneRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [am, al, viewMode]);
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [leftPane, setLeftPane] = useState<"outline" | "materials">("outline");
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
@@ -867,8 +884,10 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         {/* Canvas — B3c adds .lesson-canvas-pane for the 3px brand-
             cascade top accent strip. The strip color flips when
             the user toggles the brand (B3d wires <body data-brand>),
-            giving an instant visible signal of the active theme. */}
-        <div className="flex-1 min-w-0 overflow-y-auto lesson-canvas-pane">
+            giving an instant visible signal of the active theme.
+            polish-9e: ref attached so the lesson-change effect can
+            scroll this pane (not the window) back to top. */}
+        <div ref={canvasPaneRef} className="flex-1 min-w-0 overflow-y-auto lesson-canvas-pane">
           {/* sprint-2-2: aggregate build-progress band. Sticky at the
               top of THIS pane so it scrolls with the lesson body but
               stays visible. Returns null at rest — only renders when
