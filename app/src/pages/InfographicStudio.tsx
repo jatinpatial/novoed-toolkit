@@ -2,6 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BarChart3, Download } from "lucide-react";
 import html2canvas from "html2canvas";
+// Track-X3: dom-to-image-more handles gradient text-fill (used in
+// stat_spotlight headlines), inline SVG via dangerouslySetInnerHTML
+// (BCG icons), and font embedding more reliably than html2canvas. We
+// import without types — the package exports a default with .toPng,
+// .toBlob, etc. and the @types/dom-to-image package's shape matches.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — no bundled types; runtime API is documented + used here.
+import domtoimage from "dom-to-image-more";
 import { AppShell } from "../shell/AppShell";
 import { AgentChat } from "../agent/AgentChat";
 import { useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
@@ -136,27 +144,85 @@ export default function InfographicStudio() {
     setInfographic(next);
   }
 
+  /**
+   * Track-X3: PNG export via dom-to-image-more, with html2canvas as
+   * fallback. dom-to-image-more handles three things html2canvas
+   * tends to mangle:
+   *   1. Gradient text-fill — the stat_spotlight `.ig-stat-headline`
+   *      uses -webkit-background-clip:text + linear-gradient. html2canvas
+   *      flattens that to a solid color; dom-to-image-more renders the
+   *      gradient correctly.
+   *   2. Inline SVG via dangerouslySetInnerHTML — BCG icons use that
+   *      pattern. dom-to-image-more walks the live DOM via SVG
+   *      foreignObject so the rendered paths come through, where
+   *      html2canvas occasionally drops them.
+   *   3. CSS variables — both libs handle them, but dom-to-image-more
+   *      resolves them by reading computed style at capture time, so
+   *      brand-cascade swaps render as the user sees them.
+   *
+   * Resolution: 3× device pixels (~retina+). Output is a base64 data
+   * URL → triggers anchor download. ~2-3 MB PNG for a typical layout.
+   *
+   * Fallback: if dom-to-image throws (rare — usually CORS image issue
+   * with Pexels people-photos), we re-try via html2canvas. The output
+   * is slightly less faithful but the download still succeeds.
+   */
   async function downloadPng() {
     if (!renderRef.current || !infographic) return;
     setDownloadError(null);
     setDownloading(true);
-    try {
-      const canvas = await html2canvas(renderRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2, // retina output
-        useCORS: true,
-        logging: false,
-      });
-      const url = canvas.toDataURL("image/png");
+    const node = renderRef.current;
+    const stem = (infographic.title || infographic.topic || "infographic").replace(/[^\w\-_.]/g, "_");
+
+    function trigger(dataUrl: string) {
       const a = document.createElement("a");
-      a.href = url;
-      const stem = (infographic.title || infographic.topic || "infographic").replace(/[^\w\-_.]/g, "_");
+      a.href = dataUrl;
       a.download = `${stem}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (e) {
-      setDownloadError((e as Error).message);
+    }
+
+    try {
+      // Primary path: dom-to-image-more with 3× scale for crisp output.
+      // The `style` override applies a CSS scale so the rasterized
+      // canvas captures at higher resolution; width/height stay in DOM
+      // pixels but the output PNG has 3× the linear pixel density.
+      const rect = node.getBoundingClientRect();
+      const scale = 3;
+      const dataUrl = await domtoimage.toPng(node, {
+        bgcolor: "#ffffff",
+        width: rect.width * scale,
+        height: rect.height * scale,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+        },
+        // Cache-busting on external images — Pexels URLs serve with
+        // CORS headers but the response cache can intermittently miss
+        // them. Adding a no-op query param forces a fresh fetch with
+        // the corsAnonymous credential.
+        cacheBust: true,
+      });
+      trigger(dataUrl);
+    } catch (primaryErr) {
+      // Fallback: classic html2canvas path. Less faithful for gradient
+      // text-fills but reliable for the core layouts.
+      try {
+        const canvas = await html2canvas(node, {
+          backgroundColor: "#ffffff",
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        trigger(canvas.toDataURL("image/png"));
+      } catch (fallbackErr) {
+        // Both paths failed — surface the dom-to-image error since
+        // it's usually the more informative one.
+        setDownloadError((primaryErr as Error).message || (fallbackErr as Error).message);
+      }
     } finally {
       setDownloading(false);
     }
