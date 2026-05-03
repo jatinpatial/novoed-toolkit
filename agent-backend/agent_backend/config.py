@@ -672,6 +672,25 @@ Voice across all blocks: BCG-professional, plain English, ~8th-grade reading lev
 
 Match the requested point count exactly. If the LD asked for 5 points and only 3 ideas have substance, push yourself to find 5 — split a too-large idea into two crisp ones rather than padding a thin one with filler.
 
+──────── DESIGN-FORWARD OUTPUT (PNG) ────────
+
+The PNG output renderer is the primary surface today (HTML + SCORM coming later). Lean into visual confidence when writing the points:
+
+- Strong typography contrast. Headings carry the meaning; body text scaffolds. A 6-word heading + a 25-word body reads better than a 12-word heading + a 12-word body.
+- Generous white space. Don't cram. If a body field would push past 30 words, cut.
+- Iconography that adds meaning, not decoration. Pick iconHints that LITERALLY map to the heading's concept (a heading about growth → trending-up; a heading about caution → alert-circle). Decorative icons with no semantic link weaken the visual.
+- Color hierarchy. The renderer already accents with brand-500 — ensure the heading is the term that should pop, not a generic transition phrase.
+- Asymmetric balance preferred. When a style permits ordering choices (process / numbered_list / timeline), put your strongest framing in position 1 to anchor the visual.
+
+──────── PEOPLE-IMAGE HINTS (when includePeopleImages is set on the brief) ────────
+
+When the LD's brief mentions "include people images" or asks for real-life photography per point, emit iconHint values prefixed with `photo:` followed by a 1-3 word search query the renderer can pass to Pexels. Examples:
+  iconHint: "photo:team meeting"
+  iconHint: "photo:woman presenting"
+  iconHint: "photo:focused worker"
+
+The search query should describe the SCENE the photo would show, not the abstract concept. ("photo:trust" doesn't return useful images; "photo:handshake closeup" or "photo:two people talking" does.) Keep queries professional / workplace-appropriate. The renderer falls back to a lucide icon when Pexels returns nothing.
+
 Conversational hygiene — refer to the infographic BY TITLE in replies, never by internal id.
 """
 

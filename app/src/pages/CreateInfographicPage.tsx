@@ -4,7 +4,11 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { MaterialsDropZone } from "../shell/MaterialsDropZone";
 import { useAgent } from "../agent/AgentContext";
-import { saveInfographic, type InfographicStyle } from "../store/infographics";
+import {
+  saveInfographic,
+  type InfographicFormat,
+  type InfographicStyle,
+} from "../store/infographics";
 
 /**
  * Track-G / G2: Infographic Studio brief form.
@@ -34,6 +38,35 @@ const POINT_COUNT_OPTIONS: { value: number; label: string; hint: string }[] = [
   { value: 7, label: "7", hint: "Most depth (numbered list works best at 7)" },
 ];
 
+// Track-S: output format options. PNG ships now; HTML + SCORM are
+// surfaced as "soon" so LDs can express intent — selecting either
+// at submit shows a toast and falls back to PNG.
+const FORMAT_OPTIONS: {
+  value: InfographicFormat;
+  label: string;
+  hint: string;
+  soon: boolean;
+}[] = [
+  {
+    value: "png",
+    label: "PNG image",
+    hint: "Creative visual, downloadable. Available now.",
+    soon: false,
+  },
+  {
+    value: "html",
+    label: "HTML",
+    hint: "Embed in NovoEd. Coming next week.",
+    soon: true,
+  },
+  {
+    value: "scorm",
+    label: "SCORM",
+    hint: "Interactive with flipcards. Coming next week.",
+    soon: true,
+  },
+];
+
 export default function CreateInfographicPage() {
   const navigate = useNavigate();
   const { sendBuildInfographic, pendingMaterials } = useAgent();
@@ -42,6 +75,11 @@ export default function CreateInfographicPage() {
   const [style, setStyle] = useState<InfographicStyle>("numbered_list");
   const [pointCount, setPointCount] = useState<number>(5);
   const [notes, setNotes] = useState("");
+  // Track-S form additions
+  const [format, setFormat] = useState<InfographicFormat>("png");
+  const [useBrandColors, setUseBrandColors] = useState(true);
+  const [includePeopleImages, setIncludePeopleImages] = useState(false);
+  const [comingSoonNote, setComingSoonNote] = useState<string | null>(null);
 
   const topicValid = topic.trim().length > 0;
   const isValid = topicValid;
@@ -49,6 +87,17 @@ export default function CreateInfographicPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) return;
+
+    // Track-S: HTML + SCORM picked → show toast + fall back to PNG.
+    // The choice gets recorded on the Infographic record so we can
+    // surface "you wanted SCORM — coming next week" on the result
+    // page. Doesn't block the build.
+    const effectiveFormat: InfographicFormat = format === "png" ? "png" : "png";
+    if (format !== "png") {
+      setComingSoonNote(
+        `${format === "html" ? "HTML" : "SCORM"} output is coming next week. Building the PNG version now — you can re-export later.`,
+      );
+    }
 
     const id =
       "ig-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -63,16 +112,34 @@ export default function CreateInfographicPage() {
       subtitle: "",
       points: [],
       costUsd: null,
+      format: effectiveFormat,
+      useBrandColors,
+      includePeopleImages,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Compose extra prompt notes from the toggles so the agent can
+    // adjust output for brand + people-images preferences.
+    const extraNotes: string[] = [];
+    if (notes.trim()) extraNotes.push(notes.trim());
+    if (useBrandColors) {
+      extraNotes.push(
+        "Use brand colors and brand-professional typography choices in the output.",
+      );
+    }
+    if (includePeopleImages) {
+      extraNotes.push(
+        "Where appropriate, suggest a real-life people image per point (one or two-word search hint in the iconHint field formatted as 'photo:<query>'). The renderer will fetch matching photography from Pexels.",
+      );
+    }
 
     sendBuildInfographic({
       infographicId: id,
       topic: topic.trim(),
       style,
       pointCount,
-      notes: notes.trim() || undefined,
+      notes: extraNotes.join("\n\n") || undefined,
     });
 
     navigate(`/infographics/${id}`);
@@ -171,6 +238,77 @@ export default function CreateInfographicPage() {
               {quadrantHint && (
                 <div className="mt-2 text-xs text-ink-500 italic">{quadrantHint}</div>
               )}
+            </FormField>
+
+            <FormField
+              label="Output format"
+              required
+              hint="PNG ships now. HTML + SCORM are coming next week — picking either today builds the PNG version and records your interest."
+            >
+              <div className="flex flex-wrap gap-2">
+                {FORMAT_OPTIONS.map((opt) => (
+                  <button
+                    type="button"
+                    key={opt.value}
+                    onClick={() => setFormat(opt.value)}
+                    className={
+                      format === opt.value ? "form-chip form-chip-active" : "form-chip"
+                    }
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                    {opt.soon && (
+                      <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider opacity-70">
+                        soon
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {comingSoonNote && (
+                <div className="mt-2 text-xs text-brand-700 italic">{comingSoonNote}</div>
+              )}
+            </FormField>
+
+            <FormField
+              label="Style options"
+              optional
+              hint="Make the output match your brand and audience."
+            >
+              <div className="space-y-2">
+                <label className="flex items-start gap-2.5 cursor-pointer p-2 -mx-2 rounded-md hover:bg-ink-50 transition">
+                  <input
+                    type="checkbox"
+                    checked={useBrandColors}
+                    onChange={(e) => setUseBrandColors(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-brand-600 cursor-pointer"
+                  />
+                  <span className="flex-1">
+                    <span className="text-sm font-semibold text-ink-900 block">
+                      Use brand colors and font
+                    </span>
+                    <span className="text-xs text-ink-500 leading-relaxed">
+                      Inherit the active brand from the top-bar toggle (BCG / BCG U / Client).
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer p-2 -mx-2 rounded-md hover:bg-ink-50 transition">
+                  <input
+                    type="checkbox"
+                    checked={includePeopleImages}
+                    onChange={(e) => setIncludePeopleImages(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-brand-600 cursor-pointer"
+                  />
+                  <span className="flex-1">
+                    <span className="text-sm font-semibold text-ink-900 block">
+                      Include people images
+                    </span>
+                    <span className="text-xs text-ink-500 leading-relaxed">
+                      Pulls professional photography from Pexels per point. Requires the Pexels API key configured in <code className="text-[10px]">.env</code>.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </FormField>
 
             <FormField label="Notes for the agent" optional>

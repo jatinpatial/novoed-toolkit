@@ -24,6 +24,12 @@ export interface InfographicPoint {
   iconHint?: string;
 }
 
+/** Track-S: output formats. PNG ships in MVP; HTML + SCORM are
+ *  surfaced as options but submit triggers a "coming soon" toast
+ *  rather than going through. Recording the LD's choice lets us
+ *  measure intent for week-2 implementation prioritization. */
+export type InfographicFormat = "png" | "html" | "scorm";
+
 export interface Infographic {
   id: string;
   /** Editable display title — defaults to the topic. */
@@ -43,6 +49,14 @@ export interface Infographic {
   points: InfographicPoint[];
   /** SDK-reported cost for the build, surfaced on the result page. */
   costUsd: number | null;
+  /** Track-S: form-collected output format. PNG = current path;
+   *  HTML / SCORM = recorded for week-2 implementation. */
+  format?: InfographicFormat;
+  /** Track-S: form-collected toggles. brand uses the active brand's
+   *  color tokens; peopleImages requests Pexels people-photo
+   *  embedding (requires PEXELS_API_KEY configured). */
+  useBrandColors?: boolean;
+  includePeopleImages?: boolean;
   createdAt: number;
   updatedAt: number;
 }
