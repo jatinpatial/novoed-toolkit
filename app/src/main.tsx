@@ -10,6 +10,7 @@ import ScriptStudio from "./pages/ScriptStudio";
 import ScormPlayer from "./pages/ScormPlayer";
 import ProjectsLibrary from "./pages/ProjectsLibrary";
 import { BrandBodyAttribute } from "./shell/TopBar";
+import { AgentProvider } from "./agent/AgentContext";
 import "./index.css";
 
 const basename = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
@@ -32,7 +33,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             HeroComposer's "Detailed brief →" button. Mounted before
             the /courses route so /courses/new resolves before the
             /courses param-only route fallthrough. */}
-        <Route path="/courses/new" element={<CreateCoursePage />} />
+        <Route path="/courses/new" element={<AgentProvider><CreateCoursePage /></AgentProvider>} />
         {/* polish-3c: standalone Synthesia script intake. Submits
             into a 1-module / 1-lesson / 1-video-block course that
             CourseCanvas opens with the Scriptwriter brief auto-sent.
