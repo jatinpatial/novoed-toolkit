@@ -491,7 +491,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   // flow. Without this, the brief sat in the URL but never reached
   // the agent (CoursesHome's handler doesn't run with project loaded).
   const [canvasParams, setCanvasParams] = useSearchParams();
-  const { setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus } = useAgent();
+  const { setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, lastBuildProgress } = useAgent();
   useEffect(() => {
     const brief = canvasParams.get("brief");
     const autosend = canvasParams.get("autosend") === "1";
@@ -517,6 +517,56 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   // module summary page (week/objectives/final assessment/case study).
   // Switched by clicking the module row vs a lesson row in the outline.
   const [viewMode, setViewMode] = useState<"lesson" | "module">("lesson");
+
+  // sprint-2-9: auto-download the course as a Word doc when the
+  // orchestrator emits course_export_ready (fires after lessons +
+  // KCs + case studies all finish cleanly). Closes the "click → file
+  // downloaded" loop the demo promises.
+  //
+  // The existing onExportCourseDocx callback in TopBar holds the
+  // canonical download flow; this effect reproduces it inline so it
+  // can fire without the TopBar being mounted (e.g. mobile / narrow
+  // layouts that hide the export menu). The fired-once ref prevents
+  // re-trigger on re-renders or rehydration.
+  const courseDocxFiredRef = useRef(false);
+  useEffect(() => {
+    if (lastBuildProgress?.kind === "lesson_started" &&
+        lastBuildProgress.payload.idx === 0) {
+      // New build → re-arm.
+      courseDocxFiredRef.current = false;
+      return;
+    }
+    if (lastBuildProgress?.kind !== "course_export_ready") return;
+    if (courseDocxFiredRef.current) return;
+    courseDocxFiredRef.current = true;
+    // Fire-and-forget — toast on success/failure.
+    (async () => {
+      try {
+        const res = await fetch(`${HTTP_URL}/export/course-docx`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ course, audience: "" }),
+        });
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || `server returned ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const stem = `${course.title || "course"}-course`.replace(/[^\w\-_.]/g, "_");
+        a.download = `${stem}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast("Course downloaded as Word doc");
+      } catch (e) {
+        toast(`Auto-download failed: ${(e as Error).message}`, false);
+      }
+    })();
+  }, [lastBuildProgress, course]);
 
   // polish-9e: scroll the canvas pane back to top on every lesson /
   // module change. Smooth so it reads as "moved to next lesson"

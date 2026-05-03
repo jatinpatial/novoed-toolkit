@@ -63,6 +63,7 @@ export type BuildProgressKind =
   | "cs_started"
   | "cs_completed"
   | "cs_failed"
+  | "cs_retrying"
   | "course_completed"
   | "course_export_ready"
   | "not_implemented";

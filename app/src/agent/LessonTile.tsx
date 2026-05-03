@@ -228,20 +228,26 @@ function phaseLabelFor(
   payload: Record<string, unknown> | undefined,
 ): string {
   if (!kind) return "Building course…";
-  // sprint-2-6 / sprint-2-8: retry events get a distinct label so the
+  // sprint-2-6 / 2-8 / 2-9: retry events get a distinct label so the
   // LD knows the build hit a snag and is auto-recovering. Pulls
   // attempt count off the payload — falls back to plain "Retrying…"
   // if the payload shape isn't what we expect.
-  if (kind === "lesson_retrying" || kind === "kc_retrying") {
-    const isKc = kind === "kc_retrying";
+  if (
+    kind === "lesson_retrying" ||
+    kind === "kc_retrying" ||
+    kind === "cs_retrying"
+  ) {
     const idx = typeof payload?.idx === "number" ? payload.idx : null;
     const attempt = typeof payload?.attempt === "number" ? payload.attempt : null;
     const max = typeof payload?.maxAttempts === "number" ? payload.maxAttempts : null;
-    const targetRef = isKc
-      ? " knowledge check"
-      : idx !== null
-        ? ` lesson ${idx + 1}`
-        : " lesson";
+    const targetRef =
+      kind === "kc_retrying"
+        ? " knowledge check"
+        : kind === "cs_retrying"
+          ? " case study"
+          : idx !== null
+            ? ` lesson ${idx + 1}`
+            : " lesson";
     const attemptRef =
       attempt !== null && max !== null ? ` (attempt ${attempt + 1}/${max})` : "";
     return `Retrying${targetRef}${attemptRef}…`;

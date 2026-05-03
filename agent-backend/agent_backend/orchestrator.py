@@ -156,6 +156,18 @@ class _LessonTarget:
 
 
 @dataclass
+class _CSTarget:
+    """Internal: one case-study slot to design. Computed from
+    course.caseStudies — slots planted by Course Architect (MODE 1)
+    with empty content fields are the targets. Slots already filled
+    (re-build over an existing course) are skipped.
+    sprint-2-9.
+    """
+    cs_id: str    # the slot's id, used as kc_states-equivalent key
+    title: str    # for prompt + progress event display
+
+
+@dataclass
 class _KCTarget:
     """Internal: one knowledge-check slot to fill. Computed from the
     snapshot of `course` + shape directives; stable for the build.
@@ -239,25 +251,31 @@ class BuildOrchestrator:
             # sprint-2-8: KC targets computed up-front so totals are
             # stable for the FE's progress band denominator.
             kc_targets = self._collect_kc_targets(course, shape)
+            # sprint-2-9: CS targets — case-study slots Course Architect
+            # planted that don't yet have content. Already-designed
+            # slots (re-build over an existing course) are skipped.
+            cs_targets = self._collect_cs_targets(course)
 
             self._cancelled = False
             self._state = OrchestratorState(
                 phase="building",
                 total_lessons=len(targets),
                 total_kcs=len(kc_targets),
-                total_css=len(self._collect_case_studies(course)),
+                total_css=len(cs_targets),
             )
             for t in targets:
                 self._state.lesson_states[t.idx] = "idle"
             for kt in kc_targets:
                 self._state.kc_states[kt.kc_id] = "idle"
+            for ct in cs_targets:
+                self._state.cs_states[ct.cs_id] = "idle"
             self._course_snapshot = course
             self._shape_snapshot = shape
 
             await self._emit_state()
             log.info(
-                "build_full_course start — lessons=%d kcs=%d shape=%s",
-                len(targets), len(kc_targets), shape,
+                "build_full_course start — lessons=%d kcs=%d css=%d shape=%s",
+                len(targets), len(kc_targets), len(cs_targets), shape,
             )
 
         # Run the loops OUTSIDE the lock so cancel() / get_state() can
@@ -271,19 +289,36 @@ class BuildOrchestrator:
         # is the green-light condition.
         if self._state.phase == "building" and kc_targets:
             await self._run_kc_loop(kc_targets, start_from=0)
-        # sprint-2-8: course_completed emitted here (was at the end
-        # of _run_lesson_loop pre-2-8). Lets the lesson loop keep
-        # phase="building" so the KC loop has a chance to run.
+        # sprint-2-9: CS phase runs only if KC phase didn't halt.
+        if self._state.phase == "building" and cs_targets:
+            await self._run_cs_loop(cs_targets, start_from=0)
+        # course_completed + course_export_ready emitted here. Lets all
+        # phases keep phase="building" through their runs and only
+        # transitions to "completed" when ALL phases finish cleanly.
         if self._state.phase == "building":
             self._state.phase = "completed"
             await self._emit_state()
             await self._emit_progress("course_completed", {
                 "totalLessons": self._state.total_lessons,
                 "totalKcs": self._state.total_kcs,
+                "totalCss": self._state.total_css,
+            })
+            # sprint-2-9: signal the FE that the course is fully built
+            # and ready to download as a Word doc. The FE listens for
+            # this event and auto-triggers the existing course-docx
+            # export endpoint. Separate from course_completed so the
+            # FE can stage the celebration (confetti) → download in
+            # the right order without coupling the two.
+            await self._emit_progress("course_export_ready", {
+                "totalLessons": self._state.total_lessons,
+                "totalKcs": self._state.total_kcs,
+                "totalCss": self._state.total_css,
             })
             log.info(
-                "build_full_course complete — %d lessons, %d KCs",
-                self._state.total_lessons, self._state.total_kcs,
+                "build_full_course complete — %d lessons, %d KCs, %d CSs",
+                self._state.total_lessons,
+                self._state.total_kcs,
+                self._state.total_css,
             )
 
     async def resume(self, start_from: int) -> None:
@@ -356,6 +391,38 @@ class BuildOrchestrator:
         if not isinstance(course, dict):
             return []
         return [cs for cs in (course.get("caseStudies") or []) if isinstance(cs, dict)]
+
+    @classmethod
+    def _collect_cs_targets(cls, course: dict[str, Any]) -> list[_CSTarget]:
+        """sprint-2-9: case-study slots planted by Course Architect
+        that don't yet have content. A slot is "filled" when it has
+        non-empty `context` OR any `stakeholders` — those are the two
+        most reliable signals that MODE 5 has run against it. Slots
+        with only an id + title (Course Architect's planted state)
+        are the targets for the CS phase.
+
+        Skipping already-filled slots is the right behavior for
+        re-builds: an LD who hand-edited a case study shouldn't have
+        their work overwritten by an automated re-run.
+        """
+        targets: list[_CSTarget] = []
+        for cs in cls._collect_case_studies(course):
+            cs_id = str(cs.get("id") or "")
+            if not cs_id:
+                continue
+            context = cs.get("context") or ""
+            stakeholders = cs.get("stakeholders") or []
+            already_filled = (
+                (isinstance(context, str) and context.strip())
+                or (isinstance(stakeholders, list) and len(stakeholders) > 0)
+            )
+            if already_filled:
+                continue
+            targets.append(_CSTarget(
+                cs_id=cs_id,
+                title=str(cs.get("title") or "Untitled case study"),
+            ))
+        return targets
 
     @staticmethod
     def _collect_kc_targets(
@@ -887,6 +954,174 @@ class BuildOrchestrator:
             "have already worked through the lesson-level KCs by this point).\n"
         )
 
+    # ─── sprint-2-9: case-study phase ──────────────────────────────
+
+    async def _run_cs_loop(
+        self, targets: list[_CSTarget], start_from: int,
+    ) -> None:
+        """Iterate CS targets sequentially. Same retry+backoff +
+        cancel-aware backoff scaffold as the lesson + KC loops.
+        On non-recoverable error, transitions to phase=paused and
+        halts. last_error string identifies the CS slot so sprint-2-7's
+        resume can pick up from the right phase.
+        """
+        for ct in targets[start_from:]:
+            if self._cancelled:
+                log.info("orchestrator cancelled at CS %s", ct.cs_id)
+                await self._emit_progress("not_implemented", {
+                    "message": f"Build cancelled at case study {ct.cs_id}.",
+                    "stoppedAtCsId": ct.cs_id,
+                })
+                return
+
+            self._state.cs_states[ct.cs_id] = "building"
+            await self._emit_state()
+            await self._emit_progress("cs_started", {
+                "csId": ct.cs_id,
+                "title": ct.title,
+            })
+
+            start_ts = time.monotonic()
+            try:
+                usage, init_ms = await self._run_cs_with_retry(ct)
+            except _BuildCancelledDuringBackoff:
+                log.info("orchestrator cancelled during CS retry backoff at %s", ct.cs_id)
+                return
+            except Exception as exc:
+                log.exception(
+                    "cs %s (%s) failed after %d attempts",
+                    ct.cs_id, ct.title, LESSON_MAX_ATTEMPTS,
+                )
+                self._state.cs_states[ct.cs_id] = "error"
+                self._state.last_error = f"Case study ({ct.title}): {exc}"
+                self._state.phase = "paused"
+                await self._emit_state()
+                await self._emit_progress("cs_failed", {
+                    "csId": ct.cs_id,
+                    "title": ct.title,
+                    "error": str(exc),
+                    "attempts": LESSON_MAX_ATTEMPTS,
+                })
+                return
+
+            duration_ms = int((time.monotonic() - start_ts) * 1000)
+            self._state.cs_states[ct.cs_id] = "done"
+            await self._emit_state()
+            metrics = _extract_usage(usage)
+            await self._emit_progress("cs_completed", {
+                "csId": ct.cs_id,
+                "title": ct.title,
+                "durationMs": duration_ms,
+                "initMs": init_ms,
+                "tokensIn": metrics["tokens_in_total"],
+                "tokensOut": metrics["tokens_out"],
+                "model": metrics["model"],
+                "costUsd": metrics["cost_usd"],
+                "tokensInUncached": metrics["tokens_in_uncached"],
+                "tokensInCacheRead": metrics["tokens_in_cache_read"],
+                "tokensInCacheCreation": metrics["tokens_in_cache_creation"],
+            })
+            log.info(
+                "cs %s done — %dms (init %dms) tokens in=%s out=%s cost=$%s",
+                ct.cs_id, duration_ms, init_ms,
+                metrics["tokens_in_total"],
+                metrics["tokens_out"],
+                f"{metrics['cost_usd']:.4f}" if metrics["cost_usd"] is not None else "?",
+            )
+
+    async def _run_cs_with_retry(self, ct: _CSTarget) -> tuple[dict[str, Any], int]:
+        """Same retry+backoff pattern as _run_lesson_with_retry /
+        _run_kc_with_retry, applied to CS mini-sessions. sprint-2-9.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(1, LESSON_MAX_ATTEMPTS + 1):
+            try:
+                return await self._run_cs_session(ct)
+            except Exception as exc:
+                last_exc = exc
+                log.warning(
+                    "cs %s attempt %d/%d failed: %s",
+                    ct.cs_id, attempt, LESSON_MAX_ATTEMPTS, exc,
+                )
+                if attempt >= LESSON_MAX_ATTEMPTS:
+                    break
+                await self._emit_progress("cs_retrying", {
+                    "csId": ct.cs_id,
+                    "title": ct.title,
+                    "attempt": attempt,
+                    "maxAttempts": LESSON_MAX_ATTEMPTS,
+                    "backoffSeconds": LESSON_RETRY_BACKOFF_SECONDS,
+                    "error": str(exc),
+                })
+                for _ in range(LESSON_RETRY_BACKOFF_SECONDS):
+                    if self._cancelled:
+                        raise _BuildCancelledDuringBackoff()
+                    await asyncio.sleep(1)
+        assert last_exc is not None
+        raise last_exc
+
+    async def _run_cs_session(self, ct: _CSTarget) -> tuple[dict[str, Any], int]:
+        """Spawn a fresh ClaudeSDKClient for one case study. Locked
+        fork #2 path-parity: file SYSTEM_PROMPT (MODE 5 active),
+        shared bridge → design_case_study lands on FE actions
+        unchanged, list_structure to read the slot's planted title
+        + parent module context.
+        """
+        init_start = time.monotonic()
+        options = ClaudeAgentOptions(
+            system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
+            mcp_servers={"ui": build_ui_mcp_server(self._bridge)},
+            allowed_tools=ALLOWED_TOOL_NAMES,
+        )
+        client = ClaudeSDKClient(options=options)
+        await client.connect()
+        init_ms = int((time.monotonic() - init_start) * 1000)
+
+        try:
+            prompt = self._build_cs_prompt(ct)
+            await client.query(prompt)
+            usage: dict[str, Any] = {}
+            async for event in client.receive_response():
+                if isinstance(event, ResultMessage):
+                    usage = dict(event.usage or {})
+                    model_usage = event.model_usage or {}
+                    if model_usage:
+                        model_name = next(iter(model_usage), None)
+                        if model_name:
+                            usage["model"] = model_name
+                    if event.total_cost_usd is not None:
+                        usage["total_cost_usd"] = event.total_cost_usd
+                    break
+            return usage, init_ms
+        finally:
+            try:
+                await client.disconnect()
+            except Exception:
+                log.warning("cs %s disconnect failed (non-fatal)", ct.cs_id, exc_info=True)
+
+    def _build_cs_prompt(self, ct: _CSTarget) -> str:
+        """User message for a CS mini-session. The agent calls
+        list_structure() to find the slot (cs_id), reads materials
+        if any, and design_case_study() lands the four required
+        fields per MODE 5 (context, stakeholders, decisionPoints,
+        debriefPrompts).
+        """
+        return (
+            f"Design the case study slot \"{ct.title}\".\n\n"
+            f"Case study id: {ct.cs_id}\n\n"
+            "Steps:\n"
+            "1. Call list_structure() to find the case-study slot's "
+            "parent module + that module's objectives. The case study "
+            "should anchor on the module's central topic.\n"
+            "2. If the LD has uploaded source materials for this course, "
+            "call read_materials and ground the scenario in them.\n"
+            "3. Call design_case_study with the slot id and content "
+            "covering all four fields (context, stakeholders, "
+            "decisionPoints, debriefPrompts) per the MODE 5 spec in "
+            "the system prompt. Required disclaimer at the end of "
+            "context, and a Sources / Inspired by block.\n"
+        )
+
     # ─── internal: event emission helpers ──────────────────────────
 
     async def _emit_state(self) -> None:
@@ -903,15 +1138,20 @@ class BuildOrchestrator:
         """Push a progress event. `kind` is one of:
           lesson_started / lesson_completed / lesson_failed / lesson_retrying
           kc_started / kc_completed / kc_failed / kc_retrying
-          cs_started / cs_completed / cs_failed
+          cs_started / cs_completed / cs_failed / cs_retrying
           course_completed / course_export_ready
           not_implemented (sprint-2-1 + cancellation/resume stubs)
 
-        sprint-2-6 / sprint-2-8: *_retrying events carry
+        sprint-2-6 / 2-8 / 2-9: *_retrying events carry
         {attempt, maxAttempts, backoffSeconds, error} alongside the
         standard target-identifying fields so the FE's progress band
-        can show "Retrying lesson N (attempt 2/2)…" or the equivalent
-        for KCs.
+        can show "Retrying lesson N (attempt 2/2)…" or the
+        equivalent for KCs / CSs.
+
+        sprint-2-9: course_export_ready fires after course_completed
+        when the course is fully built and ready to download as a
+        Word doc. The FE listens for this and auto-triggers the
+        existing /export/course-docx endpoint.
         """
         await self._send({
             "type": "build_progress",
