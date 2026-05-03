@@ -135,6 +135,31 @@ export function BuildProgressBand() {
     setDurationsMs((prev) => [...prev, dur]);
   }, [lastBuildProgress]);
 
+  // polish-15b + polish-12b: state-derived phase label that cycles
+  // through per-phase copy reels. phraseIndex monotonically
+  // increments on a 7s tick; resets to 0 on phase transitions so
+  // each new phase starts with its anchor copy. Phase key derived
+  // via activePhaseKey to detect transitions.
+  // HOTFIX: hooks moved above the early return below so they call
+  // unconditionally every render (Rules of Hooks). When the band is
+  // hidden (phase !== "building") the timer still ticks but its
+  // setState is a no-op against a returned-null tree.
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const lastPhaseKeyRef = useRef<string | null>(null);
+  const currentPhaseKey = activePhaseKey(orchestratorState, lastBuildProgress?.kind);
+  useEffect(() => {
+    if (currentPhaseKey !== lastPhaseKeyRef.current) {
+      lastPhaseKeyRef.current = currentPhaseKey;
+      setPhraseIndex(0);
+    }
+  }, [currentPhaseKey]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhraseIndex((i) => i + 1);
+    }, PHASE_CYCLE_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   if (orchestratorState.phase !== "building") return null;
 
   // polish-15a: combined denominator across all three phases. 100%
@@ -155,27 +180,6 @@ export function BuildProgressBand() {
   ).length;
   const completedSteps = lessonsDone + kcsDone + cssDone;
   const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-
-  // polish-15b + polish-12b: state-derived phase label that cycles
-  // through per-phase copy reels. phraseIndex monotonically
-  // increments on a 7s tick; resets to 0 on phase transitions so
-  // each new phase starts with its anchor copy. Phase key derived
-  // via activePhaseKey to detect transitions.
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const lastPhaseKeyRef = useRef<string | null>(null);
-  const currentPhaseKey = activePhaseKey(orchestratorState, lastBuildProgress?.kind);
-  useEffect(() => {
-    if (currentPhaseKey !== lastPhaseKeyRef.current) {
-      lastPhaseKeyRef.current = currentPhaseKey;
-      setPhraseIndex(0);
-    }
-  }, [currentPhaseKey]);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhraseIndex((i) => i + 1);
-    }, PHASE_CYCLE_MS);
-    return () => clearInterval(timer);
-  }, []);
   const phaseLabel = derivePhaseLabel(
     orchestratorState,
     lastBuildProgress?.kind,
