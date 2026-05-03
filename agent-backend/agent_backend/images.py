@@ -47,10 +47,18 @@ import os
 import time
 from typing import Any
 
+import certifi
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
 log = logging.getLogger(__name__)
+
+# Track-F SSL fix: pin certifi as the trust store. Python on Windows
+# default-fails on Pexels' HTTPS handshake with "unable to get local
+# issuer certificate" because the system store isn't always exposed
+# to httpx. certifi.where() returns a path to a known-good CA bundle
+# that httpx accepts via the `verify` parameter.
+_PEXELS_CA_BUNDLE = certifi.where()
 
 router = APIRouter(prefix="/api/images")
 
@@ -100,7 +108,7 @@ async def search_images(
         return cached[1]
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=_PEXELS_CA_BUNDLE) as client:
             resp = await client.get(
                 f"{PEXELS_BASE}/search",
                 params={
