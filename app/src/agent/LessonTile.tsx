@@ -156,15 +156,31 @@ export function BuildProgressBand() {
   const completedSteps = lessonsDone + kcsDone + cssDone;
   const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
-  // polish-15b: state-derived phase label. More robust than relying
-  // on lastBuildProgress.kind alone — e.g. between phases when the
-  // last event was a *_completed but the next phase hasn't fired its
-  // first *_started yet, the kind-based label would lag. State-based
-  // logic looks at what's done and what's still in flight.
+  // polish-15b + polish-12b: state-derived phase label that cycles
+  // through per-phase copy reels. phraseIndex monotonically
+  // increments on a 7s tick; resets to 0 on phase transitions so
+  // each new phase starts with its anchor copy. Phase key derived
+  // via activePhaseKey to detect transitions.
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const lastPhaseKeyRef = useRef<string | null>(null);
+  const currentPhaseKey = activePhaseKey(orchestratorState, lastBuildProgress?.kind);
+  useEffect(() => {
+    if (currentPhaseKey !== lastPhaseKeyRef.current) {
+      lastPhaseKeyRef.current = currentPhaseKey;
+      setPhraseIndex(0);
+    }
+  }, [currentPhaseKey]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhraseIndex((i) => i + 1);
+    }, PHASE_CYCLE_MS);
+    return () => clearInterval(timer);
+  }, []);
   const phaseLabel = derivePhaseLabel(
     orchestratorState,
     lastBuildProgress?.kind,
     lastBuildProgress?.payload,
+    phraseIndex,
   );
 
   // polish-15a: ETA now uses combined remaining steps × avg duration
@@ -244,30 +260,73 @@ function formatEta(ms: number): string {
     : `~${hours}h ${minutes}m remaining`;
 }
 
+// polish-12b: per-phase cycling copy reels. Same cadence pattern as
+// polish-6a's tool-status reels — first phrase shows immediately,
+// then cycles through the rest every 7s. Reels reset to phrase 0 on
+// phase change so each new phase starts with its anchor copy. Reels
+// give a sense of activity during the long static fills between
+// step completions ("Building lessons…" alone for 20 minutes reads
+// as stuck even when the band is filling).
+//
+// Order matters within each reel — phrase 0 is the canonical
+// label; later phrases drift into more characterful copy.
+const PHASE_REELS: Record<string, string[]> = {
+  building_lessons: [
+    "Building lessons",
+    "Stitching the narrative together",
+    "Adding the story beats",
+    "Cooking up the takeaways",
+    "Threading the arc",
+    "Polishing the prose",
+  ],
+  building_kcs: [
+    "Building knowledge checks",
+    "Crafting questions that stick",
+    "Calibrating difficulty",
+    "Writing distractors that tempt",
+    "Adding rationales",
+  ],
+  building_cs: [
+    "Designing case studies",
+    "Setting the scene",
+    "Building the dilemma",
+    "Crafting the stakes",
+    "Voicing the stakeholders",
+  ],
+  exporting: [
+    "Exporting to Word",
+    "Formatting the document",
+    "Adding final touches",
+    "Almost there",
+  ],
+};
+const PHASE_CYCLE_MS = 7_000;
+
 /**
- * polish-15b: derive the band's phase label from CURRENT STATE rather
- * than the most recent event's kind. The state-derived path is
- * robust across timing windows that produced "stuck on previous
- * phase" symptoms in live testing.
+ * polish-15b + polish-12b: derive the band's phase label from
+ * CURRENT STATE rather than the most recent event's kind, AND cycle
+ * through a per-phase reel of variant copy so the band reads as
+ * alive during long phase fills.
  *
  * Priority order:
  *   1. Active retry event   → "Retrying lesson N…" / etc. (kind-based)
- *   2. course_export_ready  → "Exporting Word doc…" (kind-based)
+ *   2. course_export_ready  → "Exporting…" reel (kind-based)
  *   3. course_completed     → "Wrapping up…" (kind-based)
- *   4. State-derived current phase based on what's done vs in flight
+ *   4. State-derived current phase based on what's done vs in flight,
+ *      cycling through that phase's reel every PHASE_CYCLE_MS.
  *
  * The state-derived path picks the EARLIEST phase that's still
  * incomplete:
- *   - lessons not all done → Building lessons
- *   - lessons done, KCs not all done → Building knowledge checks
- *   - lessons + KCs done, CSs not all done → Designing case studies
- *   - everything done → Almost done (this is the brief window
- *                       between cs_completed and course_completed)
+ *   - lessons not all done → "Building lessons…" reel
+ *   - lessons done, KCs not all done → "Building knowledge checks…" reel
+ *   - lessons + KCs done, CSs not all done → "Designing case studies…" reel
+ *   - everything done → "Almost done"
  */
 function derivePhaseLabel(
   state: import("./types").OrchestratorState,
   kind: BuildProgressKind | undefined,
   payload: Record<string, unknown> | undefined,
+  phraseIndex: number,
 ): string {
   // 1) Retry events take priority — even if the underlying phase
   //    is "lessons", the LD wants to know they're inside a recovery.
@@ -292,12 +351,14 @@ function derivePhaseLabel(
     return `Retrying${targetRef}${attemptRef}…`;
   }
 
-  // 2) Pipeline-end signals carry their own labels.
-  if (kind === "course_export_ready") return "Exporting Word doc…";
+  // 2) Pipeline-end signals.
+  if (kind === "course_export_ready") {
+    const reel = PHASE_REELS.exporting;
+    return `${reel[phraseIndex % reel.length]}…`;
+  }
   if (kind === "course_completed") return "Wrapping up…";
 
-  // 3) State-derived current phase. Counts what's still in flight
-  //    rather than relying on the most recent event's kind.
+  // 3) State-derived current phase + cycling reel.
   const lessonsAllDone =
     state.totalLessons === 0 ||
     Object.values(state.lessonStates).filter((s) => s === "done").length >=
@@ -311,12 +372,56 @@ function derivePhaseLabel(
     Object.values(state.csStates).filter((s) => s === "done").length >=
       state.totalCss;
 
-  if (!lessonsAllDone) return "Building lessons…";
-  if (!kcsAllDone) return "Building knowledge checks…";
-  if (!cssAllDone) return "Designing case studies…";
-  // All three phases of work are done; we're between the last
-  // *_completed event and course_completed.
+  if (!lessonsAllDone) {
+    const reel = PHASE_REELS.building_lessons;
+    return `${reel[phraseIndex % reel.length]}…`;
+  }
+  if (!kcsAllDone) {
+    const reel = PHASE_REELS.building_kcs;
+    return `${reel[phraseIndex % reel.length]}…`;
+  }
+  if (!cssAllDone) {
+    const reel = PHASE_REELS.building_cs;
+    return `${reel[phraseIndex % reel.length]}…`;
+  }
   return "Almost done…";
+}
+
+/**
+ * polish-12b: derive the active phase key from the same logic the
+ * label uses, so the cycling effect can detect phase transitions
+ * and reset the phrase index to 0 (anchor copy first on each new
+ * phase).
+ */
+function activePhaseKey(
+  state: import("./types").OrchestratorState,
+  kind: BuildProgressKind | undefined,
+): string {
+  if (kind === "course_export_ready") return "exporting";
+  if (kind === "course_completed") return "wrapping_up";
+  if (
+    kind === "lesson_retrying" ||
+    kind === "kc_retrying" ||
+    kind === "cs_retrying"
+  ) {
+    return "retry";
+  }
+  const lessonsAllDone =
+    state.totalLessons === 0 ||
+    Object.values(state.lessonStates).filter((s) => s === "done").length >=
+      state.totalLessons;
+  const kcsAllDone =
+    state.totalKcs === 0 ||
+    Object.values(state.kcStates).filter((s) => s === "done").length >=
+      state.totalKcs;
+  const cssAllDone =
+    state.totalCss === 0 ||
+    Object.values(state.csStates).filter((s) => s === "done").length >=
+      state.totalCss;
+  if (!lessonsAllDone) return "building_lessons";
+  if (!kcsAllDone) return "building_kcs";
+  if (!cssAllDone) return "building_cs";
+  return "almost_done";
 }
 
 /**
