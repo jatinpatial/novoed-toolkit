@@ -82,6 +82,16 @@ PhaseStatus = Literal["idle", "building", "paused", "completed", "cancelled", "f
 TargetStatus = Literal["idle", "building", "done", "error"]
 
 
+# sprint-2-6: retry+backoff constants. One retry after a 5-second
+# backoff before halting the build. Calibrated for the demo case
+# (rate-limit blips + transient SDK glitches typically clear inside
+# 5s). For a recurrent error, halting after attempt 2 surfaces the
+# problem fast rather than silently extending wall-time on a doomed
+# call.
+LESSON_MAX_ATTEMPTS = 2
+LESSON_RETRY_BACKOFF_SECONDS = 5
+
+
 @dataclass
 class OrchestratorState:
     """Snapshot of the orchestrator's current state.
@@ -326,9 +336,22 @@ class BuildOrchestrator:
 
             start_ts = time.monotonic()
             try:
-                usage, init_ms = await self._run_lesson_session(t)
+                # sprint-2-6: wrap in retry+backoff. One retry after
+                # 5s backoff; halt on the second failure. The retry
+                # path emits a lesson_retrying event so the FE shows
+                # "Retrying lesson N…" in the progress band.
+                usage, init_ms = await self._run_lesson_with_retry(t)
+            except _BuildCancelledDuringBackoff:
+                # User cancelled while we were waiting between
+                # attempts. Phase is already "cancelled" via cancel();
+                # exit cleanly without the paused/failed transition.
+                log.info("orchestrator cancelled during retry backoff at lesson %d", t.idx)
+                return
             except Exception as exc:
-                log.exception("lesson %d (%s) failed", t.idx, t.title)
+                log.exception(
+                    "lesson %d (%s) failed after %d attempts",
+                    t.idx, t.title, LESSON_MAX_ATTEMPTS,
+                )
                 self._state.lesson_states[t.idx] = "error"
                 self._state.last_error = f"Lesson {t.idx + 1} ({t.title}): {exc}"
                 self._state.phase = "paused"
@@ -338,6 +361,7 @@ class BuildOrchestrator:
                     "title": t.title,
                     "lessonId": t.lesson_id,
                     "error": str(exc),
+                    "attempts": LESSON_MAX_ATTEMPTS,
                 })
                 return  # halt — sprint-2-7 picks up via resume()
 
@@ -398,6 +422,54 @@ class BuildOrchestrator:
                 "totalLessons": self._state.total_lessons,
             })
             log.info("build_full_course complete — %d lessons", self._state.total_lessons)
+
+    async def _run_lesson_with_retry(self, t: _LessonTarget) -> tuple[dict[str, Any], int]:
+        """sprint-2-6: retry+backoff wrapper around _run_lesson_session.
+
+        Tries up to LESSON_MAX_ATTEMPTS times; sleeps
+        LESSON_RETRY_BACKOFF_SECONDS between attempts. On a transient
+        failure (rate-limit blip, SDK reconnect glitch) the second
+        attempt typically succeeds without LD intervention.
+
+        Cancellation is honored during backoff via _BuildCancelledDuringBackoff
+        — the loop's outer handler catches it and exits cleanly without
+        transitioning to "paused" (the phase is already "cancelled" by
+        the cancel() method). The sleep is broken into 1-second chunks
+        so a cancel signal lands within ~1s, not the full 5s.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(1, LESSON_MAX_ATTEMPTS + 1):
+            try:
+                return await self._run_lesson_session(t)
+            except Exception as exc:
+                last_exc = exc
+                log.warning(
+                    "lesson %d (%s) attempt %d/%d failed: %s",
+                    t.idx, t.title, attempt, LESSON_MAX_ATTEMPTS, exc,
+                )
+                if attempt >= LESSON_MAX_ATTEMPTS:
+                    # All attempts exhausted — re-raise so the loop's
+                    # outer handler transitions to paused state.
+                    break
+                # Emit retrying event so the FE updates the progress
+                # band's phase label to "Retrying lesson N…".
+                await self._emit_progress("lesson_retrying", {
+                    "idx": t.idx,
+                    "title": t.title,
+                    "lessonId": t.lesson_id,
+                    "attempt": attempt,
+                    "maxAttempts": LESSON_MAX_ATTEMPTS,
+                    "backoffSeconds": LESSON_RETRY_BACKOFF_SECONDS,
+                    "error": str(exc),
+                })
+                # Cancel-aware sleep — 1s chunks so cancel honors
+                # within ~1s of the user clicking, not the full 5s.
+                for _ in range(LESSON_RETRY_BACKOFF_SECONDS):
+                    if self._cancelled:
+                        raise _BuildCancelledDuringBackoff()
+                    await asyncio.sleep(1)
+        assert last_exc is not None  # always set when we exit the loop via break
+        raise last_exc
 
     async def _run_lesson_session(self, t: _LessonTarget) -> tuple[dict[str, Any], int]:
         """Spawn a fresh ClaudeSDKClient for one lesson. Returns
@@ -515,17 +587,30 @@ class BuildOrchestrator:
 
     async def _emit_progress(self, kind: str, payload: dict[str, Any]) -> None:
         """Push a progress event. `kind` is one of:
-          lesson_started / lesson_completed / lesson_failed
+          lesson_started / lesson_completed / lesson_failed / lesson_retrying
           kc_started / kc_completed / kc_failed
           cs_started / cs_completed / cs_failed
           course_completed / course_export_ready
           not_implemented (sprint-2-1 + cancellation/resume stubs)
+
+        sprint-2-6: lesson_retrying carries {attempt, maxAttempts,
+        backoffSeconds, error} alongside the standard {idx, title,
+        lessonId} so the FE's progress band can show "Retrying
+        lesson N (attempt 2/2)…".
         """
         await self._send({
             "type": "build_progress",
             "kind": kind,
             **payload,
         })
+
+
+class _BuildCancelledDuringBackoff(Exception):
+    """sprint-2-6: signal raised inside _run_lesson_with_retry when
+    cancel() fires during the inter-attempt backoff sleep. The lesson
+    loop's outer handler catches it specifically (rather than as a
+    generic Exception) so we exit without the paused/failed state
+    transition — phase is already "cancelled" by cancel()."""
 
 
 def _safe_int(value: Any) -> int | None:

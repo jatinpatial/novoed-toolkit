@@ -130,7 +130,10 @@ export function BuildProgressBand() {
     (s) => s === "done",
   ).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const phaseLabel = phaseLabelFor(lastBuildProgress?.kind);
+  const phaseLabel = phaseLabelFor(
+    lastBuildProgress?.kind,
+    lastBuildProgress?.payload,
+  );
 
   // polish-7a + polish-8b: rolling-avg ETA with seed estimate.
   //
@@ -220,8 +223,24 @@ function formatEta(ms: number): string {
     : `~${hours}h ${minutes}m remaining`;
 }
 
-function phaseLabelFor(kind: BuildProgressKind | undefined): string {
+function phaseLabelFor(
+  kind: BuildProgressKind | undefined,
+  payload: Record<string, unknown> | undefined,
+): string {
   if (!kind) return "Building course…";
+  // sprint-2-6: retry events get a distinct label so the LD knows
+  // the build hit a snag and is auto-recovering. Pulls attempt
+  // count off the payload — falls back to plain "Retrying lesson…"
+  // if the payload shape isn't what we expect.
+  if (kind === "lesson_retrying") {
+    const idx = typeof payload?.idx === "number" ? payload.idx : null;
+    const attempt = typeof payload?.attempt === "number" ? payload.attempt : null;
+    const max = typeof payload?.maxAttempts === "number" ? payload.maxAttempts : null;
+    const lessonRef = idx !== null ? ` lesson ${idx + 1}` : " lesson";
+    const attemptRef =
+      attempt !== null && max !== null ? ` (attempt ${attempt + 1}/${max})` : "";
+    return `Retrying${lessonRef}${attemptRef}…`;
+  }
   if (kind.startsWith("lesson_")) return "Building lessons…";
   if (kind.startsWith("kc_")) return "Building knowledge checks…";
   if (kind.startsWith("cs_")) return "Designing case studies…";

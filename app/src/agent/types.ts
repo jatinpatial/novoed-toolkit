@@ -49,10 +49,13 @@ export interface OrchestratorState {
 // Progress-event kinds the orchestrator emits. `not_implemented`
 // is the sprint-2-1 stub-only kind so the FE confirms the wire
 // works end-to-end before sprint-2-3 lands the real lesson loop.
+// `lesson_retrying` (sprint-2-6) carries attempt/maxAttempts on the
+// payload so the band can render "Retrying lesson N (attempt 2/2)…".
 export type BuildProgressKind =
   | "lesson_started"
   | "lesson_completed"
   | "lesson_failed"
+  | "lesson_retrying"
   | "kc_started"
   | "kc_completed"
   | "kc_failed"
