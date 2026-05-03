@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import logging
 import os
+import ssl
 import time
 from typing import Any
 
@@ -53,12 +54,43 @@ from fastapi import APIRouter, HTTPException, Query
 
 log = logging.getLogger(__name__)
 
-# Track-F SSL fix: pin certifi as the trust store. Python on Windows
-# default-fails on Pexels' HTTPS handshake with "unable to get local
-# issuer certificate" because the system store isn't always exposed
-# to httpx. certifi.where() returns a path to a known-good CA bundle
-# that httpx accepts via the `verify` parameter.
-_PEXELS_CA_BUNDLE = certifi.where()
+# Track-T (SSL fix v2): pre-build a real ssl.SSLContext and pass it to
+# httpx.AsyncClient(verify=ctx). Track-F's first attempt passed
+# certifi.where() (a string path) directly — turns out httpx doesn't
+# always honor a string path on Windows, so the call fell back to
+# the system trust store and produced "unable to get local issuer
+# certificate". Building the context explicitly with cafile=certifi.where()
+# forces httpx to use the certifi bundle.
+#
+# Multi-attempt resolution:
+#   1. truststore (if available) — uses the Windows native cert store.
+#      Most likely to "just work" on a corporate Windows machine where
+#      the BCG U cert chain is in the system store.
+#   2. ssl.create_default_context(cafile=certifi.where()) — Mozilla's
+#      bundle, broadly compatible.
+#   3. ssl.create_default_context() — system default, last resort.
+#
+# Resolved once at import; the context is reusable across requests.
+def _build_ssl_context() -> ssl.SSLContext:
+    try:
+        import truststore  # type: ignore[import-not-found]
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        log.info("Pexels SSL: using truststore (Windows native cert store)")
+        return ctx
+    except ImportError:
+        pass
+    except Exception as exc:
+        log.warning("Pexels SSL: truststore failed (%s) — falling back to certifi", exc)
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        log.info("Pexels SSL: using certifi bundle %s", certifi.where())
+        return ctx
+    except Exception as exc:
+        log.warning("Pexels SSL: certifi context failed (%s) — using system default", exc)
+        return ssl.create_default_context()
+
+
+_PEXELS_SSL_CONTEXT = _build_ssl_context()
 
 router = APIRouter(prefix="/api/images")
 
@@ -108,7 +140,7 @@ async def search_images(
         return cached[1]
 
     try:
-        async with httpx.AsyncClient(timeout=10.0, verify=_PEXELS_CA_BUNDLE) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=_PEXELS_SSL_CONTEXT) as client:
             resp = await client.get(
                 f"{PEXELS_BASE}/search",
                 params={

@@ -13,10 +13,15 @@ dependencies = [
     "pypdf>=4.3",
     "python-pptx>=0.6.23",
     "python-docx>=1.1",
-    # Track-F: explicit httpx + certifi for the Pexels HTTPS proxy.
-    # Without certifi.where() Python on Windows can fail with
-    # "unable to get local issuer certificate" because httpx's default
-    # SSL context doesn't always pick up the system trust store.
+    # Track-F + Track-T: explicit httpx + certifi + truststore for the
+    # Pexels HTTPS proxy. Track-F's first attempt (verify=certifi.where()
+    # as a string path) didn't bind on Windows. Track-T builds a real
+    # ssl.SSLContext via truststore (preferred — Windows native cert
+    # store) with certifi as the fallback, and passes the context to
+    # httpx.AsyncClient. truststore is a small dep (~12KB) but the
+    # most reliable Windows fix; certifi is the cross-platform safety
+    # net.
     "httpx>=0.27",
     "certifi>=2024.7",
+    "truststore>=0.9",
 ]
