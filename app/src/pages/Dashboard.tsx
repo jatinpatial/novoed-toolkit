@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { MeshHero } from "../shell/MeshHero";
 import { HeroComposer } from "../shell/HeroComposer";
+import { SuiteTiles } from "../shell/SuiteTiles";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
 import { CourseCardPhoto } from "../components/CourseCardPhoto";
@@ -186,6 +187,16 @@ export default function Dashboard() {
           Start from a brief, drop a deck, or browse the catalog. Studio Copilot
           drafts the structure; you refine and ship.
         </p>
+
+        {/* polish-18a: four-Studio suite tiles. Primary entry path —
+            sits ABOVE the composer so all four Studios get equal
+            weight. Composer is now the secondary "describe a brief"
+            path below. */}
+        <SuiteTiles />
+
+        <div className="hero-composer-divider">
+          <span>or describe what you have in mind</span>
+        </div>
 
         <HeroComposer ref={composerRef} brief={brief} setBrief={setBrief} />
         <TryAPromptPills onPick={setBrief} />

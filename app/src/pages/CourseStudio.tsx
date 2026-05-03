@@ -1453,29 +1453,13 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 );
               })}
             </div>
-            {/* polish-16c: module-level extras shown as outline rows so
-                the LD sees what's been built for this module beyond
-                the lessons. Module KC + planted case-study slot each
-                get a visual entry. Click navigates to module summary
-                view (which shows their full content). State chips
-                mirror LessonTile's orb / check / dot vocabulary. */}
+            {/* polish-16c + polish-16d: module-level extras as outline
+                rows. Order is pedagogical: Case Study (application) FIRST,
+                then KC (assessment). Pre-16d the order was reversed —
+                LDs read the placement as "test before practice" which
+                inverts the learning arc. */}
             {(m.knowledgeCheck || m.caseStudyId) && (
               <div className="outline-extras">
-                {m.knowledgeCheck && m.knowledgeCheck.questions && m.knowledgeCheck.questions.length > 0 && (
-                  <div
-                    className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
-                      viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
-                    }`}
-                    onClick={() => onSelectModule(mi)}
-                    title="Module final assessment"
-                  >
-                    <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[KC]</span>
-                    <span className="text-[13px] flex-1 truncate text-ink-700 italic">
-                      Final assessment · {m.knowledgeCheck.questions.length} question{m.knowledgeCheck.questions.length === 1 ? "" : "s"}
-                    </span>
-                    <ModuleKcTile moduleId={m.id} />
-                  </div>
-                )}
                 {m.caseStudyId && (() => {
                   const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
                   if (!cs) return null;
@@ -1496,6 +1480,21 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                     </div>
                   );
                 })()}
+                {m.knowledgeCheck && m.knowledgeCheck.questions && m.knowledgeCheck.questions.length > 0 && (
+                  <div
+                    className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
+                      viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
+                    }`}
+                    onClick={() => onSelectModule(mi)}
+                    title="Module final assessment"
+                  >
+                    <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[KC]</span>
+                    <span className="text-[13px] flex-1 truncate text-ink-700 italic">
+                      Final assessment · {m.knowledgeCheck.questions.length} question{m.knowledgeCheck.questions.length === 1 ? "" : "s"}
+                    </span>
+                    <ModuleKcTile moduleId={m.id} />
+                  </div>
+                )}
               </div>
             )}
             {!isBuilding && (

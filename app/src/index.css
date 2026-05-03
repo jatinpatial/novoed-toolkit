@@ -1537,6 +1537,114 @@
   .outline-extra-row {
     transition: background var(--duration-fast) var(--ease-sana);
   }
+
+  /* polish-18a (Track-E): four-Studio suite tiles. Primary entry
+     path on the dashboard — replaces the previous mixed
+     placeholder/live "Three ways to start" trio. All four cards
+     equal-weight, tile-style with hover lift + brand accent. */
+  .suite-tiles {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+    margin: 32px 0 24px;
+    width: 100%;
+    max-width: 880px;
+  }
+  @media (min-width: 768px) {
+    .suite-tiles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .suite-tiles {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .suite-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 18px 20px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid theme("colors.ink.200");
+    border-radius: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .suite-tile:hover,
+  .suite-tile:focus-visible {
+    transform: translateY(-3px);
+    border-color: theme("colors.brand.400");
+    box-shadow: 0 8px 24px rgba(0, 166, 81, 0.14);
+    outline: none;
+  }
+  .suite-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: theme("colors.brand.50");
+    color: theme("colors.brand.700");
+    transition: background 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                color 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .suite-tile:hover .suite-tile-icon,
+  .suite-tile:focus-visible .suite-tile-icon {
+    background: theme("colors.brand.500");
+    color: white;
+  }
+  .suite-tile-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    letter-spacing: -0.005em;
+  }
+  .suite-tile-desc {
+    font-size: 12.5px;
+    color: theme("colors.ink.600");
+    line-height: 1.5;
+    flex: 1;
+  }
+  .suite-tile-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: theme("colors.brand.700");
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+
+  /* Divider between SuiteTiles and HeroComposer — soft "or" split. */
+  .hero-composer-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0 14px;
+    color: theme("colors.ink.400");
+    font-size: 11px;
+    font-style: italic;
+    width: 100%;
+    max-width: 880px;
+  }
+  .hero-composer-divider::before,
+  .hero-composer-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: theme("colors.ink.200");
+  }
   .outline-add-lesson:hover {
     color: theme("colors.brand.700");
     background: theme("colors.brand.50");

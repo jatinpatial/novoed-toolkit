@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
-  Home, BookOpen, Shapes, Grid3x3, FolderOpen, Mic, type LucideProps,
+  Home, BookOpen, Shapes, Grid3x3, FolderOpen, Mic, ClipboardCheck,
+  type LucideProps,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -34,19 +35,21 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Start a course",
+    // polish-18b (Track-E): four-Studio suite consolidated into a
+    // single "Studios" section. KC Studio joins Script + Infographic
+    // alongside Course; Components stays as a "soon" placeholder
+    // below since it's not part of the AI-generation suite.
+    label: "Studios",
     items: [
-      { label: "Course Studio", to: "/courses", icon: BookOpen },
+      { label: "Course Studio", to: "/courses/new", icon: BookOpen },
+      { label: "Script Studio", to: "/scripts/new", icon: Mic },
+      { label: "KC Studio", to: "/kcs/new", icon: ClipboardCheck },
+      { label: "Infographic Studio", to: "/infographics/new", icon: Shapes },
     ],
   },
   {
-    label: "Build pieces",
+    label: "Catalog",
     items: [
-      // polish-4a: Script Studio entry. Routes to /scripts/new for
-      // the intake form; an existing script is opened by clicking
-      // its row in /projects (Phase-3-ish — scripts list view TBD).
-      { label: "Script Studio", to: "/scripts/new", icon: Mic },
-      { label: "Infographic Studio", to: "/infographics", icon: Shapes },
       // Phase-3 placeholder — Components catalog port. Disabled until
       // the index.html catalog ships into the React app.
       { label: "Components", icon: Grid3x3, badge: "soon" },
