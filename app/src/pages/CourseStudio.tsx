@@ -731,6 +731,11 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       // Walk the course tree to find the block, switch the canvas to
       // its lesson, and pop the drawer open. Used by AgentChat's
       // "Open script editor" button after a successful write_script.
+      //
+      // polish-9a: pre-fix this returned silently when the block
+      // wasn't found in the current course tree, so the JumpButton
+      // click looked like nothing happened. Now we toast the miss
+      // — the LD at least knows the click registered.
       for (let mi = 0; mi < course.modules.length; mi++) {
         const m = course.modules[mi];
         for (let li = 0; li < m.lessons.length; li++) {
@@ -739,10 +744,24 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
             setAm(mi);
             setAl(li);
             setEditingBlockId(blockId);
+            // polish-9a: scroll the canvas pane to top so the block
+            // drawer opens against a fresh view, not whatever scroll
+            // position the previous lesson held.
+            requestAnimationFrame(() => {
+              canvasPaneRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            });
             return;
           }
         }
       }
+      console.warn(
+        "[agent] openBlockDrawer: block %s not found in current course",
+        blockId,
+      );
+      toast(
+        "Could not find that block in the open course — it may have been deleted or belongs to a different course.",
+        false,
+      );
     },
     writeKnowledgeCheck: (targetKind, targetId, questions) => {
       let ok = false;

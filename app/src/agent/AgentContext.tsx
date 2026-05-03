@@ -247,10 +247,34 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const openLastTarget = useCallback(() => {
     const t = lastTarget;
-    if (!t) return;
+    if (!t) {
+      console.warn("[agent] openLastTarget: no lastTarget set");
+      return;
+    }
     const actions = actionsRef.current;
-    if (!actions) return;
-    if (t.kind === "script" && actions.openBlockDrawer) {
+    if (!actions) {
+      // polish-9a: surface the no-actions case so a click on the
+      // "Open script editor →" CTA doesn't silently no-op when the
+      // page hasn't registered actions (e.g. mid-route-transition).
+      console.warn("[agent] openLastTarget: no actions registered");
+      return;
+    }
+    if (t.kind === "script") {
+      if (!actions.openBlockDrawer) {
+        // polish-9a: fallback when the current page doesn't expose
+        // openBlockDrawer (CoursesHome with no course open). The
+        // caller's last action created a script block in a course
+        // we may not be viewing; navigate to that course's edit
+        // route as the most useful fallback. The route handler
+        // will pick up &block= and pop the drawer on mount.
+        console.warn(
+          "[agent] openLastTarget: actions registered but no openBlockDrawer; falling back to navigate",
+        );
+        if (actions.navigate) {
+          actions.navigate(`/courses?block=${t.blockId}`);
+        }
+        return;
+      }
       actions.openBlockDrawer(t.blockId);
     }
   }, [lastTarget]);
