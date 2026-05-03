@@ -155,6 +155,24 @@ class _LessonTarget:
     duration_min: int
 
 
+@dataclass
+class _KCTarget:
+    """Internal: one knowledge-check slot to fill. Computed from the
+    snapshot of `course` + shape directives; stable for the build.
+    sprint-2-8.
+
+    kc_id is the kcStates dict key on the wire (e.g. "lesson:b9hfkfomg"
+    or "module:abc123") — composite so a course with both per-lesson
+    KCs and module-level final assessments doesn't key-collide.
+    """
+    kc_id: str
+    kind: Literal["lesson", "module"]
+    target_id: str   # actual lesson_id or module_id
+    title: str       # for prompt + progress event display
+    module_idx: int  # for ordering + display
+    lesson_idx: int | None  # None for module-level finals
+
+
 class BuildOrchestrator:
     """Per-session orchestrator — one instance per WS connection.
 
@@ -199,31 +217,55 @@ class BuildOrchestrator:
                 return
 
             targets = self._collect_lesson_targets(course)
+            # sprint-2-8: KC targets computed up-front so totals are
+            # stable for the FE's progress band denominator.
+            kc_targets = self._collect_kc_targets(course, shape)
 
             self._cancelled = False
             self._state = OrchestratorState(
                 phase="building",
                 total_lessons=len(targets),
-                total_kcs=0,  # Quiz Builder phase wires this in sprint-2-8
+                total_kcs=len(kc_targets),
                 total_css=len(self._collect_case_studies(course)),
             )
             for t in targets:
                 self._state.lesson_states[t.idx] = "idle"
+            for kt in kc_targets:
+                self._state.kc_states[kt.kc_id] = "idle"
             self._course_snapshot = course
             self._shape_snapshot = shape
 
             await self._emit_state()
             log.info(
-                "build_full_course start — lessons=%d shape=%s",
-                len(targets), shape,
+                "build_full_course start — lessons=%d kcs=%d shape=%s",
+                len(targets), len(kc_targets), shape,
             )
 
-        # Run the loop OUTSIDE the lock so cancel() / get_state() can
+        # Run the loops OUTSIDE the lock so cancel() / get_state() can
         # acquire it during the build. The lock guarded the state
-        # transition into "building"; the loop reads + writes via
-        # state methods that acquire the lock as needed for atomicity
-        # of single transitions.
+        # transition into "building"; the loops read + write via state
+        # methods that acquire the lock as needed for atomicity of
+        # single transitions.
         await self._run_lesson_loop(targets, start_from=0)
+        # sprint-2-8: KC phase runs only if the lesson loop didn't
+        # halt (paused / cancelled / failed). Phase still "building"
+        # is the green-light condition.
+        if self._state.phase == "building" and kc_targets:
+            await self._run_kc_loop(kc_targets, start_from=0)
+        # sprint-2-8: course_completed emitted here (was at the end
+        # of _run_lesson_loop pre-2-8). Lets the lesson loop keep
+        # phase="building" so the KC loop has a chance to run.
+        if self._state.phase == "building":
+            self._state.phase = "completed"
+            await self._emit_state()
+            await self._emit_progress("course_completed", {
+                "totalLessons": self._state.total_lessons,
+                "totalKcs": self._state.total_kcs,
+            })
+            log.info(
+                "build_full_course complete — %d lessons, %d KCs",
+                self._state.total_lessons, self._state.total_kcs,
+            )
 
     async def resume(self, start_from: int) -> None:
         """Resume a paused build from the given lesson index (sprint-2-7).
@@ -295,6 +337,71 @@ class BuildOrchestrator:
         if not isinstance(course, dict):
             return []
         return [cs for cs in (course.get("caseStudies") or []) if isinstance(cs, dict)]
+
+    @staticmethod
+    def _collect_kc_targets(
+        course: dict[str, Any], shape: dict[str, Any] | None,
+    ) -> list[_KCTarget]:
+        """sprint-2-8: walk the course + shape directives to enumerate
+        every knowledge-check slot the build phase should fill.
+
+        shape.knowledgeChecks scope:
+          "none"            → []  (skip the phase entirely)
+          "lesson"          → 1 KC per lesson
+          "module"          → 1 final assessment per module
+          "auto" / "both"   → both per-lesson AND per-module finals
+          missing           → "auto" default
+
+        Order: per-lesson KCs first (in lesson order across modules),
+        then module finals (in module order). Matches the natural
+        review flow — finish each module's lessons + their KCs,
+        then the module final wraps it.
+        """
+        if not isinstance(course, dict):
+            return []
+        scope = "auto"
+        if isinstance(shape, dict):
+            raw_scope = shape.get("knowledgeChecks")
+            if isinstance(raw_scope, str):
+                scope = raw_scope
+        if scope == "none":
+            return []
+
+        do_lessons = scope in ("lesson", "both", "auto")
+        do_modules = scope in ("module", "both", "auto")
+
+        targets: list[_KCTarget] = []
+        modules = course.get("modules") or []
+        for mi, mod in enumerate(modules):
+            if not isinstance(mod, dict):
+                continue
+            if do_lessons:
+                for li, lesson in enumerate(mod.get("lessons") or []):
+                    if not isinstance(lesson, dict):
+                        continue
+                    lesson_id = str(lesson.get("id") or "")
+                    if not lesson_id:
+                        continue
+                    targets.append(_KCTarget(
+                        kc_id=f"lesson:{lesson_id}",
+                        kind="lesson",
+                        target_id=lesson_id,
+                        title=str(lesson.get("title") or f"Lesson {mi + 1}.{li + 1}"),
+                        module_idx=mi,
+                        lesson_idx=li,
+                    ))
+            if do_modules:
+                module_id = str(mod.get("id") or "")
+                if module_id:
+                    targets.append(_KCTarget(
+                        kc_id=f"module:{module_id}",
+                        kind="module",
+                        target_id=module_id,
+                        title=str(mod.get("title") or f"Module {mi + 1}"),
+                        module_idx=mi,
+                        lesson_idx=None,
+                    ))
+        return targets
 
     async def _run_lesson_loop(
         self, targets: list[_LessonTarget], start_from: int,
@@ -414,14 +521,10 @@ class BuildOrchestrator:
                 f"{metrics['cost_usd']:.4f}" if metrics["cost_usd"] is not None else "?",
             )
 
-        # Loop ended without cancel/error → completed.
-        if not self._cancelled:
-            self._state.phase = "completed"
-            await self._emit_state()
-            await self._emit_progress("course_completed", {
-                "totalLessons": self._state.total_lessons,
-            })
-            log.info("build_full_course complete — %d lessons", self._state.total_lessons)
+        # sprint-2-8: lesson loop no longer emits course_completed —
+        # the top-level build_full_course handler does after the KC
+        # phase (if any) finishes too. Phase stays "building" if we
+        # finish lessons cleanly so the next phase has a green light.
 
     async def _run_lesson_with_retry(self, t: _LessonTarget) -> tuple[dict[str, Any], int]:
         """sprint-2-6: retry+backoff wrapper around _run_lesson_session.
@@ -573,6 +676,198 @@ class BuildOrchestrator:
             "text blocks.\n"
         )
 
+    # ─── sprint-2-8: knowledge-check phase ─────────────────────────
+
+    async def _run_kc_loop(
+        self, targets: list[_KCTarget], start_from: int,
+    ) -> None:
+        """Iterate KC targets sequentially, mini-session per target.
+        Same retry+backoff scaffold as the lesson loop (2-6) — one
+        retry on failure with 5s backoff before halting the build.
+
+        On any non-recoverable error, transitions to phase=paused and
+        halts. The lesson phase has already completed by this point;
+        sprint-2-7's resume needs to know we paused mid-KC-phase
+        (last_error string makes that clear).
+        """
+        for kt in targets[start_from:]:
+            if self._cancelled:
+                log.info("orchestrator cancelled at KC %s", kt.kc_id)
+                await self._emit_progress("not_implemented", {
+                    "message": f"Build cancelled at knowledge check {kt.kc_id}.",
+                    "stoppedAtKcId": kt.kc_id,
+                })
+                return
+
+            self._state.kc_states[kt.kc_id] = "building"
+            await self._emit_state()
+            await self._emit_progress("kc_started", {
+                "kcId": kt.kc_id,
+                "kind": kt.kind,
+                "targetId": kt.target_id,
+                "title": kt.title,
+                "moduleIdx": kt.module_idx,
+                "lessonIdx": kt.lesson_idx,
+            })
+
+            start_ts = time.monotonic()
+            try:
+                usage, init_ms = await self._run_kc_with_retry(kt)
+            except _BuildCancelledDuringBackoff:
+                log.info("orchestrator cancelled during KC retry backoff at %s", kt.kc_id)
+                return
+            except Exception as exc:
+                log.exception(
+                    "kc %s (%s) failed after %d attempts",
+                    kt.kc_id, kt.title, LESSON_MAX_ATTEMPTS,
+                )
+                self._state.kc_states[kt.kc_id] = "error"
+                self._state.last_error = f"Knowledge check ({kt.kind} {kt.title}): {exc}"
+                self._state.phase = "paused"
+                await self._emit_state()
+                await self._emit_progress("kc_failed", {
+                    "kcId": kt.kc_id,
+                    "kind": kt.kind,
+                    "targetId": kt.target_id,
+                    "title": kt.title,
+                    "error": str(exc),
+                    "attempts": LESSON_MAX_ATTEMPTS,
+                })
+                return
+
+            duration_ms = int((time.monotonic() - start_ts) * 1000)
+            self._state.kc_states[kt.kc_id] = "done"
+            await self._emit_state()
+            metrics = _extract_usage(usage)
+            await self._emit_progress("kc_completed", {
+                "kcId": kt.kc_id,
+                "kind": kt.kind,
+                "targetId": kt.target_id,
+                "title": kt.title,
+                "durationMs": duration_ms,
+                "initMs": init_ms,
+                "tokensIn": metrics["tokens_in_total"],
+                "tokensOut": metrics["tokens_out"],
+                "model": metrics["model"],
+                "costUsd": metrics["cost_usd"],
+                "tokensInUncached": metrics["tokens_in_uncached"],
+                "tokensInCacheRead": metrics["tokens_in_cache_read"],
+                "tokensInCacheCreation": metrics["tokens_in_cache_creation"],
+            })
+            log.info(
+                "kc %s done — %dms (init %dms) tokens in=%s out=%s cost=$%s",
+                kt.kc_id, duration_ms, init_ms,
+                metrics["tokens_in_total"],
+                metrics["tokens_out"],
+                f"{metrics['cost_usd']:.4f}" if metrics["cost_usd"] is not None else "?",
+            )
+
+    async def _run_kc_with_retry(self, kt: _KCTarget) -> tuple[dict[str, Any], int]:
+        """Same retry+backoff pattern as _run_lesson_with_retry, applied
+        to KC mini-sessions. sprint-2-6 + sprint-2-8."""
+        last_exc: Exception | None = None
+        for attempt in range(1, LESSON_MAX_ATTEMPTS + 1):
+            try:
+                return await self._run_kc_session(kt)
+            except Exception as exc:
+                last_exc = exc
+                log.warning(
+                    "kc %s attempt %d/%d failed: %s",
+                    kt.kc_id, attempt, LESSON_MAX_ATTEMPTS, exc,
+                )
+                if attempt >= LESSON_MAX_ATTEMPTS:
+                    break
+                await self._emit_progress("kc_retrying", {
+                    "kcId": kt.kc_id,
+                    "kind": kt.kind,
+                    "targetId": kt.target_id,
+                    "title": kt.title,
+                    "attempt": attempt,
+                    "maxAttempts": LESSON_MAX_ATTEMPTS,
+                    "backoffSeconds": LESSON_RETRY_BACKOFF_SECONDS,
+                    "error": str(exc),
+                })
+                for _ in range(LESSON_RETRY_BACKOFF_SECONDS):
+                    if self._cancelled:
+                        raise _BuildCancelledDuringBackoff()
+                    await asyncio.sleep(1)
+        assert last_exc is not None
+        raise last_exc
+
+    async def _run_kc_session(self, kt: _KCTarget) -> tuple[dict[str, Any], int]:
+        """Spawn a fresh ClaudeSDKClient for one KC. Same shape as
+        _run_lesson_session — locked-fork-#2 path-parity stays
+        intact (file SYSTEM_PROMPT, shared bridge, agent introspects
+        via list_structure + writes via write_knowledge_check)."""
+        init_start = time.monotonic()
+        options = ClaudeAgentOptions(
+            system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
+            mcp_servers={"ui": build_ui_mcp_server(self._bridge)},
+            allowed_tools=ALLOWED_TOOL_NAMES,
+        )
+        client = ClaudeSDKClient(options=options)
+        await client.connect()
+        init_ms = int((time.monotonic() - init_start) * 1000)
+
+        try:
+            prompt = self._build_kc_prompt(kt)
+            await client.query(prompt)
+            usage: dict[str, Any] = {}
+            async for event in client.receive_response():
+                if isinstance(event, ResultMessage):
+                    usage = dict(event.usage or {})
+                    model_usage = event.model_usage or {}
+                    if model_usage:
+                        model_name = next(iter(model_usage), None)
+                        if model_name:
+                            usage["model"] = model_name
+                    if event.total_cost_usd is not None:
+                        usage["total_cost_usd"] = event.total_cost_usd
+                    break
+            return usage, init_ms
+        finally:
+            try:
+                await client.disconnect()
+            except Exception:
+                log.warning("kc %s disconnect failed (non-fatal)", kt.kc_id, exc_info=True)
+
+    def _build_kc_prompt(self, kt: _KCTarget) -> str:
+        """User message for a KC mini-session. Tells the agent which
+        target the KC anchors on; the agent calls list_structure() to
+        read the lesson body / module objectives + write_knowledge_check
+        to land the questions. MODE 4 in SYSTEM_PROMPT trains the
+        questioning style (5 MCQ default, Bloom's mix, plausible
+        distractors).
+        """
+        if kt.kind == "lesson":
+            return (
+                f"Add a knowledge check to lesson {kt.module_idx + 1}."
+                f"{(kt.lesson_idx or 0) + 1}: \"{kt.title}\".\n\n"
+                f"Lesson id: {kt.target_id}\n\n"
+                "Steps:\n"
+                "1. Call list_structure() to read the lesson's body content "
+                "and stated objectives.\n"
+                "2. Call write_knowledge_check(target_kind=\"lesson\", "
+                f"target_id=\"{kt.target_id}\", questions=[...]) with 5 MCQ "
+                "questions following the MODE 4 spec (Bloom's mix: 1-2 recall, "
+                "2 apply, 1-2 analyze; plausible distractors; rationale per "
+                "question).\n"
+            )
+        # module-level final assessment
+        return (
+            f"Add a final assessment to module {kt.module_idx + 1}: "
+            f"\"{kt.title}\".\n\n"
+            f"Module id: {kt.target_id}\n\n"
+            "Steps:\n"
+            "1. Call list_structure() to read all lessons in this module + "
+            "the module's objectives. The final assessment should cover the "
+            "module as a whole, not duplicate any single lesson's KC.\n"
+            "2. Call write_knowledge_check(target_kind=\"module\", "
+            f"target_id=\"{kt.target_id}\", questions=[...]) with 5 MCQ "
+            "questions weighted toward apply / analyze (the LD's learners "
+            "have already worked through the lesson-level KCs by this point).\n"
+        )
+
     # ─── internal: event emission helpers ──────────────────────────
 
     async def _emit_state(self) -> None:
@@ -588,15 +883,16 @@ class BuildOrchestrator:
     async def _emit_progress(self, kind: str, payload: dict[str, Any]) -> None:
         """Push a progress event. `kind` is one of:
           lesson_started / lesson_completed / lesson_failed / lesson_retrying
-          kc_started / kc_completed / kc_failed
+          kc_started / kc_completed / kc_failed / kc_retrying
           cs_started / cs_completed / cs_failed
           course_completed / course_export_ready
           not_implemented (sprint-2-1 + cancellation/resume stubs)
 
-        sprint-2-6: lesson_retrying carries {attempt, maxAttempts,
-        backoffSeconds, error} alongside the standard {idx, title,
-        lessonId} so the FE's progress band can show "Retrying
-        lesson N (attempt 2/2)…".
+        sprint-2-6 / sprint-2-8: *_retrying events carry
+        {attempt, maxAttempts, backoffSeconds, error} alongside the
+        standard target-identifying fields so the FE's progress band
+        can show "Retrying lesson N (attempt 2/2)…" or the equivalent
+        for KCs.
         """
         await self._send({
             "type": "build_progress",

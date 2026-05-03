@@ -59,6 +59,7 @@ export type BuildProgressKind =
   | "kc_started"
   | "kc_completed"
   | "kc_failed"
+  | "kc_retrying"
   | "cs_started"
   | "cs_completed"
   | "cs_failed"
