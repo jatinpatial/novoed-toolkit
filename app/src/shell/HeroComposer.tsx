@@ -136,10 +136,17 @@ export const HeroComposer = forwardRef<HTMLTextAreaElement, HeroComposerProps>(
             just a 60-90 sec video script, not a whole course. Smaller
             than the structured-brief pill so the visual hierarchy
             stays clean: primary CTA → secondary form pill → tertiary
-            text link. */}
+            text link.
+            Track-B-Quiz: KC Studio joins the tertiary row alongside
+            Script Studio. Same hierarchy — both are "single-component"
+            entry paths into the studio suite. */}
         <div className="composer-tertiary-link">
           Just a video script?{" "}
           <Link to="/scripts/new">Try Script Studio →</Link>
+        </div>
+        <div className="composer-tertiary-link">
+          Just a knowledge check?{" "}
+          <Link to="/kcs/new">Try KC Studio →</Link>
         </div>
       </>
     );
