@@ -95,12 +95,19 @@ export function LessonTile({
  * only while `phase === "building"`; idle / completed / cancelled /
  * paused / failed all hide it.
  *
- * Phase label rotates based on the most recent build_progress event:
- *   lesson_*           → Building lessons…
- *   kc_*               → Building knowledge checks…
- *   cs_*               → Designing case studies…
- *   course_export_*    → Exporting Word doc…
- *   default            → Building course…
+ * polish-15a (FULL pipeline progress)
+ *   Pre-15a the band counted lessons only — "4 of 4 lessons (100%)"
+ *   while KC + CS phases were still running, misleading the LD into
+ *   thinking the build was done. Post-15a the denominator is the
+ *   FULL pipeline (lessons + KCs + CSs), and 100% only lands when
+ *   course_completed fires.
+ *
+ * polish-15b (state-derived phase label)
+ *   Pre-15b the phase label was driven by the most recent progress
+ *   event's kind. Between phases (e.g. last lesson_completed, before
+ *   first kc_started) the label stayed on the previous phase. Post-15b
+ *   the label is derived from STATE — what's done vs in flight —
+ *   which is robust to any timing windows between events.
  *
  * Width: full pane (the pane is the scroll container, so a sticky
  * top-0 + edge-to-edge works without tracking the outline width).
@@ -111,13 +118,18 @@ export function LessonTile({
 export function BuildProgressBand() {
   const { orchestratorState, lastBuildProgress } = useAgent();
 
-  // polish-7a: capture per-lesson durations as lesson_completed events
-  // arrive. Local component state — when phase flips to non-building
-  // the band unmounts, which automatically resets this for the next
-  // build. No need for a context-level slice.
+  // polish-7a + polish-15a: capture step durations across ALL phases
+  // (lesson + kc + cs completed events). Pre-15a the durations array
+  // only filled from lesson_completed, so ETA stopped sharpening once
+  // lessons finished even though KCs + CSs were still running.
   const [durationsMs, setDurationsMs] = useState<number[]>([]);
   useEffect(() => {
-    if (lastBuildProgress?.kind !== "lesson_completed") return;
+    if (!lastBuildProgress) return;
+    const isCompletion =
+      lastBuildProgress.kind === "lesson_completed" ||
+      lastBuildProgress.kind === "kc_completed" ||
+      lastBuildProgress.kind === "cs_completed";
+    if (!isCompletion) return;
     const dur = lastBuildProgress.payload.durationMs;
     if (typeof dur !== "number" || !isFinite(dur) || dur <= 0) return;
     setDurationsMs((prev) => [...prev, dur]);
@@ -125,32 +137,41 @@ export function BuildProgressBand() {
 
   if (orchestratorState.phase !== "building") return null;
 
-  const total = orchestratorState.totalLessons;
-  const done = Object.values(orchestratorState.lessonStates).filter(
+  // polish-15a: combined denominator across all three phases. 100%
+  // only when every step in every phase has landed.
+  const totalLessons = orchestratorState.totalLessons;
+  const totalKcs = orchestratorState.totalKcs;
+  const totalCss = orchestratorState.totalCss;
+  const totalSteps = totalLessons + totalKcs + totalCss;
+
+  const lessonsDone = Object.values(orchestratorState.lessonStates).filter(
     (s) => s === "done",
   ).length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const phaseLabel = phaseLabelFor(
+  const kcsDone = Object.values(orchestratorState.kcStates).filter(
+    (s) => s === "done",
+  ).length;
+  const cssDone = Object.values(orchestratorState.csStates).filter(
+    (s) => s === "done",
+  ).length;
+  const completedSteps = lessonsDone + kcsDone + cssDone;
+  const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+  // polish-15b: state-derived phase label. More robust than relying
+  // on lastBuildProgress.kind alone — e.g. between phases when the
+  // last event was a *_completed but the next phase hasn't fired its
+  // first *_started yet, the kind-based label would lag. State-based
+  // logic looks at what's done and what's still in flight.
+  const phaseLabel = derivePhaseLabel(
+    orchestratorState,
     lastBuildProgress?.kind,
     lastBuildProgress?.payload,
   );
 
-  // polish-7a + polish-8b: rolling-avg ETA with seed estimate.
-  //
-  // polish-7a (initial): showed ETA only after 1 lesson had completed.
-  // Live testing said that's too long without info — for a 14-lesson
-  // course the LD waits ~2 minutes before they get any wall-time
-  // signal. ETA was hidden when it was MOST useful.
-  //
-  // polish-8b (this commit): seed the ETA from t=0 using SEED_MS_PER_LESSON
-  // (calibrated from Saturday's telemetry — avg 124s/lesson). The seed
-  // gets replaced by the rolling avg as soon as one lesson actually
-  // completes, so the number sharpens with real data. Honest from
-  // second 1.
-  //
-  // Hidden when the build is paused / cancelled (band already hides
-  // on those phases anyway, but be explicit).
-  const remaining = Math.max(0, total - done);
+  // polish-15a: ETA now uses combined remaining steps × avg duration
+  // across all phases. Seed for pre-data fallback stays the same
+  // (~120s/step is roughly accurate for KCs and CSs too — slightly
+  // shorter than lessons but in the same ballpark).
+  const remaining = Math.max(0, totalSteps - completedSteps);
   const avgMs =
     durationsMs.length > 0
       ? durationsMs.reduce((s, d) => s + d, 0) / durationsMs.length
@@ -168,7 +189,7 @@ export function BuildProgressBand() {
       <div className="build-progress-band-text">
         <span className="build-progress-band-phase">{phaseLabel}</span>
         <span className="build-progress-band-count">
-          {done} of {total} lesson{total === 1 ? "" : "s"} ({pct}%)
+          {completedSteps} of {totalSteps} step{totalSteps === 1 ? "" : "s"} ({pct}%)
           {etaText && (
             <span className="build-progress-band-eta">
               {" · "}
@@ -223,15 +244,33 @@ function formatEta(ms: number): string {
     : `~${hours}h ${minutes}m remaining`;
 }
 
-function phaseLabelFor(
+/**
+ * polish-15b: derive the band's phase label from CURRENT STATE rather
+ * than the most recent event's kind. The state-derived path is
+ * robust across timing windows that produced "stuck on previous
+ * phase" symptoms in live testing.
+ *
+ * Priority order:
+ *   1. Active retry event   → "Retrying lesson N…" / etc. (kind-based)
+ *   2. course_export_ready  → "Exporting Word doc…" (kind-based)
+ *   3. course_completed     → "Wrapping up…" (kind-based)
+ *   4. State-derived current phase based on what's done vs in flight
+ *
+ * The state-derived path picks the EARLIEST phase that's still
+ * incomplete:
+ *   - lessons not all done → Building lessons
+ *   - lessons done, KCs not all done → Building knowledge checks
+ *   - lessons + KCs done, CSs not all done → Designing case studies
+ *   - everything done → Almost done (this is the brief window
+ *                       between cs_completed and course_completed)
+ */
+function derivePhaseLabel(
+  state: import("./types").OrchestratorState,
   kind: BuildProgressKind | undefined,
   payload: Record<string, unknown> | undefined,
 ): string {
-  if (!kind) return "Building course…";
-  // sprint-2-6 / 2-8 / 2-9: retry events get a distinct label so the
-  // LD knows the build hit a snag and is auto-recovering. Pulls
-  // attempt count off the payload — falls back to plain "Retrying…"
-  // if the payload shape isn't what we expect.
+  // 1) Retry events take priority — even if the underlying phase
+  //    is "lessons", the LD wants to know they're inside a recovery.
   if (
     kind === "lesson_retrying" ||
     kind === "kc_retrying" ||
@@ -252,12 +291,32 @@ function phaseLabelFor(
       attempt !== null && max !== null ? ` (attempt ${attempt + 1}/${max})` : "";
     return `Retrying${targetRef}${attemptRef}…`;
   }
-  if (kind.startsWith("lesson_")) return "Building lessons…";
-  if (kind.startsWith("kc_")) return "Building knowledge checks…";
-  if (kind.startsWith("cs_")) return "Designing case studies…";
+
+  // 2) Pipeline-end signals carry their own labels.
   if (kind === "course_export_ready") return "Exporting Word doc…";
   if (kind === "course_completed") return "Wrapping up…";
-  return "Building course…";
+
+  // 3) State-derived current phase. Counts what's still in flight
+  //    rather than relying on the most recent event's kind.
+  const lessonsAllDone =
+    state.totalLessons === 0 ||
+    Object.values(state.lessonStates).filter((s) => s === "done").length >=
+      state.totalLessons;
+  const kcsAllDone =
+    state.totalKcs === 0 ||
+    Object.values(state.kcStates).filter((s) => s === "done").length >=
+      state.totalKcs;
+  const cssAllDone =
+    state.totalCss === 0 ||
+    Object.values(state.csStates).filter((s) => s === "done").length >=
+      state.totalCss;
+
+  if (!lessonsAllDone) return "Building lessons…";
+  if (!kcsAllDone) return "Building knowledge checks…";
+  if (!cssAllDone) return "Designing case studies…";
+  // All three phases of work are done; we're between the last
+  // *_completed event and course_completed.
+  return "Almost done…";
 }
 
 /**
