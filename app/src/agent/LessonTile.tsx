@@ -132,20 +132,27 @@ export function BuildProgressBand() {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const phaseLabel = phaseLabelFor(lastBuildProgress?.kind);
 
-  // polish-7a: rolling-avg ETA. Show only after 1 lesson has actually
-  // completed (no pre-data ETA — would be a guess). Use the average
-  // over all observed durations rather than just the most recent —
-  // smooths out a single fast or slow lesson skewing the projection.
+  // polish-7a + polish-8b: rolling-avg ETA with seed estimate.
+  //
+  // polish-7a (initial): showed ETA only after 1 lesson had completed.
+  // Live testing said that's too long without info — for a 14-lesson
+  // course the LD waits ~2 minutes before they get any wall-time
+  // signal. ETA was hidden when it was MOST useful.
+  //
+  // polish-8b (this commit): seed the ETA from t=0 using SEED_MS_PER_LESSON
+  // (calibrated from Saturday's telemetry — avg 124s/lesson). The seed
+  // gets replaced by the rolling avg as soon as one lesson actually
+  // completes, so the number sharpens with real data. Honest from
+  // second 1.
+  //
   // Hidden when the build is paused / cancelled (band already hides
   // on those phases anyway, but be explicit).
   const remaining = Math.max(0, total - done);
-  const etaText =
-    durationsMs.length > 0 && remaining > 0
-      ? formatEta(
-          (durationsMs.reduce((s, d) => s + d, 0) / durationsMs.length) *
-            remaining,
-        )
-      : null;
+  const avgMs =
+    durationsMs.length > 0
+      ? durationsMs.reduce((s, d) => s + d, 0) / durationsMs.length
+      : SEED_MS_PER_LESSON;
+  const etaText = remaining > 0 ? formatEta(avgMs * remaining) : null;
 
   return (
     <div className="build-progress-band" role="status" aria-live="polite">
@@ -170,6 +177,21 @@ export function BuildProgressBand() {
     </div>
   );
 }
+
+/**
+ * polish-8b: seed estimate per lesson, used until the rolling avg
+ * has at least one observation. Calibrated from Saturday's first
+ * live build telemetry — a 4-lesson course averaged 124s/lesson
+ * total wall-time including ~8s init. 120s is a clean round number
+ * and slightly conservative, which is the right side to err on for
+ * a user-facing ETA.
+ *
+ * Once one lesson_completed event lands, the rolling avg replaces
+ * this seed entirely, so the ETA sharpens automatically. If actual
+ * builds run faster (parallel-batch sprint-2-11 lands), the seed
+ * over-estimates briefly then the rolling avg corrects within ~30s.
+ */
+const SEED_MS_PER_LESSON = 120_000;
 
 /**
  * Round-up wall-time formatter. Always overestimates rather than
