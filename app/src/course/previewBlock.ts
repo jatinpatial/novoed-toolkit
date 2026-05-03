@@ -36,7 +36,23 @@ export function renderTextBlockBody(text: string): string {
   return text
     .split("\n")
     .map((line) => {
-      const numbered = /^(\d+)\.\s+(.*)$/.exec(line);
+      // polish-6d: numbered-line regex tolerates BOTH "1. Foo" (with
+      // space) and "1.Foo" (no space). Pre-polish-6d a takeaway list
+      // emitted as "1.Define\n2.Watch" fell through to plain text-line
+      // rendering — no green marker, no flex gap, just two adjacent
+      // run-on lines that read smushed.
+      //
+      // Pattern breakdown:
+      //   ^(\d+)\.                 — line starts with digits + period
+      //   (?:\s+|(?=[A-Za-z]))     — either space(s), OR lookahead at
+      //                              a letter (handles no-space case
+      //                              without consuming the letter).
+      //                              Decimals like "1.5 million" fail
+      //                              the lookahead (5 isn't a letter)
+      //                              so they don't become numbered
+      //                              items.
+      //   (.+)$                    — at least one char of content.
+      const numbered = /^(\d+)\.(?:\s+|(?=[A-Za-z]))(.+)$/.exec(line);
       if (numbered) {
         return (
           '<div class="text-numbered-line"><span class="text-numbered-marker">' +

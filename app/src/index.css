@@ -879,8 +879,12 @@
   .text-block-render .text-numbered-line {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 8px;
+    /* polish-6d: bump gap from 12px to 14px so the takeaway list-item
+       marker has unmistakable breathing room from the content even at
+       tight font sizes. Also bumps margin-bottom so adjacent items
+       don't visually run together. */
+    gap: 14px;
+    margin-bottom: 10px;
   }
   .text-block-render .text-numbered-marker {
     flex-shrink: 0;
