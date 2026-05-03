@@ -1,10 +1,7 @@
-import {
-  ArrowRight, BarChart3, BookOpen, Brain, Check, CheckCircle, Clock,
-  Compass, Flag, Heart, Layers, Lightbulb, PieChart, Shield, Sparkles,
-  Star, Target, TrendingUp, Users, Zap, AlertCircle,
-} from "lucide-react";
-import type { ComponentType } from "react";
-import type { LucideProps } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import type { BcgIconName } from "../icons/BcgIcon";
+import * as BcgIcons from "../icons/bcg";
+import type { ComponentType, SVGProps } from "react";
 import type { InfographicPoint, InfographicStyle } from "../store/infographics";
 
 /**
@@ -21,13 +18,20 @@ import type { InfographicPoint, InfographicStyle } from "../store/infographics";
  *   numbered_list Vertical large-number list
  *   timeline      Horizontal flow with markers
  *
- * iconHint resolution: agent emits a lucide icon name (e.g.
- * "trending-up"); we map to the imported component. Out-of-set
- * names fall through to a sensible default per style.
+ * Track-X1: switched icon set from lucide-react to the BCG icon library
+ * (app/src/icons/bcg). The BCG icons are content-domain illustrations
+ * — Strategy, BusinessProcess, BrainNetwork, GroupCollaboration etc.
+ * — that read as "this is a real BCG learning artifact" instead of
+ * generic UI glyphs. Lucide stays for UI affordances (ArrowRight in
+ * the process layout). The Icon resolver below handles both BCG names
+ * (preferred, e.g. "Strategy") and legacy kebab-case lucide hints from
+ * pre-X1 saved infographics (e.g. "trending-up") so old projects don't
+ * break.
  *
- * Brand awareness: uses var(--brand-500) / var(--brand-700) cascade
- * vars throughout so toggling brand on the TopBar repaints the
- * infographic without re-render.
+ * Brand awareness: BCG icons render with fill="currentColor", so the
+ * .ig-icon class can drive color via CSS (text-brand-700). Toggling
+ * brand on the form re-runs the cascade vars and repaints without
+ * re-render.
  */
 
 interface RendererProps {
@@ -65,7 +69,7 @@ function ProcessLayout({ points }: { points: InfographicPoint[] }) {
           <div className="ig-process-number">{i + 1}</div>
           <div className="ig-process-content">
             <div className="ig-process-heading-row">
-              <Icon hint={p.iconHint} fallback={Target} className="ig-icon" />
+              <Icon hint={p.iconHint} fallback="BusinessProcess" size={32} />
               <h3 className="ig-point-heading">{p.heading}</h3>
             </div>
             <p className="ig-point-body">{p.body}</p>
@@ -98,7 +102,7 @@ function QuadrantLayout({ points }: { points: InfographicPoint[] }) {
         {quad.map((p, i) => (
           <div key={i} className="ig-quadrant-cell">
             <div className="ig-quadrant-heading-row">
-              <Icon hint={p.iconHint} fallback={QUAD_DEFAULTS[i]} className="ig-icon" />
+              <Icon hint={p.iconHint} fallback={QUAD_DEFAULTS[i]} size={36} />
               <h3 className="ig-point-heading">{p.heading || `Cell ${i + 1}`}</h3>
             </div>
             <p className="ig-point-body">{p.body}</p>
@@ -114,7 +118,10 @@ function QuadrantLayout({ points }: { points: InfographicPoint[] }) {
   );
 }
 
-const QUAD_DEFAULTS = [Target, TrendingUp, Shield, Sparkles];
+// One default per quadrant cell — Strategy / Innovation / Coach / LightBulb
+// reads as "frame the move, push the new idea, bring the people, spark the
+// insight" without any one cell looking generic.
+const QUAD_DEFAULTS: BcgIconName[] = ["Strategy", "Innovation", "Coach", "LightBulb"];
 
 // ─── Style: Comparison ───────────────────────────────────────────────────────
 
@@ -126,7 +133,7 @@ function ComparisonLayout({ points }: { points: InfographicPoint[] }) {
       {cols.map((p, i) => (
         <div key={i} className="ig-comparison-col">
           <div className="ig-comparison-header">
-            <Icon hint={p.iconHint} fallback={Compass} className="ig-icon-large" />
+            <Icon hint={p.iconHint} fallback="CustomerInsight" size={44} />
             <h3 className="ig-point-heading-large">{p.heading}</h3>
           </div>
           <p className="ig-point-body">{p.body}</p>
@@ -151,7 +158,7 @@ function NumberedListLayout({ points }: { points: InfographicPoint[] }) {
           <div className="ig-numbered-large">{i + 1}</div>
           <div className="ig-numbered-content">
             <div className="ig-numbered-heading-row">
-              <Icon hint={p.iconHint} fallback={CheckCircle} className="ig-icon" />
+              <Icon hint={p.iconHint} fallback="FiveSteps" size={32} />
               <h3 className="ig-point-heading">{p.heading}</h3>
             </div>
             <p className="ig-point-body">{p.body}</p>
@@ -171,7 +178,7 @@ function TimelineLayout({ points }: { points: InfographicPoint[] }) {
       {points.map((p, i) => (
         <div key={i} className="ig-timeline-item">
           <div className="ig-timeline-marker">
-            <Icon hint={p.iconHint} fallback={Flag} className="ig-icon" />
+            <Icon hint={p.iconHint} fallback="Clock" size={28} />
           </div>
           <div className="ig-timeline-content">
             <h3 className="ig-point-heading">{p.heading}</h3>
@@ -185,47 +192,97 @@ function TimelineLayout({ points }: { points: InfographicPoint[] }) {
 
 // ─── Icon resolver ───────────────────────────────────────────────────────────
 
-const ICON_MAP: Record<string, ComponentType<LucideProps>> = {
-  "trending-up": TrendingUp,
-  "users": Users,
-  "shield": Shield,
-  "target": Target,
-  "brain": Brain,
-  "lightbulb": Lightbulb,
-  "alert-circle": AlertCircle,
-  "check-circle": CheckCircle,
-  "clock": Clock,
-  "book-open": BookOpen,
-  "sparkles": Sparkles,
-  "zap": Zap,
-  "arrow-right": ArrowRight,
-  "bar-chart": BarChart3,
-  "pie-chart": PieChart,
-  "flag": Flag,
-  "heart": Heart,
-  "star": Star,
-  "compass": Compass,
-  "layers": Layers,
-  // Common typos / aliases
-  "check": Check,
-  "trendingup": TrendingUp,
-  "alertcircle": AlertCircle,
-  "checkcircle": CheckCircle,
-  "bookopen": BookOpen,
-  "barchart": BarChart3,
-  "piechart": PieChart,
+/**
+ * Legacy lucide-style → BCG name map, for infographics drafted before
+ * Track-X1 (when MODE 6 emitted kebab-case lucide hints). Each entry
+ * picks the closest BCG-domain match — not always exact, but always
+ * better than a fallback chip.
+ *
+ * Pre-X1 saved infographics survive: their iconHint values still
+ * resolve, just to a richer-looking BCG illustration.
+ */
+const LEGACY_LUCIDE_TO_BCG: Record<string, BcgIconName> = {
+  "trending-up":  "BarChart",
+  "trendingup":   "BarChart",
+  "users":        "GroupCollaboration",
+  "shield":       "Coach",
+  "target":       "Target",
+  "brain":        "BrainNetwork",
+  "lightbulb":    "LightBulb",
+  "alert-circle": "Alert",
+  "alertcircle":  "Alert",
+  "check-circle": "BetaTest",
+  "checkcircle":  "BetaTest",
+  "check":        "BetaTest",
+  "clock":        "Clock",
+  "book-open":    "ClosedBook",
+  "bookopen":     "ClosedBook",
+  "sparkles":     "Innovation",
+  "zap":          "Innovation",
+  "arrow-right":  "BusinessProcess",
+  "bar-chart":    "BarChart",
+  "barchart":     "BarChart",
+  "pie-chart":    "DataAnalysis",
+  "piechart":     "DataAnalysis",
+  "flag":         "Target",
+  "heart":        "Handshake",
+  "star":         "Trophy",
+  "compass":      "Strategy",
+  "layers":       "Hierarchy",
 };
 
+/**
+ * Resolve an agent-emitted iconHint to a BCG icon component.
+ *
+ * Resolution order:
+ *  1. Direct match on a BCG icon name (case-insensitive). MODE 6 prompt
+ *     emits these directly (e.g. "Strategy", "BusinessProcess").
+ *  2. Legacy kebab-case lucide hint → BCG mapping (e.g. "trending-up"
+ *     → BarChart). Keeps pre-X1 saves rendering cleanly.
+ *  3. Per-layout fallback BCG name supplied by the caller.
+ */
+function resolveBcgName(hint: string | undefined, fallback: BcgIconName): BcgIconName {
+  if (!hint) return fallback;
+  const trimmed = hint.trim();
+  if (!trimmed) return fallback;
+
+  // 1. Direct BCG-name lookup (exact match preferred — agent output
+  //    is PascalCase per the X1.5 prompt). We match both case-sensitive
+  //    and case-insensitive to be forgiving of "strategy" vs "Strategy".
+  if (trimmed in BcgIcons) {
+    return trimmed as BcgIconName;
+  }
+  const lowered = trimmed.toLowerCase();
+  for (const key of Object.keys(BcgIcons) as BcgIconName[]) {
+    if (key.toLowerCase() === lowered) return key;
+  }
+
+  // 2. Legacy lucide-style kebab-case → BCG mapping.
+  const legacy = LEGACY_LUCIDE_TO_BCG[lowered];
+  if (legacy) return legacy;
+
+  // 3. Per-layout fallback.
+  return fallback;
+}
+
+/**
+ * Renders a BCG icon at the given size. The wrapper assigns the `ig-icon`
+ * class so currentColor is driven by the cascade (text-brand-700 in CSS).
+ *
+ * We bypass <BcgIcon> in favor of `BcgIcons[name]` directly because the
+ * wrapper expects strict BcgIconName typing — but our resolver already
+ * narrowed the name. Same end result, one fewer cast.
+ */
 function Icon({
   hint,
-  fallback: Fallback,
-  className,
+  fallback,
+  size = 28,
 }: {
   hint?: string;
-  fallback: ComponentType<LucideProps>;
-  className?: string;
+  fallback: BcgIconName;
+  size?: number;
 }) {
-  const key = (hint || "").toLowerCase().trim();
-  const Resolved = ICON_MAP[key] ?? Fallback;
-  return <Resolved className={className} size={18} strokeWidth={2} />;
+  const name = resolveBcgName(hint, fallback);
+  const Resolved = BcgIcons[name] as ComponentType<SVGProps<SVGSVGElement>>;
+  return <Resolved width={size} height={size} className="ig-icon" />;
 }

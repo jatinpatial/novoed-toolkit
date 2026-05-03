@@ -659,14 +659,31 @@ Output shape:
 - points (required): 3-7 items, count must match what the LD requested in the brief. Each item:
   - heading (required): 3-6 words. The top-level claim.
   - body (required): 15-30 words explaining or expanding the heading.
-  - iconHint (optional): a lucide icon name suggesting a visual. Pick from: trending-up, users, shield, target, brain, lightbulb, alert-circle, check-circle, clock, book-open, sparkles, zap, arrow-right, bar-chart, pie-chart, flag, heart, star, compass, layers. Out-of-set names fall back to a default icon at render time, so prefer the curated set.
+  - iconHint (optional): a BCG icon name suggesting a visual. See ICON SELECTION below for the vocabulary. Out-of-set names fall back to a default at render time, so prefer the curated set.
+
+ICON SELECTION (BCG icon library)
+
+When selecting iconHint for each point, choose from the BCG-domain icon set. Pick by semantic match, not just keyword:
+  - Strategy / business concepts → Strategy, BusinessProcess, Hierarchy, FiveSteps, BusinessUnitStrategy
+  - People dynamics → People, GroupCollaboration, GroupMeeting, Coach, Speaking, Handshake
+  - Insights / data → CustomerInsight, DataAnalysis, BarChart, Dashboard, MagnifyingGlass
+  - Cognition / learning → BrainNetwork, HumanIntelligence, LightBulb, ClosedBook, HigherEducation
+  - Goals / outcomes → Target, Trophy
+  - Decisions / paths → Crossroads, CrossroadsAlt
+  - Process / flow → BusinessProcess, Funnel, Network, Survey, ContinuousTesting
+  - Content / artifacts → Document, Brochure, Cards, Library, FileCabinet, Inventory
+  - Innovation → Innovation, BetaTest
+  - Status / urgency → Alert, Clock
+  - Media → PlayVideo, PictureFrame
+
+These icons are visually richer than generic icon sets — pick the ONE that best fits the point's meaning. Avoid using the same icon twice in one infographic.
 
 Style drives the renderer's layout:
 - process: numbered sequence, each step builds on the previous. Order points chronologically.
 - quadrant: 4 items in a 2x2 matrix. The first two and last two get axis labels — order matters: items 1+2 form one row of the matrix, 3+4 the other.
 - comparison: 2-3 items as side-by-side columns. Each item is one option / approach being compared.
 - numbered_list: vertical list with large numbers. Order is rank-by-importance unless the topic is naturally sequential.
-- timeline: chronological, dates / phases / eras. iconHints for timeline items often map to time markers (clock, flag, etc.).
+- timeline: chronological, dates / phases / eras. iconHints for timeline items often map to time markers (Clock, Target for milestones, etc.).
 
 Voice across all blocks: BCG-professional, plain English, ~8th-grade reading level. Tight sentences. Active verbs. No filler ("very", "really", "kind of"). No consultant clichés.
 
@@ -678,7 +695,7 @@ The PNG output renderer is the primary surface today (HTML + SCORM coming later)
 
 - Strong typography contrast. Headings carry the meaning; body text scaffolds. A 6-word heading + a 25-word body reads better than a 12-word heading + a 12-word body.
 - Generous white space. Don't cram. If a body field would push past 30 words, cut.
-- Iconography that adds meaning, not decoration. Pick iconHints that LITERALLY map to the heading's concept (a heading about growth → trending-up; a heading about caution → alert-circle). Decorative icons with no semantic link weaken the visual.
+- Iconography that adds meaning, not decoration. Pick iconHints that LITERALLY map to the heading's concept (a heading about growth → BarChart; a heading about caution → Alert; a heading about a strategic move → Strategy; a heading about cross-functional people work → GroupCollaboration). Decorative icons with no semantic link weaken the visual.
 - Color hierarchy. The renderer already accents with brand-500 — ensure the heading is the term that should pop, not a generic transition phrase.
 - Asymmetric balance preferred. When a style permits ordering choices (process / numbered_list / timeline), put your strongest framing in position 1 to anchor the visual.
 
@@ -689,7 +706,7 @@ When the LD's brief mentions "include people images" or asks for real-life photo
   iconHint: "photo:woman presenting"
   iconHint: "photo:focused worker"
 
-The search query should describe the SCENE the photo would show, not the abstract concept. ("photo:trust" doesn't return useful images; "photo:handshake closeup" or "photo:two people talking" does.) Keep queries professional / workplace-appropriate. The renderer falls back to a lucide icon when Pexels returns nothing.
+The search query should describe the SCENE the photo would show, not the abstract concept. ("photo:trust" doesn't return useful images; "photo:handshake closeup" or "photo:two people talking" does.) Keep queries professional / workplace-appropriate. The renderer falls back to a BCG icon when Pexels returns nothing.
 
 Conversational hygiene — refer to the infographic BY TITLE in replies, never by internal id.
 """
