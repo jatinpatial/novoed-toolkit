@@ -530,9 +530,10 @@ class BuildOrchestrator:
             start_ts = time.monotonic()
             try:
                 # sprint-2-6: wrap in retry+backoff. One retry after
-                # 5s backoff; halt on the second failure. The retry
-                # path emits a lesson_retrying event so the FE shows
-                # "Retrying lesson N…" in the progress band.
+                # 5s backoff; halt on the second failure.
+                # polish-16b: verification happens INSIDE the retry
+                # wrapper so a zero-blocks completion triggers retry
+                # rather than going straight to paused state.
                 usage, init_ms = await self._run_lesson_with_retry(t)
             except _BuildCancelledDuringBackoff:
                 # User cancelled while we were waiting between
@@ -620,6 +621,14 @@ class BuildOrchestrator:
         failure (rate-limit blip, SDK reconnect glitch) the second
         attempt typically succeeds without LD intervention.
 
+        polish-16b: each successful attempt is verified — if the
+        mini-session reported success but the lesson still has zero
+        blocks (silent-success class: write_lesson returned ok=true
+        against a stale course tree, or the agent never called
+        write_lesson), we raise a RuntimeError so the retry kicks in.
+        Catches the lesson-1.1-zero-blocks regression from the BCG
+        playbook test.
+
         Cancellation is honored during backoff via _BuildCancelledDuringBackoff
         — the loop's outer handler catches it and exits cleanly without
         transitioning to "paused" (the phase is already "cancelled" by
@@ -629,7 +638,24 @@ class BuildOrchestrator:
         last_exc: Exception | None = None
         for attempt in range(1, LESSON_MAX_ATTEMPTS + 1):
             try:
-                return await self._run_lesson_session(t)
+                result = await self._run_lesson_session(t)
+                # polish-16b: defensive verify. Inside the retry loop
+                # so a verification failure triggers the retry path
+                # rather than going to paused state.
+                wrote_blocks = await self._verify_lesson_written(t)
+                if not wrote_blocks:
+                    log.warning(
+                        "lesson %d (%s) attempt %d: mini-session reported "
+                        "success but 0 blocks present — treating as failure",
+                        t.idx, t.title, attempt,
+                    )
+                    raise RuntimeError(
+                        f"Lesson mini-session completed but produced no "
+                        f"blocks. Either write_lesson didn't reach the FE "
+                        f"or lesson_id {t.lesson_id} no longer matches the "
+                        f"current course tree."
+                    )
+                return result
             except Exception as exc:
                 last_exc = exc
                 log.warning(
@@ -659,6 +685,46 @@ class BuildOrchestrator:
                     await asyncio.sleep(1)
         assert last_exc is not None  # always set when we exit the loop via break
         raise last_exc
+
+    async def _verify_lesson_written(self, t: _LessonTarget) -> bool:
+        """polish-16b: defensive check after a lesson mini-session
+        completes successfully. Calls list_structure via the bridge
+        and inspects the lesson's block count. If still zero, the
+        write_lesson tool didn't actually land — bug surfaces in the
+        log so it doesn't silently look like a success.
+
+        Returns True if the lesson has writer-authored blocks, False
+        otherwise. Caller decides whether to fail the lesson, retry,
+        or just log.
+
+        Cheap call — list_structure returns the whole course tree
+        and parses fast on the FE side.
+        """
+        try:
+            structure = await self._bridge.call("list_structure", {})
+        except Exception as exc:
+            log.warning(
+                "verify_lesson_written: list_structure failed for lesson %d: %s",
+                t.idx, exc,
+            )
+            # Don't fail the lesson on a verification glitch — return
+            # True so the build keeps moving; the LD will see the
+            # actual block state in the canvas anyway.
+            return True
+        course = structure.get("course") if isinstance(structure, dict) else None
+        modules = (course or {}).get("modules") or []
+        for mod in modules:
+            for lesson in mod.get("lessons") or []:
+                if lesson.get("id") == t.lesson_id:
+                    block_count = len(lesson.get("blocks") or [])
+                    return block_count > 0
+        # Lesson not found in the structure — that's a different bug
+        # but we surface it as "not written" so it gets attention.
+        log.warning(
+            "verify_lesson_written: lesson %s not found in list_structure",
+            t.lesson_id,
+        )
+        return False
 
     async def _run_lesson_session(self, t: _LessonTarget) -> tuple[dict[str, Any], int]:
         """Spawn a fresh ClaudeSDKClient for one lesson. Returns

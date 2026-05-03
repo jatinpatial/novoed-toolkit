@@ -341,7 +341,10 @@ function CourseBuilderInner() {
           added += 1;
         }
       });
-      return { replaced, added };
+      // polish-16b: writeLesson now signals ok/false to surface
+      // silent-success cases. CourseBuilder's findLesson throws on
+      // not-found, so reaching this return means the write happened.
+      return { ok: true, replaced, added };
     },
     writeScript: (videoBlockId, script) => {
       let ok = false;

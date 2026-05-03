@@ -745,6 +745,25 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         if (fallback) resolvedId = fallback;
       }
 
+      // polish-16b: detect lesson not found BEFORE mutating, so we can
+      // return ok=false to the agent. Pre-fix this returned silently
+      // as { replaced: 0, added: 0 } — toolExecutor wrapped that in
+      // { ok: true } regardless, so the orchestrator marked the
+      // lesson "done" with zero blocks. The agent thought success;
+      // the lesson stayed empty. Live BCG playbook test surfaced
+      // this as lesson 1.1 having 0 blocks while 1.2/1.3/1.4 wrote.
+      const lessonExists = course.modules.some((m) =>
+        m.lessons.some((l) => l.id === resolvedId),
+      );
+      if (!lessonExists) {
+        console.warn(
+          "[agent] writeLesson: lesson_id %s (resolved %s) not found in course tree; refusing silent no-op",
+          lessonId,
+          resolvedId,
+        );
+        return { ok: false, replaced: 0, added: 0 };
+      }
+
       let replaced = 0;
       let added = 0;
       mutate((c) => {
@@ -772,7 +791,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
           }
         }));
       });
-      return { replaced, added };
+      return { ok: true, replaced, added };
     },
     writeScript: (videoBlockId, script) => {
       let ok = false;

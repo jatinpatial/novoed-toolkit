@@ -38,11 +38,19 @@ export async function dispatchToolCall(
       // rendered as text body.
       const blocks = sanitizeWriterBlocks(parseWriterBlocks(args.blocks));
       const result = actions.writeLesson(lessonId, blocks);
+      // polish-16b: surface ok/error truthfully so the agent + the
+      // orchestrator's retry path can react when a lesson_id mismatch
+      // produces zero writes. Pre-fix this always returned ok: true,
+      // so a wrong lesson_id silently marked the lesson "done" with
+      // zero blocks — exactly the lesson-1.1 zero-blocks regression
+      // from the BCG playbook test.
       return {
-        ok: true,
+        ok: result.ok,
         replaced: result.replaced,
         added: result.added,
-        message: `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`,
+        message: result.ok
+          ? `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`
+          : `No lesson found with id ${lessonId}. Call list_structure to get the current lesson ids; do not retry with the same id.`,
       };
     }
     case "write_script": {

@@ -57,7 +57,7 @@ export interface AgentActions {
   deleteBlock: (blockId: string) => void;
   reorder: (kind: "module" | "lesson" | "block", id: string, newIndex: number) => void;
   exportLesson: (lessonId: string, format: "scorm" | "json") => void;
-  writeLesson: (lessonId: string, blocks: WriterBlock[]) => { replaced: number; added: number };
+  writeLesson: (lessonId: string, blocks: WriterBlock[]) => { ok: boolean; replaced: number; added: number };
   writeScript: (videoBlockId: string, script: string) => { ok: boolean; previousScriptLength: number };
   // Quiz Builder: write or replace a knowledge check on a lesson or module.
   // Returns whether the target was found and whether existing content was
