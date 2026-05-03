@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Search, Command } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Command, HelpCircle, LogOut, Search, Settings } from "lucide-react";
 import { B, type BrandKey } from "../brand/tokens";
+import { clearUser, getUser, initialsFor, subscribeUser, type StudioUser } from "../store/user";
 
 const KEY = "bcgu_studio_active_brand";
 
@@ -48,14 +49,56 @@ export function BrandBodyAttribute() {
 
 interface Props {
   onSearch?: (q: string) => void;
+  /** Track-H: open the help drawer when the avatar dropdown's "Help"
+      item is clicked, OR when the persistent ? icon is clicked.
+      AppShell wires this to a single HelpDrawer at the shell level. */
+  onShowHelp?: () => void;
+  /** Track-H: re-open the WelcomeModal (e.g. from Reset profile, or
+      after clearUser fires). Dashboard already wires reopenWelcome
+      via its existing onShowWelcome path; passing it through here
+      lets the avatar dropdown reach it. */
+  onShowWelcome?: () => void;
 }
 
 // Tooltip text shared across both brand toggles (here + the
 // CourseTopBar inside CourseStudio.tsx). Kept tight per B3d spec.
 const BRAND_TOOLTIP = "Theme used in preview & export";
 
-export function TopBar({ onSearch }: Props) {
+export function TopBar({ onSearch, onShowHelp, onShowWelcome }: Props) {
   const [brand, setBrand] = useActiveBrand();
+  // Track-H: local user profile. Subscribes to studio.user changes so
+  // a fresh save (WelcomeModal submit) updates the avatar without a
+  // page refresh.
+  const [user, setUser] = useState<StudioUser | null>(() => getUser());
+  useEffect(() => subscribeUser(() => setUser(getUser())), []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  // Click-outside dismiss for the dropdown.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
+  // Cmd/Ctrl + ? → open help drawer.
+  useEffect(() => {
+    const handler = onShowHelp;
+    if (!handler) return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "?" || e.key === "/")) {
+        if (e.shiftKey || e.key === "?") {
+          e.preventDefault();
+          handler!();
+        }
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onShowHelp]);
 
   return (
     <header className="h-14 bg-white border-b border-ink-200 flex items-center px-5 gap-4 flex-shrink-0">
@@ -101,6 +144,113 @@ export function TopBar({ onSearch }: Props) {
             </button>
           ))}
         </div>
+
+        {/* Track-H: persistent help icon. Opens HelpDrawer; Cmd/Ctrl+?
+            shortcut also wired above. Sits between brand toggle and
+            user avatar so the help affordance is visible without a
+            menu open. */}
+        {onShowHelp && (
+          <button
+            onClick={onShowHelp}
+            className="w-9 h-9 rounded-md text-ink-500 hover:text-ink-900 hover:bg-ink-100 flex items-center justify-center transition"
+            title="Help & guides (Cmd+?)"
+            aria-label="Open help"
+          >
+            <HelpCircle size={16} />
+          </button>
+        )}
+
+        {/* Track-H: user avatar + dropdown. Initials when a name is
+            saved; "Sign in" link otherwise (re-opens WelcomeModal). */}
+        {user ? (
+          <div ref={menuRef} className="relative">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex items-center gap-2 pl-1 pr-2.5 h-9 rounded-md hover:bg-ink-100 transition"
+              title={`Signed in as ${user.name}`}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
+              <span
+                className="w-7 h-7 rounded-full bg-brand-gradient text-white text-[11px] font-bold flex items-center justify-center"
+                aria-hidden="true"
+              >
+                {initialsFor(user.name)}
+              </span>
+              <span className="text-sm font-semibold text-ink-800">
+                {user.name.split(/\s+/)[0]}
+              </span>
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-ink-200 rounded-lg shadow-elevated overflow-hidden z-50"
+              >
+                <div className="px-3 py-2.5 border-b border-ink-100">
+                  <div className="text-xs font-bold text-ink-900">{user.name}</div>
+                  <div className="text-[10px] text-ink-500 mt-0.5">
+                    Local profile · this computer
+                  </div>
+                </div>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    // Settings is a soon placeholder — no-op for now.
+                  }}
+                  className="w-full px-3 py-2 flex items-center gap-2 text-xs text-ink-500 cursor-not-allowed"
+                  disabled
+                >
+                  <Settings size={13} /> Settings
+                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-ink-400">
+                    soon
+                  </span>
+                </button>
+                {onShowHelp && (
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onShowHelp();
+                    }}
+                    className="w-full px-3 py-2 flex items-center gap-2 text-xs text-ink-700 hover:bg-ink-50"
+                  >
+                    <HelpCircle size={13} /> Help guide
+                  </button>
+                )}
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (
+                      confirm(
+                        "Reset profile? This clears your local name + the welcome flag. Your courses, scripts, and KCs are not affected.",
+                      )
+                    ) {
+                      clearUser();
+                      // Re-open the WelcomeModal so the LD lands somewhere
+                      // useful immediately rather than on an unbranded
+                      // TopBar.
+                      onShowWelcome?.();
+                    }
+                  }}
+                  className="w-full px-3 py-2 flex items-center gap-2 text-xs text-ink-700 hover:bg-ink-50 border-t border-ink-100"
+                >
+                  <LogOut size={13} /> Reset profile
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          onShowWelcome && (
+            <button
+              onClick={onShowWelcome}
+              className="px-3 h-9 rounded-md text-sm font-semibold text-brand-700 hover:bg-brand-50 transition"
+            >
+              Sign in
+            </button>
+          )
+        )}
       </div>
     </header>
   );

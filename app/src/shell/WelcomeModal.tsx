@@ -1,17 +1,29 @@
-import { useEffect } from "react";
-import { X, Upload, MessageCircle, Grid3x3, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Sparkles, Video, X } from "lucide-react";
+import { getUser, saveUser } from "../store/user";
 
 /**
- * First-load welcome modal (Phase 2 #1f).
+ * First-load welcome modal (Phase 2 #1f, rebuilt in Track-H).
  *
- * Shown on the first Dashboard mount per the localStorage flag
- * `bcgu_studio_welcome_seen_v1`. Dismissal sets the flag so it
- * doesn't show again. The SidebarFooter "Help & how it works"
- * button calls reopen() — clears the flag and re-opens the modal —
- * so onboarding can be replayed (Q5d).
+ * Track-H rewrite:
+ *   1. Collects the LD's name (first-name preferred) into the local
+ *      studio.user record. TopBar reads it for the avatar + greeting.
+ *   2. Frames BCG U Studio as a 4-Studio suite (Course / Script /
+ *      KC / Infographic) — matches the SuiteTiles on the dashboard
+ *      so the onboarding-to-home transition is continuous.
+ *   3. Reinforces the "no cloud, no sign-up" privacy contract under
+ *      the input so LDs feel safe naming themselves.
  *
- * Content mirrors the three EntryCards on the dashboard so the
- * onboarding lines up 1:1 with the surfaces a returning LD will see.
+ * Trigger:
+ *   - First-load: studio.user unset → modal opens automatically.
+ *   - Manual: SidebarFooter "Help & how it works" → Dashboard's
+ *     reopenWelcome() clears the seen flag + opens the modal.
+ *
+ * Submit behavior:
+ *   - Saves studio.user, marks welcome seen, dismisses modal.
+ *   - If LD just clicks the X without entering a name, modal still
+ *     dismisses (markWelcomeSeen) but no user is saved — TopBar
+ *     shows a "Sign in" link to re-open.
  */
 
 const FLAG_KEY = "bcgu_studio_welcome_seen_v1";
@@ -45,17 +57,56 @@ interface WelcomeModalProps {
   onClose: () => void;
 }
 
+const STUDIO_ROWS: { icon: typeof BookOpen; title: string; description: string }[] = [
+  {
+    icon: BookOpen,
+    title: "Course Studio",
+    description: "Build a full multi-week course from a brief or source material.",
+  },
+  {
+    icon: Video,
+    title: "Script Studio",
+    description: "Generate Synthesia-ready video scripts.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "KC Studio",
+    description: "Standalone knowledge checks from any source.",
+  },
+  {
+    icon: BarChart3,
+    title: "Infographic Studio",
+    description: "Visual summaries from source material.",
+  },
+];
+
 export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
+  // Pre-fill from existing user record so a re-open of the modal
+  // (via SidebarFooter "Help & how it works") shows what's saved.
+  const [name, setName] = useState(() => getUser()?.name ?? "");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
+    // Auto-focus the name input when the modal opens — primary
+    // action on first visit is "tell us your name".
+    requestAnimationFrame(() => inputRef.current?.focus());
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   if (!open) return null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (name.trim().length > 0) {
+      saveUser(name);
+    }
+    onClose();
+  }
 
   return (
     <div
@@ -67,7 +118,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 relative">
+        <div className="px-7 pt-7 pb-5 relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-7 h-7 rounded-md text-ink-400 hover:text-ink-700 hover:bg-ink-100 flex items-center justify-center"
@@ -75,75 +126,75 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
           >
             <X size={16} />
           </button>
-          <div className="w-10 h-10 rounded-lg bg-brand-gradient text-white flex items-center justify-center mb-3">
+          <div className="w-10 h-10 rounded-lg bg-brand-gradient text-white flex items-center justify-center mb-4">
             <Sparkles size={18} strokeWidth={2.5} />
           </div>
-          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">
+          <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1.5">
             Welcome to BCG U Studio
           </div>
-          <h2 className="text-xl font-bold text-ink-900 mb-2">
-            Three ways to start a course.
+          <h2 className="text-xl font-bold text-ink-900 mb-2 leading-snug">
+            An AI-powered course-building suite, built for BCG U Learning Designers.
           </h2>
-          <p className="text-sm text-ink-600 leading-relaxed">
-            BCG U Studio is your AI-led course design workspace. Pick the entry path that matches what you have today.
-          </p>
         </div>
 
-        {/* Three rows */}
-        <div className="px-6 pb-4 space-y-3">
-          <Row
-            icon={<Upload size={16} />}
-            title="From a deck"
-            description="Drop a PPTX, PDF, or DOCX. The agent reads it and proposes a course outline."
-            soon
-          />
-          <Row
-            icon={<MessageCircle size={16} />}
-            title="From an idea"
-            description="Type a brief into the home composer — topic, audience, duration. Course Architect drafts the outline; you click Build."
-          />
-          <Row
-            icon={<Grid3x3 size={16} />}
-            title="From the catalog"
-            description="Browse pre-built components — cards, timelines, quizzes, polls. Pick a piece, fill it with your data."
-            soon
-          />
-        </div>
+        {/* Name input */}
+        <form onSubmit={handleSubmit} className="px-7 pb-2">
+          <label className="block">
+            <div className="text-sm font-semibold text-ink-900 mb-1.5">
+              What should we call you?
+            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your first name"
+              className="w-full px-3 h-11 rounded-lg border border-ink-200 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition"
+            />
+            <div className="text-[11px] text-ink-500 mt-1.5 italic">
+              Stays on your computer — no cloud account, no sign-up.
+            </div>
+          </label>
+        </form>
 
-        {/* Footer */}
-        <div className="px-6 pb-6 pt-2 border-t border-ink-100 flex items-center justify-between gap-3">
-          <div className="text-[11px] text-ink-400">
-            You can re-open this from <strong className="text-ink-600">Help & how it works</strong> in the sidebar.
+        {/* Suite framing */}
+        <div className="px-7 py-5">
+          <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-3">
+            Four Studios. One workflow.
           </div>
-          <button
-            onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-brand-gradient text-white text-sm font-semibold shadow-sm hover:shadow-md transition"
-          >
-            Let's go
-          </button>
+          <div className="space-y-2.5">
+            {STUDIO_ROWS.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.title} className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
+                    <Icon size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-ink-900 mb-0.5">{s.title}</div>
+                    <div className="text-xs text-ink-600 leading-relaxed">
+                      {s.description}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 text-xs text-ink-600 leading-relaxed border-t border-ink-100 pt-3">
+            Drop a deck, brief, or PDF on any Studio. The agent reads it and
+            grounds your content in your material.
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-function Row({ icon, title, description, soon }: { icon: React.ReactNode; title: string; description: string; soon?: boolean }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${soon ? "bg-ink-100 text-ink-500" : "bg-brand-50 text-brand-700"}`}>
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <div className={`text-sm font-bold ${soon ? "text-ink-500" : "text-ink-900"}`}>{title}</div>
-          {soon && (
-            <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 bg-ink-100 px-1.5 py-0.5 rounded">
-              soon
-            </span>
-          )}
-        </div>
-        <div className={`text-xs leading-relaxed ${soon ? "text-ink-400" : "text-ink-600"}`}>
-          {description}
+        {/* Footer CTA */}
+        <div className="px-7 pb-7 pt-2 flex items-center justify-end gap-3">
+          <button
+            onClick={handleSubmit}
+            type="submit"
+            className="inline-flex items-center gap-1.5 px-5 h-10 rounded-lg bg-brand-gradient text-white text-sm font-semibold shadow-sm hover:shadow-md transition"
+          >
+            Get started <ArrowRight size={14} strokeWidth={2.5} />
+          </button>
         </div>
       </div>
     </div>

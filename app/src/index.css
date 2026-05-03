@@ -1626,6 +1626,40 @@
     margin-top: 2px;
   }
 
+  /* Track-H / H3: HelpDrawer typography. Tight, scannable copy
+     since this is reference material the LD pulls open mid-task. */
+  .help-content h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    margin: 18px 0 6px;
+    letter-spacing: -0.005em;
+  }
+  .help-content h3:first-child {
+    margin-top: 0;
+  }
+  .help-content p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: theme("colors.ink.700");
+    margin-bottom: 10px;
+  }
+  .help-content ul {
+    margin: 6px 0 12px;
+    padding-left: 18px;
+    list-style: disc;
+  }
+  .help-content li {
+    font-size: 13px;
+    line-height: 1.55;
+    color: theme("colors.ink.700");
+    margin-bottom: 6px;
+  }
+  .help-content strong {
+    font-weight: 700;
+    color: theme("colors.ink.900");
+  }
+
   /* Divider between SuiteTiles and HeroComposer — soft "or" split. */
   .hero-composer-divider {
     display: flex;
@@ -2478,6 +2512,15 @@
 @keyframes progress-band-shimmer {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+/* Track-H / H3: HelpDrawer slide-in from the right edge. */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Chat message arrival animation (B3-tune-a) — paired with .msg-tool
