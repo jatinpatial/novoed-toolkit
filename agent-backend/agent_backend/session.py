@@ -15,7 +15,13 @@ from claude_agent_sdk import (
 )
 
 from .bridge import ToolBridge
-from .config import SYSTEM_PROMPT_FILE, TOOL_CALL_TIMEOUT_SECONDS
+from .config import (
+    MODEL_ARCHITECT,
+    MODEL_FALLBACK,
+    MODEL_WORKER,
+    SYSTEM_PROMPT_FILE,
+    TOOL_CALL_TIMEOUT_SECONDS,
+)
 from .orchestrator import BuildOrchestrator, _extract_usage
 from .ui_tools import ALLOWED_TOOL_NAMES, build_ui_mcp_server
 
@@ -125,10 +131,16 @@ class Session:
         # tells the SDK to use --system-prompt-file <path> instead;
         # subprocess args drop to a few hundred bytes regardless of
         # prompt size. See config.py for the file-write logic.
+        # polish-17a: chat session runs Course Architect (MODE 1) most
+        # often — outline quality matters, so default to MODEL_ARCHITECT
+        # (Opus-tier when configured). Falls through to SDK default
+        # (currently Opus on BCG U subscription) when env var unset.
         options = ClaudeAgentOptions(
             system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": ui_server},
             allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_ARCHITECT,
+            fallback_model=MODEL_FALLBACK,
         )
         self._client = ClaudeSDKClient(options=options)
         await self._client.connect()
@@ -284,10 +296,15 @@ class Session:
         )
 
         init_start = time.monotonic()
+        # polish-17a: KC build runs Quiz Builder (MODE 4) — worker tier.
+        # Sonnet-grade quality is sufficient for question generation;
+        # cost amplification matters most here for KC-Studio volume.
         options = ClaudeAgentOptions(
             system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": build_ui_mcp_server(self.bridge)},
             allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_WORKER,
+            fallback_model=MODEL_FALLBACK,
         )
         client = ClaudeSDKClient(options=options)
         try:

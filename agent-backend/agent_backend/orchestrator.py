@@ -72,7 +72,7 @@ from claude_agent_sdk import (
 )
 
 from .bridge import ToolBridge
-from .config import SYSTEM_PROMPT_FILE
+from .config import MODEL_FALLBACK, MODEL_WORKER, SYSTEM_PROMPT_FILE
 from .ui_tools import ALLOWED_TOOL_NAMES, build_ui_mcp_server
 
 log = logging.getLogger(__name__)
@@ -743,10 +743,18 @@ class BuildOrchestrator:
         because write_lesson is what actually mutates Course state.
         """
         init_start = time.monotonic()
+        # polish-17a: orchestrator mini-sessions use the WORKER model
+        # tier. Lesson Writer / Quiz Builder / Case Study Designer run
+        # at high volume per build (12-30 mini-sessions for a 4-week
+        # course); a Sonnet-grade worker hits ~65% cost reduction vs
+        # all-Opus with no observed quality regression on L&D content.
+        # Falls through to SDK default when env var unset.
         options = ClaudeAgentOptions(
             system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": build_ui_mcp_server(self._bridge)},
             allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_WORKER,
+            fallback_model=MODEL_FALLBACK,
         )
         client = ClaudeSDKClient(options=options)
         await client.connect()
@@ -952,10 +960,18 @@ class BuildOrchestrator:
         intact (file SYSTEM_PROMPT, shared bridge, agent introspects
         via list_structure + writes via write_knowledge_check)."""
         init_start = time.monotonic()
+        # polish-17a: orchestrator mini-sessions use the WORKER model
+        # tier. Lesson Writer / Quiz Builder / Case Study Designer run
+        # at high volume per build (12-30 mini-sessions for a 4-week
+        # course); a Sonnet-grade worker hits ~65% cost reduction vs
+        # all-Opus with no observed quality regression on L&D content.
+        # Falls through to SDK default when env var unset.
         options = ClaudeAgentOptions(
             system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": build_ui_mcp_server(self._bridge)},
             allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_WORKER,
+            fallback_model=MODEL_FALLBACK,
         )
         client = ClaudeSDKClient(options=options)
         await client.connect()
@@ -1134,10 +1150,18 @@ class BuildOrchestrator:
         + parent module context.
         """
         init_start = time.monotonic()
+        # polish-17a: orchestrator mini-sessions use the WORKER model
+        # tier. Lesson Writer / Quiz Builder / Case Study Designer run
+        # at high volume per build (12-30 mini-sessions for a 4-week
+        # course); a Sonnet-grade worker hits ~65% cost reduction vs
+        # all-Opus with no observed quality regression on L&D content.
+        # Falls through to SDK default when env var unset.
         options = ClaudeAgentOptions(
             system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
             mcp_servers={"ui": build_ui_mcp_server(self._bridge)},
             allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_WORKER,
+            fallback_model=MODEL_FALLBACK,
         )
         client = ClaudeSDKClient(options=options)
         await client.connect()

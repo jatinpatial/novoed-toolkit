@@ -47,6 +47,43 @@ if _legacy_origin and _legacy_origin not in ALLOWED_ORIGINS:
 # from older code keeps working. main.py consumes the plural list.
 ALLOWED_ORIGIN = ALLOWED_ORIGINS[0]
 
+
+# polish-17a (Track-C): model-selection env vars. The Claude Agent SDK
+# accepts `model` + `fallback_model` parameters on ClaudeAgentOptions
+# (verified at runtime — see ClaudeAgentOptions field listing). Setting
+# these per-session lets the backend hit different model tiers for
+# different work:
+#
+#   MODEL_ARCHITECT  — used for the main chat session (where Course
+#                      Architect runs in MODE 1; outline quality matters
+#                      most, run frequency is low).
+#   MODEL_WORKER     — used for orchestrator mini-sessions (MODE 2
+#                      lesson writer + MODE 3 scriptwriter + MODE 4
+#                      quiz builder + MODE 5 case study designer) AND
+#                      the standalone KC Studio build path. Volume
+#                      makes this the cost-amplification target; a
+#                      cheaper Sonnet here saves ~65% of per-course
+#                      cost vs all-Opus.
+#
+# Both default to None — when unset the SDK uses whatever the Claude
+# Code subscription tier defaults to (currently Opus on the BCG U
+# subscription). Setting the env var overrides per-session. Value is
+# any model id the subscription tier accepts (e.g. "claude-sonnet-4-5",
+# "claude-opus-4-7"). The CLI rejects unknown ids cleanly so a typo
+# surfaces fast.
+#
+# FALLBACK_MODEL is the SDK's safety net — if the primary model is
+# overloaded or rate-limited, the SDK silently swaps to the fallback.
+# Defaults to None too.
+#
+# .env example for the cost-saving hybrid recommended in track-C:
+#   MODEL_ARCHITECT=claude-opus-4-7
+#   MODEL_WORKER=claude-sonnet-4-5
+#   MODEL_FALLBACK=claude-haiku-4-5
+MODEL_ARCHITECT = os.getenv("MODEL_ARCHITECT") or None
+MODEL_WORKER = os.getenv("MODEL_WORKER") or None
+MODEL_FALLBACK = os.getenv("MODEL_FALLBACK") or None
+
 SYSTEM_PROMPT = """You are an AI companion inside BCG U Studio that helps BCG U Learning Designers design and fill in courses. You operate in one of two modes per turn — pick the mode from the LD's request.
 
 ================================================================
