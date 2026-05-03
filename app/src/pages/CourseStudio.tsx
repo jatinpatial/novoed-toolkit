@@ -1139,6 +1139,14 @@ interface LeftSidebarProps {
 
 function LeftSidebar({ course, am, al, viewMode, leftPane, setLeftPane, onSelect, onSelectModule, onUpdate, onCollapse, onAddMaterial, onRemoveMaterial }: LeftSidebarProps) {
   const matCount = course.materials?.length ?? 0;
+  // sprint-2-5: outline-lock state. While the orchestrator is
+  // actively building lessons the outline tree edits are paused —
+  // the agent is concurrently mutating the course tree, and a
+  // simultaneous LD edit would race. Navigation (click a lesson
+  // row to view it) stays enabled so the LD can watch the build
+  // unfold across the canvas.
+  const { orchestratorState } = useAgent();
+  const isBuilding = orchestratorState.phase === "building";
   return (
     <aside className="w-64 flex-shrink-0 bg-white border-r border-ink-200 flex flex-col">
       <div className="h-11 flex items-center px-2 border-b border-ink-200 gap-1">
@@ -1166,8 +1174,21 @@ function LeftSidebar({ course, am, al, viewMode, leftPane, setLeftPane, onSelect
         </button>
       </div>
 
+      {/* sprint-2-5: edits-paused badge. Visible only during phase=
+          "building"; explains why the add/delete/title controls
+          below are disabled. Brand-tinted to match the build-progress
+          band's visual language. Pulsing dot signals "active" state. */}
+      {isBuilding && leftPane === "outline" && (
+        <div className="outline-edits-paused-badge">
+          <span className="outline-edits-paused-dot" aria-hidden="true" />
+          <span>
+            <strong>Building</strong> — edits paused
+          </span>
+        </div>
+      )}
+
       {leftPane === "outline" ? (
-        <CourseOutlineBody course={course} am={am} al={al} viewMode={viewMode} onSelect={onSelect} onSelectModule={onSelectModule} onUpdate={onUpdate} />
+        <CourseOutlineBody course={course} am={am} al={al} viewMode={viewMode} onSelect={onSelect} onSelectModule={onSelectModule} onUpdate={onUpdate} isBuilding={isBuilding} />
       ) : (
         <MaterialsShelf
           materials={course.materials ?? []}
@@ -1182,8 +1203,20 @@ function LeftSidebar({ course, am, al, viewMode, leftPane, setLeftPane, onSelect
 /* ═══════════════════════════════════════════════════════════════════════════
    OUTLINE BODY — modules & lessons list (rendered inside LeftSidebar)
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule, onUpdate }: any) {
+function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule, onUpdate, isBuilding }: any) {
+  // sprint-2-5: tiny helper that turns mutation calls into no-ops
+  // during a build, with a one-line toast so the LD knows their
+  // click registered but was deferred. Wrapped on every mutating
+  // path below. Navigation (onSelect / onSelectModule) is NOT
+  // wrapped — clicking a lesson row to view it stays live.
+  function blockedDuringBuild(): boolean {
+    if (!isBuilding) return false;
+    toast("Edits paused while the course is building. Cancel or wait for completion.", false);
+    return true;
+  }
+
   function addModule() {
+    if (blockedDuringBuild()) return;
     onUpdate((c: Course) => {
       const mi = c.modules.length + 1;
       c.modules.push({ id: rid(), title: "Module " + mi, lessons: [{ id: rid(), title: mi + ".1 New Lesson", duration: 5, blocks: [] }] });
@@ -1191,6 +1224,7 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
   }
 
   function addLesson(mi: number) {
+    if (blockedDuringBuild()) return;
     onUpdate((c: Course) => {
       const m = c.modules[mi];
       if (!m) return;
@@ -1200,6 +1234,7 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
   }
 
   function removeLesson(mi: number, li: number) {
+    if (blockedDuringBuild()) return;
     onUpdate((c: Course) => {
       const m = c.modules[mi];
       if (!m || m.lessons.length <= 1) return;
@@ -1208,6 +1243,7 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
   }
 
   function removeModule(mi: number) {
+    if (blockedDuringBuild()) return;
     onUpdate((c: Course) => {
       if (c.modules.length <= 1) return;
       c.modules.splice(mi, 1);
@@ -1251,11 +1287,15 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 <span className="outline-module-num">{mi + 1}</span>
                 <input
                   value={m.title}
-                  onChange={(e) => onUpdate((c: Course) => { c.modules[mi].title = e.target.value; })}
+                  onChange={(e) => {
+                    if (isBuilding) return;
+                    onUpdate((c: Course) => { c.modules[mi].title = e.target.value; });
+                  }}
                   onClick={(e) => e.stopPropagation()}
+                  readOnly={isBuilding}
                   className="outline-module-title"
                 />
-                {course.modules.length > 1 && (
+                {course.modules.length > 1 && !isBuilding && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); if (confirm("Delete module '" + m.title + "'?")) removeModule(mi); }}
@@ -1315,7 +1355,7 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                         Falls back to the legacy chip at idle. Read-only
                         in 2-2 — the row's onSelect still fires. */}
                     <LessonTile absoluteIndex={moduleStartIdx + li} blockCount={l.blocks.length} />
-                    {m.lessons.length > 1 && (
+                    {m.lessons.length > 1 && !isBuilding && (
                       <button
                         onClick={(e) => { e.stopPropagation(); if (confirm("Delete lesson?")) removeLesson(mi, li); }}
                         className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-red-500 transition-opacity flex-shrink-0"
@@ -1328,17 +1368,21 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 );
               })}
             </div>
-            <button onClick={() => addLesson(mi)} className="outline-add-lesson">
-              + lesson
-            </button>
+            {!isBuilding && (
+              <button onClick={() => addLesson(mi)} className="outline-add-lesson">
+                + lesson
+              </button>
+            )}
           </div>
           );
         })}
       </div>
 
-      <button onClick={addModule} className="mx-3 my-3 py-2 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
-        <Plus size={12} /> Add module
-      </button>
+      {!isBuilding && (
+        <button onClick={addModule} className="mx-3 my-3 py-2 rounded-lg border-2 border-dashed border-ink-200 text-xs font-semibold text-ink-500 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50 transition flex items-center justify-center gap-1.5">
+          <Plus size={12} /> Add module
+        </button>
+      )}
     </>
   );
 }
