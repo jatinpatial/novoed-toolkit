@@ -65,11 +65,19 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
         className="w-full max-w-[480px] h-full bg-white shadow-elevated flex flex-col animate-slide-in-right"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="px-5 h-12 border-b border-ink-200 flex items-center justify-between flex-shrink-0">
-          <h2 id="help-drawer-title" className="text-sm font-bold text-ink-900">
-            Help &amp; guides
-          </h2>
+        {/* Header — Track-P / P3 adds the BCG U logo for brand
+            consistency with the dashboard hero + welcome modal. */}
+        <div className="px-5 h-14 border-b border-ink-200 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <img
+              src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
+              alt="BCG U"
+              className="block h-5"
+            />
+            <h2 id="help-drawer-title" className="text-sm font-bold text-ink-900">
+              Help &amp; guides
+            </h2>
+          </div>
           <button
             onClick={onClose}
             className="w-7 h-7 rounded-md text-ink-400 hover:text-ink-900 hover:bg-ink-100 flex items-center justify-center"

@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { SidebarNav } from "./SidebarNav";
 import { SidebarFooter } from "./SidebarFooter";
 
@@ -24,7 +25,14 @@ interface SidebarProps {
 export function Sidebar({ onShowWelcome }: SidebarProps = {}) {
   return (
     <aside className="w-60 flex-shrink-0 surface-1 border-r border-ink-200 flex flex-col">
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-ink-200">
+      {/* Track-P / P4: header is clickable, navigates home from any
+          page. Ground-floor "click the logo to go home" affordance
+          users expect from product apps. */}
+      <Link
+        to="/"
+        className="h-16 flex items-center gap-3 px-5 border-b border-ink-200 hover:bg-ink-50 transition-colors"
+        title="Go home"
+      >
         <div className="w-9 h-9 rounded-card bg-brand-gradient flex items-center justify-center text-white shadow-resting">
           <Sparkles size={17} strokeWidth={2.5} />
         </div>
@@ -32,7 +40,7 @@ export function Sidebar({ onShowWelcome }: SidebarProps = {}) {
           <div className="text-h3 text-ink-900 leading-tight tracking-tight">BCG U Studio</div>
           <div className="text-caption text-ink-500 leading-tight">Learning design platform</div>
         </div>
-      </div>
+      </Link>
 
       <SidebarNav />
       <SidebarFooter onShowWelcome={onShowWelcome} />

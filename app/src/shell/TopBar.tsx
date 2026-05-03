@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Command, HelpCircle, LogOut, Search, Settings } from "lucide-react";
 import { B, type BrandKey } from "../brand/tokens";
 import { clearUser, getUser, initialsFor, subscribeUser, type StudioUser } from "../store/user";
@@ -66,6 +67,17 @@ const BRAND_TOOLTIP = "Theme used in preview & export";
 
 export function TopBar({ onSearch, onShowHelp, onShowWelcome }: Props) {
   const [brand, setBrand] = useActiveBrand();
+  // Track-P / P5: scope the brand toggle to surfaces where it
+  // matters. User feedback: brand toggle on the home page is
+  // cognitive overhead — the LD hasn't picked a Studio yet, so
+  // there's nothing to brand. Show it only on Infographic Studio
+  // routes (where the rendered output uses the brand colors).
+  // Course / Script / KC studios have their own brand handling
+  // baked into the export path; they don't need the top-level
+  // toggle either. Future: surface it on lesson canvas only when
+  // an export is in progress.
+  const location = useLocation();
+  const showBrandToggle = location.pathname.startsWith("/infographics");
   // Track-H: local user profile. Subscribes to studio.user changes so
   // a fresh save (WelcomeModal submit) updates the avatar without a
   // page refresh.
@@ -116,34 +128,36 @@ export function TopBar({ onSearch, onShowHelp, onShowWelcome }: Props) {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-ink-500">
-          <span className="font-medium">Brand</span>
-        </div>
-        {/* B3d: title attribute on the toggle group; per-button
-            color swatch shows each brand's primary color so the LD
-            sees "BCG = green / BCG U = darker green / Client = blue"
-            at a glance even before hovering for the tooltip. */}
-        <div
-          className="flex items-center gap-0.5 p-0.5 rounded-lg bg-ink-100"
-          title={BRAND_TOOLTIP}
-        >
-          {(Object.keys(B) as BrandKey[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setBrand(k)}
-              className={`flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-semibold transition ${
-                brand === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"
-              }`}
+        {showBrandToggle && (
+          <>
+            <div className="flex items-center gap-1.5 text-xs text-ink-500">
+              <span className="font-medium">Brand</span>
+            </div>
+            {/* B3d: title attribute on the toggle group; per-button
+                color swatch shows each brand's primary color. */}
+            <div
+              className="flex items-center gap-0.5 p-0.5 rounded-lg bg-ink-100"
+              title={BRAND_TOOLTIP}
             >
-              <span
-                className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-                style={{ background: B[k].pri }}
-                aria-hidden="true"
-              />
-              {B[k].n}
-            </button>
-          ))}
-        </div>
+              {(Object.keys(B) as BrandKey[]).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setBrand(k)}
+                  className={`flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-semibold transition ${
+                    brand === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800"
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                    style={{ background: B[k].pri }}
+                    aria-hidden="true"
+                  />
+                  {B[k].n}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Track-H: persistent help icon. Opens HelpDrawer; Cmd/Ctrl+?
             shortcut also wired above. Sits between brand toggle and

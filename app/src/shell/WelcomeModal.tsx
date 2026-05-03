@@ -126,9 +126,14 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
           >
             <X size={16} />
           </button>
-          <div className="w-10 h-10 rounded-lg bg-brand-gradient text-white flex items-center justify-center mb-4">
-            <Sparkles size={18} strokeWidth={2.5} />
-          </div>
+          {/* Track-P / P3: BCG U logo at the top of the welcome
+              modal. Replaces the generic Sparkles tile so the LD
+              sees the brand mark immediately. */}
+          <img
+            src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
+            alt="BCG U"
+            className="block h-7 mb-3"
+          />
           <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1.5">
             Welcome to BCG U Studio
           </div>

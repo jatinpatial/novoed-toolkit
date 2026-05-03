@@ -5,6 +5,7 @@ import { AppShell } from "../shell/AppShell";
 import { MeshHero } from "../shell/MeshHero";
 import { HeroComposer } from "../shell/HeroComposer";
 import { SuiteTiles } from "../shell/SuiteTiles";
+import { ContinueBar } from "../shell/ContinueBar";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
 import { CourseCardPhoto } from "../components/CourseCardPhoto";
@@ -179,19 +180,30 @@ export default function Dashboard() {
       <WelcomeModal open={welcomeOpen} onClose={dismissWelcome} />
 
       <MeshHero>
-        <div className="hero-eyebrow">BCG U · AI Learning Design Studio</div>
+        {/* Track-P / P3: BCG U logo at the top of the hero. Dark
+            version since the mesh hero background is light. */}
+        <img
+          src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
+          alt="BCG U"
+          className="hero-logo"
+        />
+        <div className="hero-eyebrow">AI Learning Design Studio</div>
         <h1 className="hero-title">
           What will you <span className="hero-title-accent">design</span> today?
         </h1>
         <p className="hero-subtitle">
-          Start from a brief, drop a deck, or browse the catalog. Studio Copilot
-          drafts the structure; you refine and ship.
+          Drop a deck, brief in chat, or pick a Studio. Studio Copilot drafts
+          the structure; you refine and ship.
         </p>
 
-        {/* polish-18a: four-Studio suite tiles. Primary entry path —
-            sits ABOVE the composer so all four Studios get equal
-            weight. Composer is now the secondary "describe a brief"
-            path below. */}
+        {/* Track-P / P6: continue-where-you-left-off bar. Returns
+            null when no prior work exists — fresh-install LDs see
+            only the suite tiles + composer. */}
+        <ContinueBar />
+
+        {/* polish-18a + Track-P / P1: hero Course Studio + 3
+            secondary tiles. Composer is now tertiary, below the
+            tiles, separated by a soft divider. */}
         <SuiteTiles />
 
         <div className="hero-composer-divider">
