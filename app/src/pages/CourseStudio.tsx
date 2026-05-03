@@ -2683,58 +2683,47 @@ function InteractiveAccordion({ block, brand }: { block: Block; brand: BrandKey 
   const hiddenCount = Math.max(0, items.length - 3);
 
   return (
-    <div>
+    <div
+      /* polish-9d: brand-color CSS variables exposed on the wrapper so
+         the .accordion-item child rules (in index.css) can read them.
+         Avoids per-item inline styles for hover / transition states
+         that need pseudo-classes :hover can't see. */
+      style={
+        {
+          "--acc-border": b.n2,
+          "--acc-bg-rest": b.wh,
+          "--acc-bg-open": b.priLt,
+          "--acc-bg-hover": b.priLt,
+          "--acc-fg": b.tx,
+          "--acc-body-fg": b.txL,
+        } as React.CSSProperties
+      }
+    >
       {visible.map((it, i) => {
         const isOpen = openSet.has(i);
         return (
           <div
             key={i}
-            style={{
-              border: `1px solid ${b.n2}`,
-              borderRadius: 7,
-              marginBottom: 5,
-              overflow: "hidden",
-            }}
+            className={`accordion-item${isOpen ? " accordion-item-open" : ""}`}
           >
             <button
               type="button"
               onClick={(e) => toggle(i, e)}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: b.tx,
-                background: isOpen ? b.priLt : b.wh,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
+              className="accordion-title"
               aria-expanded={isOpen}
             >
               <span>{it.title}</span>
-              <span aria-hidden="true">{isOpen ? "▲" : "▼"}</span>
+              <span className="accordion-chevron" aria-hidden="true">
+                ▼
+              </span>
             </button>
-            {isOpen && (
-              <div
-                style={{
-                  padding: "10px 14px",
-                  fontSize: 12,
-                  color: b.txL,
-                  lineHeight: 1.7,
-                }}
-                /* polish-6b: render **bold** markdown in accordion bodies.
-                   renderInlineMd HTML-escapes first, so the dangerouslySet
-                   call here is safe against tag-injection from authored
-                   content. */
-                dangerouslySetInnerHTML={{
-                  __html: renderInlineMd(it.desc || ""),
-                }}
-              />
-            )}
+            <div
+              className="accordion-body"
+              aria-hidden={!isOpen}
+              dangerouslySetInnerHTML={{
+                __html: renderInlineMd(it.desc || ""),
+              }}
+            />
           </div>
         );
       })}

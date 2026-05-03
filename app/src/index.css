@@ -1392,6 +1392,98 @@
     font-weight: 500;
   }
 
+  /* polish-9d: SCORM-style polish for InteractiveAccordion. Targets
+     class names emitted by the React component; brand colors come
+     in via --acc-* CSS variables set on the wrapper.
+
+     Behaviors:
+       - Smooth max-height transition on body expand/collapse (250ms)
+       - Title-row hover: subtle bg shift signaling clickable
+       - Open state: brand-tinted bg + small box-shadow elevation
+       - Chevron rotates 180deg on open (▼ → ▲ visual via rotate)
+
+     Pre-polish-9d the accordion was inert-looking even though it
+     toggled — instant snap, no hover affordance, no sense of
+     "this is a real interactive component". Now reads SCORM-style. */
+  .accordion-item {
+    border: 1px solid var(--acc-border);
+    border-radius: 7px;
+    margin-bottom: 5px;
+    overflow: hidden;
+    transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .accordion-item-open {
+    box-shadow: 0 4px 12px rgba(0, 166, 81, 0.10);
+    border-color: theme("colors.brand.300");
+  }
+  .accordion-title {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--acc-fg);
+    background: var(--acc-bg-rest);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .accordion-title:hover {
+    background: var(--acc-bg-hover);
+  }
+  .accordion-item-open .accordion-title {
+    background: var(--acc-bg-open);
+  }
+  .accordion-chevron {
+    display: inline-block;
+    font-size: 10px;
+    color: theme("colors.ink.500");
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: rotate(0deg);
+  }
+  .accordion-item-open .accordion-chevron {
+    transform: rotate(180deg);
+    color: theme("colors.brand.700");
+  }
+  .accordion-body {
+    overflow: hidden;
+    max-height: 0;
+    padding: 0 16px;
+    font-size: 12px;
+    color: var(--acc-body-fg);
+    line-height: 1.7;
+    transition: max-height 260ms cubic-bezier(0.4, 0, 0.2, 1),
+                padding 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+  }
+  .accordion-item-open .accordion-body {
+    /* 1000px is a cheap "tall enough for any reasonable accordion"
+       — content shorter than that gets the natural collapse-on-
+       transition feel; longer accordion bodies clip but still
+       expand. The alternative (content-aware height via JS resize-
+       observer) is overkill for this surface. */
+    max-height: 1000px;
+    padding: 12px 16px;
+    opacity: 1;
+  }
+
+  /* polish-9d: hover-lift on the editor's interactive flipcard
+     buttons. The iframe preview already has this via polish-9b-preview;
+     this matches the affordance on the canvas surface. The button
+     itself gets a small translate-up; the 3D inner-flip transform is
+     React-state-driven so we leave that alone. */
+  .lesson-canvas-pane button[aria-label*="click to flip"] {
+    transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .lesson-canvas-pane button[aria-label*="click to flip"]:hover {
+    transform: translateY(-2px);
+  }
+
   .outline-add-lesson {
     margin: 4px 0 0 8px;
     padding: 6px 10px;
