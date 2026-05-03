@@ -1626,6 +1626,202 @@
     margin-top: 2px;
   }
 
+  /* Track-G / G3: InfographicRenderer styles. Renders inside
+     .infographic-render-host on the InfographicStudio page, captured
+     by html2canvas for the PNG download — so all visuals are real
+     CSS / DOM, no external assets except lucide icons (which render
+     as SVG and capture cleanly). Uses brand cascade vars throughout. */
+  .infographic-render-host {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid theme("colors.ink.200");
+    overflow: hidden;
+  }
+  .ig-frame {
+    padding: 32px 36px 36px;
+    background: white;
+    color: theme("colors.ink.900");
+  }
+  .ig-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid theme("colors.brand.500");
+  }
+  .ig-title {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: theme("colors.ink.900");
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+  }
+  .ig-subtitle {
+    font-size: 14px;
+    color: theme("colors.ink.600");
+    margin: 0;
+    line-height: 1.5;
+  }
+  .ig-body {
+    padding-top: 4px;
+  }
+  .ig-point-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    margin: 0;
+    line-height: 1.3;
+  }
+  .ig-point-heading-large {
+    font-size: 16px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    margin: 0;
+    line-height: 1.3;
+  }
+  .ig-point-body {
+    font-size: 13px;
+    color: theme("colors.ink.700");
+    line-height: 1.55;
+    margin: 6px 0 0;
+  }
+  .ig-icon { color: theme("colors.brand.700"); flex-shrink: 0; }
+  .ig-icon-large { color: theme("colors.brand.700"); flex-shrink: 0; width: 22px; height: 22px; }
+  .ig-overflow-note {
+    margin-top: 14px;
+    font-size: 11px;
+    color: theme("colors.ink.500");
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* Style: Process — vertical chain of numbered cards with arrows */
+  .ig-process { display: flex; flex-direction: column; gap: 10px; }
+  .ig-process-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border: 1px solid theme("colors.ink.200");
+    border-radius: 10px;
+    background: white;
+  }
+  .ig-process-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--brand-500, #29BA74);
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ig-process-content { flex: 1; min-width: 0; }
+  .ig-process-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .ig-process-arrow {
+    position: absolute;
+    right: -2px;
+    bottom: -16px;
+    color: theme("colors.brand.500");
+    transform: rotate(90deg);
+  }
+
+  /* Style: Quadrant — 2x2 grid */
+  .ig-quadrant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+  }
+  .ig-quadrant-cell {
+    padding: 16px;
+    border: 1px solid theme("colors.ink.200");
+    border-top: 3px solid theme("colors.brand.500");
+    border-radius: 10px;
+    background: theme("colors.brand.50");
+    min-height: 120px;
+  }
+  .ig-quadrant-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+
+  /* Style: Comparison — side-by-side columns */
+  .ig-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .ig-comparison-col {
+    padding: 18px;
+    border: 1px solid theme("colors.ink.200");
+    border-top: 3px solid theme("colors.brand.500");
+    border-radius: 10px;
+    background: white;
+  }
+  .ig-comparison-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+  /* Style: Numbered list — large numbers + content */
+  .ig-numbered-list { display: flex; flex-direction: column; gap: 14px; }
+  .ig-numbered-row {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-bottom: 1px solid theme("colors.ink.100");
+  }
+  .ig-numbered-row:last-child { border-bottom: none; }
+  .ig-numbered-large {
+    flex-shrink: 0;
+    font-size: 36px;
+    font-weight: 800;
+    color: theme("colors.brand.500");
+    line-height: 1;
+    width: 40px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .ig-numbered-content { flex: 1; min-width: 0; }
+  .ig-numbered-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+
+  /* Style: Timeline — vertical with marker dots */
+  .ig-timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+  .ig-timeline-line {
+    position: absolute;
+    left: 14px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: theme("colors.brand.300");
+    border-radius: 1px;
+  }
+  .ig-timeline-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .ig-timeline-item:last-child { margin-bottom: 0; }
+  .ig-timeline-marker {
+    position: absolute;
+    left: -28px;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand-500, #29BA74);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+  .ig-timeline-marker .ig-icon { color: white; }
+  .ig-timeline-content { flex: 1; min-width: 0; padding-top: 2px; }
+
   /* Track-H / H3: HelpDrawer typography. Tight, scannable copy
      since this is reference material the LD pulls open mid-task. */
   .help-content h3 {

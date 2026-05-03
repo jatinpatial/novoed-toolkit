@@ -187,6 +187,9 @@ class Session:
         # ─── Track-B (KC Studio): standalone-KC build route ────────
         elif mtype == "build_kc":
             asyncio.create_task(self._run_kc_build(msg))
+        # ─── Track-G (Infographic Studio): standalone build route ──
+        elif mtype == "build_infographic":
+            asyncio.create_task(self._run_infographic_build(msg))
         elif mtype == "get_orchestrator_state":
             # Not async-heavy — but we still await rather than create_task
             # so the response lands in send-order with any other state
@@ -399,6 +402,156 @@ class Session:
                 "Additional notes from the LD:",
                 notes,
             ])
+        return "\n".join(lines)
+
+    async def _run_infographic_build(self, msg: dict[str, Any]) -> None:
+        """Track-G (Infographic Studio): standalone Infographic Builder
+        mini-session. Same shape as _run_kc_build — fresh
+        ClaudeSDKClient with the file SYSTEM_PROMPT (MODE 6 active),
+        shared bridge for the write_infographic round-trip, cost
+        telemetry on the infographic_built event.
+
+        Wire format
+          incoming: {
+            type: "build_infographic",
+            infographicId: str,
+            topic: str,
+            style: "process" | "quadrant" | "comparison"
+                 | "numbered_list" | "timeline",
+            pointCount: int (3-7),
+            notes: str (optional),
+          }
+          outgoing (success): {
+            type: "infographic_built",
+            infographicId: str,
+            durationMs, initMs, tokensIn, tokensOut, model, costUsd
+          }
+          outgoing (failure): {
+            type: "infographic_build_failed",
+            infographicId: str,
+            error: str,
+          }
+
+        Points themselves arrive on the FE via write_infographic tool
+        path — by the time infographic_built fires, FE state already
+        has them.
+        """
+        infographic_id = msg.get("infographicId") or ""
+        topic = msg.get("topic") or "Untitled infographic"
+        style = msg.get("style") or "numbered_list"
+        try:
+            point_count = int(msg.get("pointCount") or 5)
+        except (TypeError, ValueError):
+            point_count = 5
+        notes = (msg.get("notes") or "").strip()
+
+        if not infographic_id:
+            await self._send({
+                "type": "infographic_build_failed",
+                "infographicId": infographic_id,
+                "error": "Missing infographicId in build_infographic payload.",
+            })
+            return
+
+        log.info(
+            "build_infographic start — id=%s topic='%s' style=%s points=%d",
+            infographic_id, topic, style, point_count,
+        )
+
+        prompt = self._build_infographic_prompt(
+            infographic_id=infographic_id,
+            topic=topic,
+            style=style,
+            point_count=point_count,
+            notes=notes,
+        )
+
+        init_start = time.monotonic()
+        # polish-17a: worker-tier model — Infographic Builder is high-
+        # volume, low-stakes-per-call work; Sonnet-grade is enough.
+        options = ClaudeAgentOptions(
+            system_prompt={"type": "file", "path": SYSTEM_PROMPT_FILE},
+            mcp_servers={"ui": build_ui_mcp_server(self.bridge)},
+            allowed_tools=ALLOWED_TOOL_NAMES,
+            model=MODEL_WORKER,
+            fallback_model=MODEL_FALLBACK,
+        )
+        client = ClaudeSDKClient(options=options)
+        try:
+            await client.connect()
+            init_ms = int((time.monotonic() - init_start) * 1000)
+            start_ts = time.monotonic()
+            await client.query(prompt)
+            usage: dict[str, Any] = {}
+            async for event in client.receive_response():
+                if isinstance(event, ResultMessage):
+                    usage = dict(event.usage or {})
+                    model_usage = event.model_usage or {}
+                    if model_usage:
+                        model_name = next(iter(model_usage), None)
+                        if model_name:
+                            usage["model"] = model_name
+                    if event.total_cost_usd is not None:
+                        usage["total_cost_usd"] = event.total_cost_usd
+                    break
+            duration_ms = int((time.monotonic() - start_ts) * 1000)
+            metrics = _extract_usage(usage)
+            await self._send({
+                "type": "infographic_built",
+                "infographicId": infographic_id,
+                "durationMs": duration_ms,
+                "initMs": init_ms,
+                "tokensIn": metrics["tokens_in_total"],
+                "tokensOut": metrics["tokens_out"],
+                "model": metrics["model"],
+                "costUsd": metrics["cost_usd"],
+            })
+            log.info(
+                "infographic %s done — %dms (init %dms) tokens in=%s out=%s cost=$%s",
+                infographic_id, duration_ms, init_ms,
+                metrics["tokens_in_total"],
+                metrics["tokens_out"],
+                f"{metrics['cost_usd']:.4f}" if metrics["cost_usd"] is not None else "?",
+            )
+        except Exception as exc:
+            log.exception("build_infographic failed for id=%s", infographic_id)
+            await self._send({
+                "type": "infographic_build_failed",
+                "infographicId": infographic_id,
+                "error": str(exc),
+            })
+        finally:
+            try:
+                await client.disconnect()
+            except Exception:
+                log.warning(
+                    "infographic %s disconnect failed (non-fatal)",
+                    infographic_id, exc_info=True,
+                )
+
+    @staticmethod
+    def _build_infographic_prompt(
+        infographic_id: str,
+        topic: str,
+        style: str,
+        point_count: int,
+        notes: str,
+    ) -> str:
+        """Compose the MODE 6 prompt for an infographic build."""
+        lines = [
+            f"Build a standalone infographic on this topic: \"{topic}\".",
+            "",
+            f"Infographic id: {infographic_id}",
+            f"Style: {style}",
+            f"Point count: {point_count}  (must match exactly — split or merge ideas to hit this number)",
+            "",
+            "Steps:",
+            "1. If source materials are attached, call read_materials FIRST and ground the infographic in their frameworks and language. Source-grounding rules from the universal CONTENT RULES section apply: invisible attribution, no citations.",
+            f"2. Call write_infographic(infographic_id=\"{infographic_id}\", title, subtitle?, points=[…]) with EXACTLY {point_count} structured points.",
+            "3. Stop after the write_infographic call.",
+        ]
+        if notes:
+            lines.extend(["", "Additional notes from the LD:", notes])
         return "\n".join(lines)
 
     async def close(self) -> None:

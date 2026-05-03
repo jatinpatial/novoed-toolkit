@@ -272,6 +272,45 @@ def build_ui_mcp_server(bridge: ToolBridge):
     async def read_materials(args):
         return await _forward("read_materials", args)
 
+    # --- Track-G: infographic builder (MODE 6) ---
+
+    @tool(
+        "write_infographic",
+        (
+            "Write or replace an infographic — title + subtitle + 3-7 structured points. "
+            "Used by MODE 6 (Infographic Builder). Style drives layout (process / "
+            "quadrant / comparison / numbered_list / timeline); the FE-side renderer "
+            "switches on style to lay the points out appropriately. Each point carries "
+            "a heading (3-6 words), body (15-30 words), and optional iconHint (lucide "
+            "icon name like \"trending-up\", \"users\", \"shield\")."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "infographic_id": {"type": "string"},
+                "title": {"type": "string"},
+                "subtitle": {"type": "string"},
+                "points": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 7,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "heading": {"type": "string"},
+                            "body": {"type": "string"},
+                            "iconHint": {"type": "string"},
+                        },
+                        "required": ["heading", "body"],
+                    },
+                },
+            },
+            "required": ["infographic_id", "title", "points"],
+        },
+    )
+    async def write_infographic(args):
+        return await _forward("write_infographic", args)
+
     # --- synthesia scriptwriter ---
 
     @tool(
@@ -576,6 +615,7 @@ def build_ui_mcp_server(bridge: ToolBridge):
             propose_course_outline,
             write_lesson,
             read_materials,
+            write_infographic,
             write_script,
             write_knowledge_check,
             regenerate_question,
@@ -598,6 +638,7 @@ ALLOWED_TOOL_NAMES = [
     "mcp__ui__propose_course_outline",
     "mcp__ui__write_lesson",
     "mcp__ui__read_materials",
+    "mcp__ui__write_infographic",
     "mcp__ui__write_script",
     "mcp__ui__write_knowledge_check",
     "mcp__ui__regenerate_question",

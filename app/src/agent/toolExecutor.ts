@@ -105,6 +105,37 @@ export async function dispatchToolCall(
           : `No case study slot found with id ${caseStudyId}. (Course Architect plants slots; if none exist, ask the LD to add one.)`,
       };
     }
+    case "write_infographic": {
+      // Track-G: standalone Infographic Studio write path. Same
+      // ok/false silent-success protection as polish-16b's writeLesson.
+      const infographicId = asString(args.infographic_id, "infographic_id");
+      if (!actions.writeInfographic) {
+        throw new Error(
+          "write_infographic isn't supported here — open Infographic Studio (/infographics/new → /infographics/:id).",
+        );
+      }
+      const title = asString(args.title, "title");
+      const subtitle = typeof args.subtitle === "string" ? args.subtitle : "";
+      const rawPoints = Array.isArray(args.points) ? args.points : [];
+      const points = rawPoints.map((p, i) => {
+        if (!p || typeof p !== "object") {
+          throw new Error(`points[${i}] must be an object`);
+        }
+        const obj = p as Record<string, unknown>;
+        return {
+          heading: asString(obj.heading, `points[${i}].heading`),
+          body: asString(obj.body, `points[${i}].body`),
+          iconHint: typeof obj.iconHint === "string" ? obj.iconHint : undefined,
+        };
+      });
+      const result = actions.writeInfographic(infographicId, { title, subtitle, points });
+      return {
+        ok: result.ok,
+        message: result.ok
+          ? `Infographic written — ${points.length} point(s) on "${title}".`
+          : `No infographic found with id ${infographicId}. Call list_structure to verify.`,
+      };
+    }
     case "read_materials": {
       // Track-B: prefer course.materials when a course is open; fall
       // back to pendingMaterials (uploaded during brief flow before

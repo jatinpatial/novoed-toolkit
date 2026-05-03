@@ -25,6 +25,15 @@ export type ClientMessage =
       difficultyMix: ("recall" | "apply" | "analyze")[];
       questionTypes: ("mcq" | "short" | "scenario")[];
       notes?: string;
+    }
+  // ── Track-G (Infographic Studio): standalone infographic build ──
+  | {
+      type: "build_infographic";
+      infographicId: string;
+      topic: string;
+      style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+      pointCount: number;
+      notes?: string;
     };
 
 // Phase / per-target status enums — must stay in sync with the
@@ -102,7 +111,19 @@ export type ServerMessage =
       model: string | null;
       costUsd: number | null;
     }
-  | { type: "kc_build_failed"; kcId: string; error: string };
+  | { type: "kc_build_failed"; kcId: string; error: string }
+  // ── Track-G (Infographic Studio) ──────────────────────────────
+  | {
+      type: "infographic_built";
+      infographicId: string;
+      durationMs: number;
+      initMs: number;
+      tokensIn: number | null;
+      tokensOut: number | null;
+      model: string | null;
+      costUsd: number | null;
+    }
+  | { type: "infographic_build_failed"; infographicId: string; error: string };
 
 export interface ChatEntry {
   id: string;

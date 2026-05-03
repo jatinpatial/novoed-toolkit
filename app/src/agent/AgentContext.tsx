@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CaseStudy, Course, CourseShape, Material, QuizQuestion } from "../course/types";
+import type { InfographicPoint } from "../store/infographics";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
 import type {
@@ -78,6 +79,14 @@ export interface AgentActions {
   // Case Study Designer: fill content into a slot Course Architect planted.
   // ok=false if the case_study_id doesn't match a known slot.
   designCaseStudy: (caseStudyId: string, content: CaseStudyContent) => { ok: boolean };
+  // Track-G: Infographic Builder write path. Writes title + subtitle +
+  // structured points onto an Infographic record. ok=false when the
+  // infographicId doesn't match a known record (silent-success
+  // protection mirroring polish-16b's writeLesson contract).
+  writeInfographic?: (
+    infographicId: string,
+    payload: { title: string; subtitle?: string; points: InfographicPoint[] },
+  ) => { ok: boolean };
   setOutlineProposal?: (proposal: CourseOutlineProposal) => void;
   // Used by the "Open script editor" button in AgentChat after a
   // successful write_script. Walks the course tree, finds the block,
@@ -187,6 +196,27 @@ interface AgentContextValue {
     questionTypes: ("mcq" | "short" | "scenario")[];
     notes?: string;
   }) => void;
+  // ── Track-G (Infographic Studio): standalone build slice ───────
+  infographicBuilds: Record<
+    string,
+    | { status: "building" }
+    | {
+        status: "done";
+        durationMs: number;
+        costUsd: number | null;
+        tokensIn: number | null;
+        tokensOut: number | null;
+        model: string | null;
+      }
+    | { status: "failed"; error: string }
+  >;
+  sendBuildInfographic: (payload: {
+    infographicId: string;
+    topic: string;
+    style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+    pointCount: number;
+    notes?: string;
+  }) => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -273,6 +303,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   // simultaneous builds (rare) coexist. KC Studio result page
   // watches its own kcBuilds[kcId] for status transitions.
   const [kcBuilds, setKcBuilds] = useState<AgentContextValue["kcBuilds"]>({});
+  // Track-G: same per-id status map for Infographic Studio builds.
+  const [infographicBuilds, setInfographicBuilds] = useState<
+    AgentContextValue["infographicBuilds"]
+  >({});
 
   const appendMessage = useCallback((entry: ChatEntry) => {
     setMessages((prev) => [...prev, entry]);
@@ -348,6 +382,25 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setKcBuilds((prev) => ({
         ...prev,
         [kcId]: { status: "failed", error },
+      }));
+    },
+    onInfographicBuilt: (payload) => {
+      setInfographicBuilds((prev) => ({
+        ...prev,
+        [payload.infographicId]: {
+          status: "done",
+          durationMs: payload.durationMs,
+          costUsd: payload.costUsd,
+          tokensIn: payload.tokensIn,
+          tokensOut: payload.tokensOut,
+          model: payload.model,
+        },
+      }));
+    },
+    onInfographicBuildFailed: (infographicId, error) => {
+      setInfographicBuilds((prev) => ({
+        ...prev,
+        [infographicId]: { status: "failed", error },
       }));
     },
   });
@@ -449,6 +502,24 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     [sendRaw],
   );
 
+  // Track-G: parallel helper for Infographic Studio builds.
+  const sendBuildInfographic = useCallback(
+    (payload: {
+      infographicId: string;
+      topic: string;
+      style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+      pointCount: number;
+      notes?: string;
+    }) => {
+      setInfographicBuilds((prev) => ({
+        ...prev,
+        [payload.infographicId]: { status: "building" },
+      }));
+      sendRaw({ type: "build_infographic", ...payload });
+    },
+    [sendRaw],
+  );
+
   const value = useMemo<AgentContextValue>(
     () => ({
       status,
@@ -479,6 +550,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       refreshOrchestratorState,
       kcBuilds,
       sendBuildKc,
+      infographicBuilds,
+      sendBuildInfographic,
     }),
     [
       status,
@@ -507,6 +580,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       refreshOrchestratorState,
       kcBuilds,
       sendBuildKc,
+      infographicBuilds,
+      sendBuildInfographic,
     ],
   );
 

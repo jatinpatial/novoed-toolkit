@@ -30,6 +30,17 @@ interface UseAgentSocketArgs {
     costUsd: number | null;
   }) => void;
   onKcBuildFailed: (kcId: string, error: string) => void;
+  // ── Track-G (Infographic Studio): standalone build round-trip ────
+  onInfographicBuilt: (payload: {
+    infographicId: string;
+    durationMs: number;
+    initMs: number;
+    tokensIn: number | null;
+    tokensOut: number | null;
+    model: string | null;
+    costUsd: number | null;
+  }) => void;
+  onInfographicBuildFailed: (infographicId: string, error: string) => void;
 }
 
 export function useAgentSocket(args: UseAgentSocketArgs) {
@@ -112,6 +123,18 @@ export function useAgentSocket(args: UseAgentSocketArgs) {
           });
         } else if (msg.type === "kc_build_failed") {
           cb.onKcBuildFailed(msg.kcId, msg.error);
+        } else if (msg.type === "infographic_built") {
+          cb.onInfographicBuilt({
+            infographicId: msg.infographicId,
+            durationMs: msg.durationMs,
+            initMs: msg.initMs,
+            tokensIn: msg.tokensIn,
+            tokensOut: msg.tokensOut,
+            model: msg.model,
+            costUsd: msg.costUsd,
+          });
+        } else if (msg.type === "infographic_build_failed") {
+          cb.onInfographicBuildFailed(msg.infographicId, msg.error);
         }
       };
 

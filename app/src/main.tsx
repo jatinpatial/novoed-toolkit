@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import InfographicStudio from "./pages/InfographicStudio";
+import CreateInfographicPage from "./pages/CreateInfographicPage";
+import ComponentCatalogLegacy from "./pages/ComponentCatalogLegacy";
 import CourseStudio from "./pages/CourseStudio";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import CreateScriptPage from "./pages/CreateScriptPage";
@@ -29,7 +31,16 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrandBodyAttribute />
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/infographics" element={<InfographicStudio />} />
+        {/* Track-G: Infographic Studio (4th in the suite). Brief form
+            + result viewer wrapped in <AgentProvider> — both use
+            useAgent for the build round-trip. */}
+        <Route path="/infographics/new" element={<AgentProvider><CreateInfographicPage /></AgentProvider>} />
+        <Route path="/infographics/:id" element={<AgentProvider><InfographicStudio /></AgentProvider>} />
+        {/* Legacy components-catalog editor — kept under /infographics
+            for backward compat with component-kind projects (Project
+            store), but no longer surfaced in nav or suite tiles.
+            Renamed at-rest to ComponentCatalogLegacy.tsx. */}
+        <Route path="/infographics" element={<ComponentCatalogLegacy />} />
         <Route path="/courses" element={<CourseStudio />} />
         {/* C0: structured course-intake form. Wired from
             HeroComposer's "Detailed brief →" button. Mounted before
