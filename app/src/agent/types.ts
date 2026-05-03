@@ -14,7 +14,18 @@ export type ClientMessage =
   | { type: "build_full_course"; course: Course; shape?: CourseShape }
   | { type: "build_full_course_resume"; startFrom: number }
   | { type: "build_cancel" }
-  | { type: "get_orchestrator_state" };
+  | { type: "get_orchestrator_state" }
+  // ── Track-B (KC Studio): standalone knowledge-check build ───────
+  | {
+      type: "build_kc";
+      kcId: string;
+      topic: string;
+      syntheticLessonId: string;
+      questionCount: number;
+      difficultyMix: ("recall" | "apply" | "analyze")[];
+      questionTypes: ("mcq" | "short" | "scenario")[];
+      notes?: string;
+    };
 
 // Phase / per-target status enums — must stay in sync with the
 // Python `PhaseStatus` and `TargetStatus` literals in
@@ -79,7 +90,19 @@ export type ServerMessage =
   // `build_progress` is per-step; carries `kind` + step-specific
   // payload (e.g. `lessonIdx`, `lessonId`, `error`, `message`).
   | { type: "build_state"; state: OrchestratorState }
-  | ({ type: "build_progress"; kind: BuildProgressKind } & Record<string, unknown>);
+  | ({ type: "build_progress"; kind: BuildProgressKind } & Record<string, unknown>)
+  // ── Track-B (KC Studio): standalone-build round-trip ────────────
+  | {
+      type: "kc_built";
+      kcId: string;
+      durationMs: number;
+      initMs: number;
+      tokensIn: number | null;
+      tokensOut: number | null;
+      model: string | null;
+      costUsd: number | null;
+    }
+  | { type: "kc_build_failed"; kcId: string; error: string };
 
 export interface ChatEntry {
   id: string;

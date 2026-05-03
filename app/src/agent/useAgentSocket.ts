@@ -19,6 +19,17 @@ interface UseAgentSocketArgs {
   // ── sprint-2-1: orchestrator event hooks ───────────────────────────
   onBuildState: (state: OrchestratorState) => void;
   onBuildProgress: (kind: BuildProgressKind, payload: Record<string, unknown>) => void;
+  // ── Track-B (KC Studio): standalone build round-trip ──────────────
+  onKcBuilt: (payload: {
+    kcId: string;
+    durationMs: number;
+    initMs: number;
+    tokensIn: number | null;
+    tokensOut: number | null;
+    model: string | null;
+    costUsd: number | null;
+  }) => void;
+  onKcBuildFailed: (kcId: string, error: string) => void;
 }
 
 export function useAgentSocket(args: UseAgentSocketArgs) {
@@ -89,6 +100,18 @@ export function useAgentSocket(args: UseAgentSocketArgs) {
           // how to merge into UI state.
           const { type: _t, kind, ...payload } = msg;
           cb.onBuildProgress(kind, payload as Record<string, unknown>);
+        } else if (msg.type === "kc_built") {
+          cb.onKcBuilt({
+            kcId: msg.kcId,
+            durationMs: msg.durationMs,
+            initMs: msg.initMs,
+            tokensIn: msg.tokensIn,
+            tokensOut: msg.tokensOut,
+            model: msg.model,
+            costUsd: msg.costUsd,
+          });
+        } else if (msg.type === "kc_build_failed") {
+          cb.onKcBuildFailed(msg.kcId, msg.error);
         }
       };
 

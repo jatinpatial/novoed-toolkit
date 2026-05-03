@@ -1440,3 +1440,65 @@ async def export_course_docx(req: CourseExportRequest):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ─── Track-B: standalone KC export ────────────────────────────────────────────
+
+
+class KcExportRequest(BaseModel):
+    """Track-B (KC Studio): standalone knowledge-check download.
+
+    The Kc record is FE-side localStorage-persisted; FE POSTs the
+    full record to this endpoint when the LD clicks Download. The
+    rendering reuses _render_knowledge_check (same path as the
+    course-docx export's lesson + module KC sections), wrapped in
+    a focused single-page document with a brand-tinted header.
+    """
+    title: str = ""
+    topic: str = ""
+    questions: list[QuizQuestionModel] = []
+    brand: str | None = None
+
+
+@router.post("/kc-docx")
+async def export_kc_docx(req: KcExportRequest):
+    if not req.questions:
+        raise HTTPException(status_code=400, detail="kc has no questions to export")
+
+    _current_brand.set(req.brand or "bcgu")
+
+    doc = Document()
+    _set_docx_default_font(doc)
+
+    # Header — title + topic + question count.
+    title_text = req.title or req.topic or "Knowledge check"
+    p = doc.add_paragraph()
+    r = p.add_run("KNOWLEDGE CHECK")
+    r.bold = True
+    r.font.size = Pt(10)
+    r.font.color.rgb = _BCG_GREEN()
+    _h1(doc, title_text)
+    if req.topic and req.topic != title_text:
+        _body(doc, f"Topic: {req.topic}", italic=True, light=True)
+    _body(
+        doc,
+        f"{len(req.questions)} question{'s' if len(req.questions) != 1 else ''}",
+        italic=True,
+        light=True,
+    )
+    doc.add_paragraph()
+
+    # Reuse the canonical KC renderer with a generic scope label.
+    _render_knowledge_check(doc, QuizModel(questions=req.questions), "Questions")
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    stem = _safe_filename(f"{title_text}-kc")
+    filename = f"{stem}.docx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

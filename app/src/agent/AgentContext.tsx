@@ -159,6 +159,34 @@ interface AgentContextValue {
       socket auto-fires this on every (re)connect; this exposes a
       manual refresh handle for diagnostic use. */
   refreshOrchestratorState: () => void;
+  // ── Track-B (KC Studio): standalone KC build slice ─────────────
+  /** Per-kcId build status. KC Studio's result page reads this to
+      show loading / done / error states. Keyed by kcId so multiple
+      builds (rare) can coexist. */
+  kcBuilds: Record<
+    string,
+    | { status: "building" }
+    | {
+        status: "done";
+        durationMs: number;
+        costUsd: number | null;
+        tokensIn: number | null;
+        tokensOut: number | null;
+        model: string | null;
+      }
+    | { status: "failed"; error: string }
+  >;
+  /** Fire build_kc and set kcBuilds[kcId] = { status: "building" }.
+      Returns the kcId for caller convenience. */
+  sendBuildKc: (payload: {
+    kcId: string;
+    topic: string;
+    syntheticLessonId: string;
+    questionCount: number;
+    difficultyMix: ("recall" | "apply" | "analyze")[];
+    questionTypes: ("mcq" | "short" | "scenario")[];
+    notes?: string;
+  }) => void;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -241,6 +269,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [lastBuildProgress, setLastBuildProgress] = useState<
     { kind: BuildProgressKind; payload: Record<string, unknown> } | null
   >(null);
+  // Track-B (KC Studio): per-kcId build status. Keyed map so
+  // simultaneous builds (rare) coexist. KC Studio result page
+  // watches its own kcBuilds[kcId] for status transitions.
+  const [kcBuilds, setKcBuilds] = useState<AgentContextValue["kcBuilds"]>({});
 
   const appendMessage = useCallback((entry: ChatEntry) => {
     setMessages((prev) => [...prev, entry]);
@@ -298,6 +330,25 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     },
     onBuildProgress: (kind, payload) => {
       setLastBuildProgress({ kind, payload });
+    },
+    onKcBuilt: (payload) => {
+      setKcBuilds((prev) => ({
+        ...prev,
+        [payload.kcId]: {
+          status: "done",
+          durationMs: payload.durationMs,
+          costUsd: payload.costUsd,
+          tokensIn: payload.tokensIn,
+          tokensOut: payload.tokensOut,
+          model: payload.model,
+        },
+      }));
+    },
+    onKcBuildFailed: (kcId, error) => {
+      setKcBuilds((prev) => ({
+        ...prev,
+        [kcId]: { status: "failed", error },
+      }));
     },
   });
 
@@ -378,6 +429,26 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     sendRaw({ type: "get_orchestrator_state" });
   }, [sendRaw]);
 
+  // Track-B (KC Studio): kick off a standalone KC build. Sets the
+  // local kcBuilds[kcId] to "building" optimistically; BE responds
+  // with kc_built or kc_build_failed which onKcBuilt / onKcBuildFailed
+  // resolves into the slice.
+  const sendBuildKc = useCallback(
+    (payload: {
+      kcId: string;
+      topic: string;
+      syntheticLessonId: string;
+      questionCount: number;
+      difficultyMix: ("recall" | "apply" | "analyze")[];
+      questionTypes: ("mcq" | "short" | "scenario")[];
+      notes?: string;
+    }) => {
+      setKcBuilds((prev) => ({ ...prev, [payload.kcId]: { status: "building" } }));
+      sendRaw({ type: "build_kc", ...payload });
+    },
+    [sendRaw],
+  );
+
   const value = useMemo<AgentContextValue>(
     () => ({
       status,
@@ -406,6 +477,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       resumeBuild,
       cancelBuild,
       refreshOrchestratorState,
+      kcBuilds,
+      sendBuildKc,
     }),
     [
       status,
@@ -432,6 +505,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       resumeBuild,
       cancelBuild,
       refreshOrchestratorState,
+      kcBuilds,
+      sendBuildKc,
     ],
   );
 
