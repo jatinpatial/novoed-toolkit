@@ -18,19 +18,26 @@ import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-r
 export function SuiteTiles() {
   return (
     <section className="suite-tiles">
-      {/* Hero — Course Studio. Full-width, brand-gradient bg,
-          larger CTA. */}
+      {/* Hero — Course Studio. Full-width brand-gradient card with
+          shimmer overlay, paper-grain texture, Flagship ribbon, +
+          icon wiggle on hover. The premium-feel pieces are
+          intentionally subtle so the LD reads "this is the main
+          one" without it feeling loud. */}
       <Link to="/courses/new" className="suite-hero">
+        <span className="suite-hero-ribbon" aria-hidden="true">
+          Flagship
+        </span>
+        <div className="suite-hero-grain" aria-hidden="true" />
+        <div className="suite-hero-shimmer" aria-hidden="true" />
         <div className="suite-hero-icon">
           <BookOpen size={28} strokeWidth={2} />
         </div>
         <div className="suite-hero-content">
-          <div className="suite-hero-eyebrow">Flagship</div>
+          <div className="suite-hero-eyebrow">Build a full course</div>
           <h3 className="suite-hero-title">Course Studio</h3>
           <p className="suite-hero-desc">
-            Build a full multi-week course from a brief or source
-            material. Modules, lessons, knowledge checks, case studies
-            — drafted in one click.
+            Modules, lessons, knowledge checks, and case studies —
+            drafted in one click from a brief or your source material.
           </p>
         </div>
         <span className="suite-hero-cta">

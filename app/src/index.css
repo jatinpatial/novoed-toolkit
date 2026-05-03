@@ -1575,37 +1575,113 @@
     display: flex;
     align-items: center;
     gap: 22px;
-    padding: 26px 28px;
+    padding: 28px 30px;
     background: linear-gradient(
       135deg,
       var(--brand-500, #29BA74) 0%,
       var(--brand-700, #1B7A4F) 100%
     );
+    background-size: 140% 140%;
+    background-position: 0% 50%;
     color: white;
     border-radius: 18px;
     text-decoration: none;
-    box-shadow: 0 8px 28px rgba(0, 166, 81, 0.18);
-    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    /* Track-W: layered shadows for depth — close brand shadow +
+       wider ambient + subtle inner highlight at the top edge. */
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 8px 28px rgba(0, 166, 81, 0.18),
+      0 24px 48px -16px rgba(0, 166, 81, 0.20);
+    transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                background-position 800ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .suite-hero:hover,
   .suite-hero:focus-visible {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 36px rgba(0, 166, 81, 0.26);
+    transform: translateY(-3px);
+    background-position: 100% 50%;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.20) inset,
+      0 14px 40px rgba(0, 166, 81, 0.32),
+      0 32px 60px -20px rgba(0, 166, 81, 0.30);
     outline: none;
   }
+  /* Track-W: "Flagship" ribbon badge in the top-right corner. */
+  .suite-hero-ribbon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: white;
+  }
+  /* Track-W: paper-grain texture overlay for premium tactility.
+     SVG-noise pattern at 5% opacity — invisible at a glance, but
+     the eye reads the surface as "real". */
+  .suite-hero-grain {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.06;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+  /* Track-W: shimmer sweep on hover. Subtle white highlight band
+     glides across the card 800ms after hover starts. */
+  .suite-hero-shimmer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      120deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.18) 50%,
+      transparent 70%
+    );
+    background-size: 250% 100%;
+    background-position: -75% 0;
+    transition: background-position 1100ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .suite-hero:hover .suite-hero-shimmer,
+  .suite-hero:focus-visible .suite-hero-shimmer {
+    background-position: 175% 0;
+  }
   .suite-hero-icon {
+    position: relative;
+    z-index: 2;
     flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.20);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: white;
+    transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+                background 320ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .suite-hero:hover .suite-hero-icon,
+  .suite-hero:focus-visible .suite-hero-icon {
+    transform: rotate(-6deg) scale(1.06);
+    background: rgba(255, 255, 255, 0.28);
   }
   .suite-hero-content {
+    position: relative;
+    z-index: 2;
     flex: 1;
     min-width: 0;
   }
@@ -1632,18 +1708,27 @@
     max-width: 56ch;
   }
   .suite-hero-cta {
+    position: relative;
+    z-index: 2;
     flex-shrink: 0;
     align-self: center;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 18px;
+    padding: 11px 20px;
     background: white;
     color: theme("colors.brand.800");
     font-size: 13px;
     font-weight: 700;
     border-radius: 999px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.10),
+      0 1px 0 rgba(0, 0, 0, 0.04) inset;
+    transition: gap 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .suite-hero:hover .suite-hero-cta,
+  .suite-hero:focus-visible .suite-hero-cta {
+    gap: 9px;
   }
 
   .suite-secondary-label {
