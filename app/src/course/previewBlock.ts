@@ -181,8 +181,46 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
     }
 
     case "flipcard": {
-      const fcs = items.slice(0, 4).map((it) => '<div style="width:110px;height:90px;background:' + b.grad + ';border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:10px;gap:4px;"><div style="font-size:10px;font-weight:700;color:#fff;text-align:center;">' + esc(it.title) + '</div><div style="font-size:8px;color:rgba(255,255,255,0.6);">Tap to flip</div></div>').join("");
-      return '<div style="display:flex;gap:7px;flex-wrap:wrap;">' + fcs + "</div>";
+      // polish-9b-preview + polish-9b-overflow: emit interactive
+      // flipcard markup with sizer trick. Each card contains a
+      // hidden sizer that holds whichever content is longer (title
+      // or desc); the parent grows to that intrinsic height. Front
+      // + back faces are absolutely positioned over the sizer.
+      // Click handler is wired by a vanilla-JS script injected into
+      // the iframe srcDoc by LessonPreviewModal — class names
+      // .flipcard-prev / .flipcard-prev-flipped are the contract.
+      //
+      // Grid layout (vs previous flex-wrap) so all cards in a row
+      // stretch to equal height — long-content cards no longer
+      // overflow past short-content neighbors.
+      const fcs = items.slice(0, 6).map((it) => {
+        const title = esc(it.title || "");
+        const desc = esc(it.desc || "");
+        // Pick whichever is longer for the sizer so the cell grows
+        // to fit the worst-case content. Both faces fill the cell.
+        const sizerContent = (it.desc || "").length > (it.title || "").length ? desc : title;
+        return (
+          '<div class="flipcard-prev" style="perspective:1000px;cursor:pointer;min-height:110px;background:transparent;">' +
+            '<div class="flipcard-prev-inner" style="position:relative;width:100%;height:100%;min-height:110px;transform-style:preserve-3d;transition:transform 350ms cubic-bezier(0.4,0,0.2,1);">' +
+              // Hidden sizer determines the cell's intrinsic height.
+              '<div style="visibility:hidden;padding:12px;font-size:11px;line-height:1.5;text-align:center;">' + sizerContent + '</div>' +
+              // Front face — brand gradient + title.
+              '<div style="position:absolute;inset:0;background:' + b.grad + ';border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:12px;gap:6px;-webkit-backface-visibility:hidden;backface-visibility:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+                '<div style="font-size:12px;font-weight:700;color:#fff;text-align:center;line-height:1.3;">' + title + '</div>' +
+                '<div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.5px;">Tap to flip</div>' +
+              '</div>' +
+              // Back face — white surface + desc, pre-rotated.
+              '<div style="position:absolute;inset:0;background:' + b.wh + ';border-radius:10px;border:1px solid ' + b.n2 + ';display:flex;align-items:center;justify-content:center;padding:12px;-webkit-backface-visibility:hidden;backface-visibility:hidden;transform:rotateY(180deg);box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+                '<div style="font-size:11px;color:' + b.tx + ';text-align:center;line-height:1.5;">' + desc + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+      const overflowHint = items.length > 6
+        ? '<div style="grid-column:1/-1;font-size:10px;color:' + b.txL + ';text-align:center;padding-top:4px;">+' + (items.length - 6) + ' more cards</div>'
+        : "";
+      return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">' + fcs + overflowHint + "</div>";
     }
 
     case "timeline": {

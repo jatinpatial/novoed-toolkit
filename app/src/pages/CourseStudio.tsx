@@ -16,7 +16,7 @@ import { TopBar, useActiveBrand } from "../shell/TopBar";
 import { PageHeader } from "../ui/PageHeader";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
-import { B, type BrandKey } from "../brand/tokens";
+import { B, esc, type BrandKey } from "../brand/tokens";
 import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock, renderTextBlockBody } from "../course/previewBlock";
 import { renderInlineMd } from "../course/renderInlineMarkdown";
@@ -2791,17 +2791,32 @@ function InteractiveFlipcard({ block, brand }: { block: Block; brand: BrandKey }
   const visible = items.slice(0, 6);
 
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+    /* polish-9b-overflow: grid layout (was flex-wrap) so all cards
+       in a row stretch to equal height. grid-auto-rows defaults to
+       auto, so each row sizes to its tallest card; the sizer trick
+       (hidden div with the longer content) gives that "tallest"
+       its intrinsic height even though front + back faces are
+       absolutely positioned. */
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gap: 10,
+      }}
+    >
       {visible.map((it, i) => {
         const isFlipped = flipped.has(i);
+        // Pick whichever is longer for the sizer so the cell grows
+        // to fit the worst-case content. Both faces fill the cell.
+        const sizerContent =
+          (it.desc || "").length > (it.title || "").length ? it.desc : it.title;
         return (
           <button
             key={i}
             type="button"
             onClick={(e) => toggle(i, e)}
             style={{
-              width: 140,
-              height: 110,
+              minHeight: 110,
               perspective: 1000,
               background: "transparent",
               border: "none",
@@ -2819,11 +2834,28 @@ function InteractiveFlipcard({ block, brand }: { block: Block; brand: BrandKey }
                 position: "relative",
                 width: "100%",
                 height: "100%",
+                minHeight: 110,
                 transformStyle: "preserve-3d",
                 transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
               }}
             >
+              {/* Hidden sizer — determines the intrinsic height of
+                  this cell so absolute-positioned faces have something
+                  to fill. Picks the longer content so neither face
+                  overflows. */}
+              <div
+                aria-hidden="true"
+                style={{
+                  visibility: "hidden",
+                  padding: 12,
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  textAlign: "center",
+                }}
+              >
+                {sizerContent || ""}
+              </div>
               {/* Front face — brand gradient + title */}
               <div
                 style={{
@@ -2900,7 +2932,7 @@ function InteractiveFlipcard({ block, brand }: { block: Block; brand: BrandKey }
       {items.length > visible.length && (
         <div
           style={{
-            width: "100%",
+            gridColumn: "1 / -1",
             fontSize: 10,
             color: b.txL,
             textAlign: "center",
@@ -3572,7 +3604,45 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
     const inner = lesson.blocks.map((blk) => {
       return '<div style="margin-bottom:28px;">' + previewBlock(blk, course.brand) + "</div>";
     }).join("");
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Inter,system-ui,sans-serif;margin:0;background:#f6f7f8;color:${b.tx}}.hdr{background:${b.grad};padding:22px 40px;color:#fff}.hdr .crs{font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}.hdr .ttl{font-size:22px;font-weight:700;line-height:1.3}.bd{max-width:760px;margin:0 auto;padding:36px 24px}</style></head><body><div class="hdr"><div class="crs">${course.title}</div><div class="ttl">${lesson.title}</div></div><div class="bd">${inner}</div></body></html>`;
+    // polish-6d-preview: inject numbered-line + text-line CSS so
+    // takeaway lists from renderTextBlockBody render with green
+    // markers and proper gap inside the iframe (the iframe doesn't
+    // load the app's index.css).
+    //
+    // polish-9b-preview: inject a vanilla-JS click handler that
+    // toggles `.flipcard-prev-flipped` on click. previewBlock.ts
+    // case "flipcard" emits the markup with .flipcard-prev as the
+    // outer class; CSS below applies the rotateY(180deg) transform
+    // when the flipped class is present on the wrapper.
+    const previewStyles = `
+      body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #f6f7f8; color: ${b.tx}; }
+      .hdr { background: ${b.grad}; padding: 22px 40px; color: #fff; }
+      .hdr .crs { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+      .hdr .ttl { font-size: 22px; font-weight: 700; line-height: 1.3; }
+      .bd { max-width: 760px; margin: 0 auto; padding: 36px 24px; }
+      /* polish-6d-preview: numbered-line markers */
+      .text-numbered-line { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 10px; }
+      .text-numbered-marker { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #00A651; color: white; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 2px; }
+      .text-numbered-content { flex: 1; line-height: 1.55; }
+      .text-line { line-height: 1.55; margin-bottom: 4px; }
+      .text-line:empty { display: none; }
+      .text-line-spacer { height: 0.6em; }
+      /* polish-9b-preview: flipcard flip-on-click */
+      .flipcard-prev.flipcard-prev-flipped .flipcard-prev-inner { transform: rotateY(180deg); }
+      .flipcard-prev:hover .flipcard-prev-inner { box-shadow: 0 4px 14px rgba(0,0,0,0.10); }
+    `;
+    const previewScript = `
+      // polish-9b-preview: wire click handlers on flipcards.
+      // Idempotent — one listener at the document level, delegated
+      // by class match, so re-renders + dynamically-added cards
+      // both work without re-binding.
+      document.addEventListener('click', function(e) {
+        var card = e.target.closest && e.target.closest('.flipcard-prev');
+        if (!card) return;
+        card.classList.toggle('flipcard-prev-flipped');
+      });
+    `;
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="hdr"><div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div></div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';
   }, [lesson, course]);
 
   useEffect(() => {
