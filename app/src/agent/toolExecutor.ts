@@ -98,8 +98,15 @@ export async function dispatchToolCall(
       };
     }
     case "read_materials": {
+      // Track-B: prefer course.materials when a course is open; fall
+      // back to pendingMaterials (uploaded during brief flow before
+      // any course exists) so Course Architect can read source
+      // content while proposing the outline.
       const course = actions.getCourse();
-      const materials = course?.materials ?? [];
+      let materials = course?.materials ?? [];
+      if (materials.length === 0 && actions.getPendingMaterials) {
+        materials = actions.getPendingMaterials();
+      }
       if (materials.length === 0) {
         return { ok: true, count: 0, charCount: 0, text: "" };
       }

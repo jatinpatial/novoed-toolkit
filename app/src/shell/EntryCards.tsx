@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Upload, MessageCircle, Grid3x3, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTilt } from "./useTilt";
 
 /**
@@ -42,6 +43,12 @@ interface EntryCardsProps {
 }
 
 export function EntryCards({ onFocusComposer }: EntryCardsProps) {
+  // Track-B (Phase 2 AI #3): "Drop a deck" card is now live. Click
+  // routes to the structured-brief form (CreateCoursePage) where
+  // the LD can drop their deck, fill in audience + duration, and
+  // hit Design course. The form's drop zone wires into
+  // pendingMaterials → read_materials → grounded course outline.
+  const navigate = useNavigate();
   return (
     <section>
       <div className="section-header">
@@ -56,8 +63,8 @@ export function EntryCards({ onFocusComposer }: EntryCardsProps) {
           title="Drop a deck"
           description="PPTX · PDF · DOCX → cover, modules, lessons, scripts, knowledge checks — drafted in one click."
           icon={<Upload size={24} strokeWidth={2} />}
-          disabled
-          soonLabel="Coming soon"
+          cta="Start with materials"
+          onClick={() => navigate("/courses/new")}
         />
         <Card
           step="B · From an idea"

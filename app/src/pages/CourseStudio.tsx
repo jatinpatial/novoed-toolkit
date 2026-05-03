@@ -212,7 +212,7 @@ function CourseStudioInner() {
 function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => void; brand: BrandKey }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [params, setParams] = useSearchParams();
-  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, sendBuildFullCourse } = useAgent();
+  const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, sendBuildFullCourse, pendingMaterials, clearPendingMaterials } = useAgent();
 
   // Brief handoff from the Dashboard hero composer (Phase 2 #1c) +
   // /courses/new structured intake form (C0).
@@ -263,6 +263,11 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
 
   const homeAgentActions = useMemo<AgentActions>(() => ({
     getCourse: () => null,
+    // Track-B: while we're on the home page (no course open), the
+    // brief-flow uploaded materials live in AgentContext's
+    // pendingMaterials slice. read_materials reads them so Course
+    // Architect can ground the proposal in source content.
+    getPendingMaterials: () => pendingMaterials,
     navigate: () => {},
     setBrand: () => {},
     addModule: () => { throw new Error("No course is open. Call propose_course_outline; the LD will build the course from there."); },
@@ -281,7 +286,7 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
       setOutlineProposal(proposal);
       setChatOpen(true);
     },
-  }), [setOutlineProposal, setChatOpen]);
+  }), [setOutlineProposal, setChatOpen, pendingMaterials]);
 
   useRegisterAgentActions(homeAgentActions);
 
@@ -300,6 +305,13 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
     const proposalToBuild = edited ?? outlineProposal;
     if (!proposalToBuild) return;
     const course = buildCourseFromProposal(proposalToBuild, brand);
+    // Track-B: migrate brief-flow uploaded materials onto the new
+    // course. After this, course.materials is the source of truth and
+    // pendingMaterials clears.
+    if (pendingMaterials.length > 0) {
+      course.materials = [...(course.materials ?? []), ...pendingMaterials];
+      clearPendingMaterials();
+    }
     const id = uid();
     saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
     clearOutlineProposal();
@@ -310,13 +322,17 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
   // sprint-2-1: Build full course — same shell as handleBuild, then
   // immediately fires build_full_course on the WS so the orchestrator
   // runs sequential mini-sessions per lesson / KC / case-study slot.
-  // Sprint-2-1 ships the wire only — the orchestrator answers with a
-  // `not_implemented` build_progress event for now. Sprint-2-3 swaps
-  // the stub for the real lesson loop.
   function handleBuildFull(edited?: CourseOutlineProposal) {
     const proposalToBuild = edited ?? outlineProposal;
     if (!proposalToBuild) return;
     const course = buildCourseFromProposal(proposalToBuild, brand);
+    // Track-B: same materials migration as handleBuild — the
+    // orchestrator's mini-sessions call read_materials which reads
+    // from course.materials (now populated).
+    if (pendingMaterials.length > 0) {
+      course.materials = [...(course.materials ?? []), ...pendingMaterials];
+      clearPendingMaterials();
+    }
     const id = uid();
     saveProject({ id, name: course.title, kind: "course", brand, data: { kind: "course", course } });
     clearOutlineProposal();

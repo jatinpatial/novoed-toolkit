@@ -1872,6 +1872,33 @@
     flex-direction: column;
     align-items: center;
   }
+  /* Track-B: live source-material drop zone. Hover + drag-over read
+     as brand-tinted; uploading state pulses to show work in flight. */
+  .materials-dropzone {
+    position: relative;
+    border: 2px dashed theme("colors.ink.200");
+    border-radius: 12px;
+    padding: 28px 24px;
+    text-align: center;
+    background: theme("colors.ink.50");
+    color: theme("colors.ink.500");
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .materials-dropzone:hover,
+  .materials-dropzone:focus-visible {
+    border-color: theme("colors.brand.400");
+    background: theme("colors.brand.50");
+    outline: none;
+  }
+  .materials-dropzone-active {
+    border-color: theme("colors.brand.500");
+    background: theme("colors.brand.50");
+  }
   .form-soon-pill {
     position: absolute;
     top: 10px;

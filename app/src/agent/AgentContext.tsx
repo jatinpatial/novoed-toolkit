@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { CaseStudy, Course, CourseShape, QuizQuestion } from "../course/types";
+import type { CaseStudy, Course, CourseShape, Material, QuizQuestion } from "../course/types";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
 import type {
@@ -43,6 +43,11 @@ export type CaseStudyContent = Omit<CaseStudy, "id" | "title">;
 
 export interface AgentActions {
   getCourse: () => Course | null;
+  /** Track-B: pending materials uploaded during the brief flow,
+      before any course exists. read_materials falls back to these
+      when course.materials is empty. Optional — pages that don't
+      participate in the brief flow can omit it. */
+  getPendingMaterials?: () => Material[];
   navigate: (route: string) => Promise<void> | void;
   setBrand: (brand: BrandKey) => void;
   addModule: (title: string) => { module_id: string };
@@ -126,6 +131,15 @@ interface AgentContextValue {
   pendingInput: string | null;
   prefillInput: (text: string) => void;
   clearPendingInput: () => void;
+  // Track-B (Phase 2 AI #3): pending materials uploaded during the
+  // brief-creation flow, before any course exists. read_materials
+  // tool falls back to these when course.materials is empty.
+  // handleBuildFull migrates them onto course.materials and clears
+  // this slice when the course is created.
+  pendingMaterials: Material[];
+  attachPendingMaterial: (m: Material) => void;
+  removePendingMaterial: (id: string) => void;
+  clearPendingMaterials: () => void;
   // ── sprint-2-1: orchestrator slice ────────────────────────────────
   // Backend is the single source of truth (locked fork #3). The FE
   // mirrors via build_state events; AgentChat / LessonTile read this
@@ -163,6 +177,60 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [pendingInput, setPendingInput] = useState<string | null>(null);
   const prefillInput = useCallback((text: string) => setPendingInput(text), []);
   const clearPendingInput = useCallback(() => setPendingInput(null), []);
+
+  // Track-B materials slice. Persisted to localStorage so the brief-
+  // form upload survives the navigate to /courses?brief=&autosend=1.
+  // Cleared once handleBuildFull migrates onto course.materials.
+  const [pendingMaterials, setPendingMaterials] = useState<Material[]>(() => {
+    try {
+      const raw = window.localStorage.getItem("studio.pendingMaterials");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const persistMaterials = useCallback((next: Material[]) => {
+    setPendingMaterials(next);
+    try {
+      window.localStorage.setItem("studio.pendingMaterials", JSON.stringify(next));
+    } catch {
+      // localStorage quota / private mode — material lives in-memory
+      // for this session, lost on refresh. Acceptable degradation.
+    }
+  }, []);
+  const attachPendingMaterial = useCallback(
+    (m: Material) => {
+      setPendingMaterials((prev) => {
+        const next = [...prev, m];
+        try {
+          window.localStorage.setItem("studio.pendingMaterials", JSON.stringify(next));
+        } catch {
+          // ignore — see persistMaterials
+        }
+        return next;
+      });
+    },
+    [],
+  );
+  const removePendingMaterial = useCallback(
+    (id: string) => {
+      setPendingMaterials((prev) => {
+        const next = prev.filter((m) => m.id !== id);
+        try {
+          window.localStorage.setItem("studio.pendingMaterials", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+    },
+    [],
+  );
+  const clearPendingMaterials = useCallback(() => {
+    persistMaterials([]);
+  }, [persistMaterials]);
 
   // sprint-2-1: orchestrator slice. Initialized to the empty state
   // and replaced wholesale on each build_state event from the BE.
@@ -328,6 +396,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       pendingInput,
       prefillInput,
       clearPendingInput,
+      pendingMaterials,
+      attachPendingMaterial,
+      removePendingMaterial,
+      clearPendingMaterials,
       orchestratorState,
       lastBuildProgress,
       sendBuildFullCourse,
@@ -350,6 +422,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       pendingInput,
       prefillInput,
       clearPendingInput,
+      pendingMaterials,
+      attachPendingMaterial,
+      removePendingMaterial,
+      clearPendingMaterials,
       orchestratorState,
       lastBuildProgress,
       sendBuildFullCourse,

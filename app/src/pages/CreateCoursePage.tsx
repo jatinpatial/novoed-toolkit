@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Loader2, Upload, X } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { useActiveBrand } from "../shell/TopBar";
 import { B, type BrandKey } from "../brand/tokens";
+import { useAgent } from "../agent/AgentContext";
+
+const HTTP_URL = (import.meta.env.VITE_AGENT_HTTP_URL as string | undefined) ?? "http://127.0.0.1:8766";
 
 /**
  * CreateCoursePage — structured course-intake form (Phase 2 #2 C0).
@@ -105,8 +108,60 @@ export default function CreateCoursePage() {
   const [videoScripts, setVideoScripts] = useState<VideoScriptsValue>("auto");
   const [knowledgeChecks, setKnowledgeChecks] = useState<KnowledgeChecksValue>("auto");
   const [interactivity, setInteractivity] = useState<InteractivityValue>("mixed");
-  // Source materials: Soon-flagged drop zone in C0b — no wiring yet
-  // (deferred to the Phase 2 AI sprint's deck-drop ingestion).
+  // Track-B (Phase 2 AI #3): source-material drop zone wired up.
+  // Files extract via /parse → AgentContext.pendingMaterials. The
+  // brief gets a "Source materials attached" hint so Course Architect
+  // calls read_materials before proposing the outline.
+  const { pendingMaterials, attachPendingMaterial, removePendingMaterial } = useAgent();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function ingestFile(file: File) {
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${HTTP_URL}/parse`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || `server returned ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        filename: string;
+        text: string;
+        charCount: number;
+      };
+      attachPendingMaterial({
+        id: crypto.randomUUID(),
+        filename: data.filename,
+        text: data.text,
+        charCount: data.charCount,
+        addedAt: Date.now(),
+      });
+    } catch (e) {
+      setUploadError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onPickFiles(files: FileList | null) {
+    if (!files) return;
+    Array.from(files).forEach(ingestFile);
+  }
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    onPickFiles(e.dataTransfer.files);
+  }
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+  }
 
   // Validation: audience non-empty, duration selected (and if custom,
   // customDuration non-empty).
@@ -170,6 +225,18 @@ export default function CreateCoursePage() {
     }
 
     if (notes.trim()) sections.push(`\n\nNotes:\n${notes.trim()}`);
+
+    // Track-B: source-material hint. Course Architect's MODE 1 prompt
+    // tells it to call read_materials when materials are attached;
+    // explicitly naming the files in the brief makes that path
+    // unambiguous and gives the agent something to reference in its
+    // proposal commentary.
+    if (pendingMaterials.length > 0) {
+      const fileList = pendingMaterials.map((m) => `  - ${m.filename}`).join("\n");
+      sections.push(
+        `\n\nSource materials attached (read these via read_materials before proposing the outline):\n${fileList}`,
+      );
+    }
     const brief = sections.join("");
 
     // Sync active brand BEFORE navigating so the new course's brand
@@ -365,21 +432,76 @@ export default function CreateCoursePage() {
             />
           </div>
 
-          {/* ── Field 6: Source materials (Soon, drop zone placeholder) */}
+          {/* ── Field 6: Source materials — Track-B drop zone */}
           <FormField
             label="Source materials"
-            hint="Drop a deck or reading and the agent grounds the course in it."
+            hint="Drop a deck, PDF, or Word doc. The agent reads it and grounds the course in your content."
+            optional
           >
-            <div className="form-soon-dropzone" aria-disabled="true">
-              <Upload size={20} className="text-ink-400 mb-2" aria-hidden="true" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.pptx,.docx,.txt,.md"
+              multiple
+              hidden
+              onChange={(e) => onPickFiles(e.target.files)}
+            />
+            <div
+              className={`materials-dropzone${uploading ? " materials-dropzone-active" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+            >
+              {uploading ? (
+                <Loader2 size={20} className="text-brand-500 mb-2 animate-spin" aria-hidden="true" />
+              ) : (
+                <Upload size={20} className="text-ink-400 mb-2" aria-hidden="true" />
+              )}
               <div className="text-sm font-semibold text-ink-700 mb-1">
-                Drop a deck or PDF here
+                {uploading ? "Reading…" : "Drop files here or click to choose"}
               </div>
-              <div className="text-xs text-ink-500">
-                PPTX · PDF · DOCX
-              </div>
-              <span className="form-soon-pill">Coming soon</span>
+              <div className="text-xs text-ink-500">PPTX · PDF · DOCX · TXT · MD</div>
             </div>
+            {uploadError && (
+              <div className="mt-2 text-xs text-red-600">
+                Upload failed: {uploadError}
+              </div>
+            )}
+            {pendingMaterials.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {pendingMaterials.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-brand-50 border border-brand-200 text-xs"
+                  >
+                    <FileText size={14} className="text-brand-700 flex-shrink-0" />
+                    <span className="flex-1 truncate font-medium text-ink-800">
+                      {m.filename}
+                    </span>
+                    <span className="text-ink-500 flex-shrink-0">
+                      {Math.round(m.charCount / 1000)}K chars
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingMaterial(m.id)}
+                      className="text-ink-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      title={`Remove ${m.filename}`}
+                      aria-label={`Remove ${m.filename}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </FormField>
 
           {/* ── Field 7: Notes for the agent (optional textarea) ───── */}
