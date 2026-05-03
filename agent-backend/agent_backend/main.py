@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import config  # noqa: F401 — loads .env and sets git-bash env var on import
 from .exports import router as exports_router
+from .images import router as images_router
 from .parse import ParseError, SUPPORTED_EXTENSIONS, parse_file
 from .session import Session
 
@@ -62,6 +63,13 @@ async def parse_endpoint(file: UploadFile):
 # whole-course bundle. Routes live in agent_backend/exports.py so this
 # file stays focused on FastAPI plumbing + the WebSocket session.
 app.include_router(exports_router)
+
+# Track-F-prep: Pexels image-search proxy. The endpoint returns 503
+# with a clear message when PEXELS_API_KEY isn't set in .env, so the
+# frontend's image-fetch path can fall back gracefully to abstract
+# gradients. Once the LD provides the key + restarts, real results
+# flow without any FE changes needed.
+app.include_router(images_router)
 
 
 @app.websocket("/ws")
