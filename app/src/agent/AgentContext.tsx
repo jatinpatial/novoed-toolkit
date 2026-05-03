@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CaseStudy, Course, CourseShape, Material, QuizQuestion } from "../course/types";
-import type { InfographicPoint } from "../store/infographics";
+import type { InfographicPoint, InfographicStyle } from "../store/infographics";
 import type { BrandKey } from "../brand/tokens";
 import type { BlockData } from "../course/types";
 import type {
@@ -213,7 +213,7 @@ interface AgentContextValue {
   sendBuildInfographic: (payload: {
     infographicId: string;
     topic: string;
-    style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+    style: InfographicStyle;
     pointCount: number;
     notes?: string;
   }) => void;
@@ -507,7 +507,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     (payload: {
       infographicId: string;
       topic: string;
-      style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+      style: InfographicStyle;
       pointCount: number;
       notes?: string;
     }) => {

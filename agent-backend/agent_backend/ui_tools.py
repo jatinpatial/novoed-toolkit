@@ -278,11 +278,13 @@ def build_ui_mcp_server(bridge: ToolBridge):
         "write_infographic",
         (
             "Write or replace an infographic — title + subtitle + 3-7 structured points. "
-            "Used by MODE 6 (Infographic Builder). Style drives layout (process / "
-            "quadrant / comparison / numbered_list / timeline); the FE-side renderer "
-            "switches on style to lay the points out appropriately. Each point carries "
-            "a heading (3-6 words), body (15-30 words), and optional iconHint (lucide "
-            "icon name like \"trending-up\", \"users\", \"shield\")."
+            "Used by MODE 6 (Infographic Builder). Style drives layout — 9 options: "
+            "core (process / quadrant / comparison / numbered_list / timeline) and "
+            "specialized (stat_spotlight / pyramid / cycle / five_forces). The FE-side "
+            "renderer switches on style to lay the points out appropriately. Each point "
+            "carries a heading (3-6 words), body (15-30 words), and optional iconHint "
+            "(BCG icon name like \"Strategy\", \"BusinessProcess\", \"GroupCollaboration\"). "
+            "See MODE 6 for layout-fit guidance."
         ),
         {
             "type": "object",

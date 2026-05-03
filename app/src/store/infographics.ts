@@ -7,8 +7,14 @@
  *
  * The agent's MODE 6 (Infographic Builder) writes structured
  * `points[]` via the write_infographic tool. The FE renders points
- * into one of five styled visual layouts at view time, picked by
+ * into one of nine styled visual layouts at view time, picked by
  * the `style` field on the record.
+ *
+ * Track-X2: 4 new sophisticated layouts added on top of the original
+ * 5 — stat_spotlight (hero numbers), pyramid (hierarchy), cycle
+ * (closed-loop flow), five_forces (Porter-style central + spokes).
+ * Existing saves continue to render — the renderer's switch covers
+ * all 9 cases and each has its own React subcomponent.
  */
 
 export type InfographicStyle =
@@ -16,7 +22,11 @@ export type InfographicStyle =
   | "quadrant"
   | "comparison"
   | "numbered_list"
-  | "timeline";
+  | "timeline"
+  | "stat_spotlight"
+  | "pyramid"
+  | "cycle"
+  | "five_forces";
 
 export interface InfographicPoint {
   heading: string;

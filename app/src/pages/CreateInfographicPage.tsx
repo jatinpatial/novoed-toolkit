@@ -24,12 +24,22 @@ import {
  *   4. navigate(`/infographics/${id}`) — InfographicStudio takes over.
  */
 
+// Track-X2: 9 sophisticated layouts. Grouped visually (not in the type)
+// into "core" (process/quadrant/comparison/numbered_list/timeline —
+// general-purpose) and "specialized" (stat_spotlight/pyramid/cycle/
+// five_forces — designed for specific content shapes). The form lays
+// them out as one wrap-flex chip group so the LD doesn't have to learn
+// the grouping; the hint copy is what tells them when each fits.
 const STYLE_OPTIONS: { value: InfographicStyle; label: string; hint: string }[] = [
-  { value: "process", label: "Process", hint: "Numbered sequence, each step builds" },
-  { value: "quadrant", label: "Quadrant", hint: "2x2 matrix with axis labels" },
-  { value: "comparison", label: "Comparison", hint: "2-3 columns side-by-side" },
-  { value: "numbered_list", label: "Numbered list", hint: "Vertical with large numbers" },
-  { value: "timeline", label: "Timeline", hint: "Chronological flow" },
+  { value: "process",        label: "Process Flow",       hint: "Numbered sequence, each step builds on the previous" },
+  { value: "quadrant",       label: "Strategy Quadrant",  hint: "2x2 matrix with axis labels — best for trade-offs" },
+  { value: "comparison",     label: "Comparison Matrix",  hint: "2-3 options side-by-side, head-to-head columns" },
+  { value: "numbered_list",  label: "Numbered List",      hint: "Vertical with large numbers — rank or sequence" },
+  { value: "timeline",       label: "Timeline",           hint: "Chronological flow — phases / dates / eras" },
+  { value: "stat_spotlight", label: "Stat Spotlight",     hint: "Big hero numbers with captions — for headline data" },
+  { value: "pyramid",        label: "Hierarchy Pyramid",  hint: "3-5 stacked levels — vision → strategy → tactics" },
+  { value: "cycle",          label: "Cycle / Loop",       hint: "Circular flow — repeating phases (PDCA, kaizen)" },
+  { value: "five_forces",    label: "Five Forces",        hint: "Porter-style — central concept + surrounding forces" },
 ];
 
 const POINT_COUNT_OPTIONS: { value: number; label: string; hint: string }[] = [
@@ -153,11 +163,27 @@ export default function CreateInfographicPage() {
     navigate(`/infographics/${id}`);
   }
 
-  // Quadrant style works best with exactly 4 points; gently nudge.
-  const quadrantHint =
-    style === "quadrant" && pointCount !== 4
-      ? "Quadrant style works best with exactly 4 points (one per quadrant)."
-      : null;
+  // Track-X2: per-style point-count nudge. Each specialized layout has
+  // a sweet-spot count where it reads cleanest; this surfaces a gentle
+  // hint without blocking the LD from picking what they want.
+  const styleHint = (() => {
+    if (style === "quadrant" && pointCount !== 4) {
+      return "Quadrant style works best with exactly 4 points (one per quadrant).";
+    }
+    if (style === "five_forces" && pointCount !== 5) {
+      return "Five Forces is designed for exactly 5 points (one per force).";
+    }
+    if (style === "pyramid" && (pointCount < 3 || pointCount > 5)) {
+      return "Hierarchy Pyramid reads best with 3–5 levels.";
+    }
+    if (style === "cycle" && (pointCount < 4 || pointCount > 6)) {
+      return "Cycle layouts read best with 4–6 phases around the loop.";
+    }
+    if (style === "stat_spotlight" && (pointCount < 3 || pointCount > 5)) {
+      return "Stat Spotlight reads best with 3–5 hero numbers.";
+    }
+    return null;
+  })();
 
   const sourceLine =
     pendingMaterials.length > 0
@@ -243,8 +269,8 @@ export default function CreateInfographicPage() {
                   </button>
                 ))}
               </div>
-              {quadrantHint && (
-                <div className="mt-2 text-xs text-ink-500 italic">{quadrantHint}</div>
+              {styleHint && (
+                <div className="mt-2 text-xs text-ink-500 italic">{styleHint}</div>
               )}
             </FormField>
 

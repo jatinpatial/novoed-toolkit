@@ -678,12 +678,30 @@ When selecting iconHint for each point, choose from the BCG-domain icon set. Pic
 
 These icons are visually richer than generic icon sets — pick the ONE that best fits the point's meaning. Avoid using the same icon twice in one infographic.
 
-Style drives the renderer's layout:
-- process: numbered sequence, each step builds on the previous. Order points chronologically.
-- quadrant: 4 items in a 2x2 matrix. The first two and last two get axis labels — order matters: items 1+2 form one row of the matrix, 3+4 the other.
-- comparison: 2-3 items as side-by-side columns. Each item is one option / approach being compared.
-- numbered_list: vertical list with large numbers. Order is rank-by-importance unless the topic is naturally sequential.
-- timeline: chronological, dates / phases / eras. iconHints for timeline items often map to time markers (Clock, Target for milestones, etc.).
+Style drives the renderer's layout. Pick the FIT, not the default. Each style is designed for a specific content shape:
+
+CORE LAYOUTS (general-purpose):
+- process: numbered sequence, each step builds on the previous. Order points chronologically. Best for "how-to" / "steps to" content. 3-6 points.
+- quadrant: 4 items in a 2x2 matrix. Items 1+2 form the top row, 3+4 the bottom. Use when content has TWO axes of variation (e.g. impact × effort, urgency × importance). Always 4 points.
+- comparison: 2-3 items as side-by-side columns. Each item is one option / approach being compared head-to-head. Use for "X vs Y vs Z" decisions. 2-3 points.
+- numbered_list: vertical list with large numbers. Order is rank-by-importance unless the topic is naturally sequential. Best when no other layout fits. 3-7 points.
+- timeline: chronological, dates / phases / eras. iconHints for timeline items often map to time markers (Clock, Target for milestones, etc.). 3-7 points.
+
+SPECIALIZED LAYOUTS (Track-X2 — designed for specific content shapes; pick when they FIT, not as default):
+- stat_spotlight: hero numbers + caption per cell. Use when the content IS the data — "73% of leaders report…", "$2.1B in value created", "10× faster onboarding". The heading field IS the number/stat (e.g. "73%", "$2.1B", "10×"). Body explains it in 15-25 words. 3-5 points.
+- pyramid: 3-5 stacked levels narrowing toward an apex. Use for hierarchies where altitude matters — vision → strategy → tactics, principles → frameworks → behaviors, leadership pillars (top = most strategic). Position 1 is the APEX (top of the pyramid). 3-5 points.
+- cycle: closed-loop flow where the last phase connects back to the first. Use for repeating cycles — PDCA, kaizen, retrospectives, OODA, design-build-test. 4-6 points. Order is the rotation direction (clockwise from top).
+- five_forces: Porter-style — central concept (the title) surrounded by 4-5 forces. Use ONLY when content fits a "central question + surrounding pressures" shape (Porter's Five Forces, stakeholder maps, decision criteria orbiting a choice). 5 points = 5 forces.
+
+WHEN TO PICK THE SPECIALIZED LAYOUTS
+
+Don't default to numbered_list when a specialized layout fits the content's natural shape. The visual hierarchy IS the meaning:
+- If the content is mostly statistics or measurable outcomes → stat_spotlight
+- If the content has clear "altitude" (strategic ↔ operational, abstract ↔ concrete) → pyramid
+- If the content describes a repeating loop or feedback cycle → cycle
+- If the content is "central concept + 4-5 surrounding pressures/forces/stakeholders" → five_forces
+
+If the LD specified a style in the brief, use that style. Don't second-guess. The list above is for cases where the renderer routes you a generic style choice and the content shape suggests a specialized fit (e.g. agent should suggest in chat when warranted).
 
 Voice across all blocks: BCG-professional, plain English, ~8th-grade reading level. Tight sentences. Active verbs. No filler ("very", "really", "kind of"). No consultant clichés.
 
@@ -693,11 +711,21 @@ Match the requested point count exactly. If the LD asked for 5 points and only 3
 
 The PNG output renderer is the primary surface today (HTML + SCORM coming later). Lean into visual confidence when writing the points:
 
-- Strong typography contrast. Headings carry the meaning; body text scaffolds. A 6-word heading + a 25-word body reads better than a 12-word heading + a 12-word body.
-- Generous white space. Don't cram. If a body field would push past 30 words, cut.
+VISUAL HIERARCHY (Track-X5 — heading + body must read at different volumes)
+- Headings carry the meaning. They are SCANNED first; the body is read second only if the heading earns it.
+- Heading craft: 3-6 words, ≤ 6 ideal. Punchy. Active. NO filler verbs ("looks at", "considers"). Lead with the concrete noun or the strong verb. ("Migrate by region" beats "A regional migration approach". "Trust compounds quietly" beats "Trust is built over time".)
+- Body craft: 15-25 words. ONE complete thought. End with a verb-led action or a concrete consequence, not a hedge.
+- Vary tempo across points. Don't make every heading the same shape — mixing "Verb-first action" / "Noun-first concept" / "Number-first stat" creates the rhythm that makes the infographic interesting to read.
+- Strong typography contrast. A 6-word heading + 25-word body reads better than a 12-word heading + 12-word body. The heading should win every cell.
+
+OTHER MOVES
+- Generous white space. Don't cram. If a body field would push past 30 words, CUT. Tighter body = bigger visual breathing room.
 - Iconography that adds meaning, not decoration. Pick iconHints that LITERALLY map to the heading's concept (a heading about growth → BarChart; a heading about caution → Alert; a heading about a strategic move → Strategy; a heading about cross-functional people work → GroupCollaboration). Decorative icons with no semantic link weaken the visual.
 - Color hierarchy. The renderer already accents with brand-500 — ensure the heading is the term that should pop, not a generic transition phrase.
-- Asymmetric balance preferred. When a style permits ordering choices (process / numbered_list / timeline), put your strongest framing in position 1 to anchor the visual.
+- Asymmetric balance preferred. When a style permits ordering choices (process / numbered_list / timeline / cycle / pyramid), put your strongest framing in position 1 to anchor the visual.
+- Stat Spotlight specifics: numbers must read as DESIGNED, not random. Round to publication-clean values (73% not 72.8%). Prefer one significant digit + symbol when possible ("10×", "$2B", "3 hrs"). The body explains; don't repeat the number in the body.
+- Pyramid specifics: apex (position 1) should be the SHORTEST and most ABSTRACT word ("Vision", "Purpose", "True North"). Base (last position) is the most CONCRETE / TACTICAL ("Daily standup", "Weekly review"). The narrowing visual maps to narrowing scope.
+- Five Forces specifics: each force heading is a NOUN PHRASE (3 words max) — "Supplier power", "Buyer leverage", "Threat of new entrants". Body describes the dynamic in 15-20 words.
 
 ──────── PEOPLE-IMAGE HINTS (when includePeopleImages is set on the brief) ────────
 

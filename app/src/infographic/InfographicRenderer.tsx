@@ -11,12 +11,16 @@ import type { InfographicPoint, InfographicStyle } from "../store/infographics";
  * structured points appropriately. Each style is its own subcomponent
  * below — the switch keeps the file scannable.
  *
- * Styles:
- *   process       Numbered sequence with arrows
- *   quadrant      2x2 matrix
- *   comparison    2-3 columns side-by-side
- *   numbered_list Vertical large-number list
- *   timeline      Horizontal flow with markers
+ * Styles (Track-X2 — 9 layouts):
+ *   process         Numbered sequence with arrows
+ *   quadrant        2x2 strategy matrix
+ *   comparison      2-3 columns side-by-side
+ *   numbered_list   Vertical large-number list
+ *   timeline        Horizontal flow with markers
+ *   stat_spotlight  Hero number per cell with caption (3-5 cells)
+ *   pyramid         3-5 stacked levels narrowing toward apex
+ *   cycle           Closed-loop circular flow (4-6 phases)
+ *   five_forces     Porter-style central concept + 4-5 surrounding forces
  *
  * Track-X1: switched icon set from lucide-react to the BCG icon library
  * (app/src/icons/bcg). The BCG icons are content-domain illustrations
@@ -27,6 +31,11 @@ import type { InfographicPoint, InfographicStyle } from "../store/infographics";
  * (preferred, e.g. "Strategy") and legacy kebab-case lucide hints from
  * pre-X1 saved infographics (e.g. "trending-up") so old projects don't
  * break.
+ *
+ * Track-X2: four new specialized layouts (stat_spotlight, pyramid,
+ * cycle, five_forces). Each has a distinct content shape — they're
+ * not interchangeable with the core 5. Picking style is now a real
+ * design decision, not a cosmetic one.
  *
  * Brand awareness: BCG icons render with fill="currentColor", so the
  * .ig-icon class can drive color via CSS (text-brand-700). Toggling
@@ -42,18 +51,30 @@ interface RendererProps {
 }
 
 export function InfographicRenderer({ title, subtitle, style, points }: RendererProps) {
+  // Track-X2: Five Forces shifts the title into the center of the frame
+  // (it's the central concept the forces surround), so the standard
+  // header is suppressed for that style. All other styles use the
+  // standard top-aligned header.
+  const showHeader = style !== "five_forces";
+
   return (
-    <div className="ig-frame">
-      <div className="ig-header">
-        <h2 className="ig-title">{title}</h2>
-        {subtitle && <p className="ig-subtitle">{subtitle}</p>}
-      </div>
+    <div className={`ig-frame ig-frame-${style}`}>
+      {showHeader && (
+        <div className="ig-header">
+          <h2 className="ig-title">{title}</h2>
+          {subtitle && <p className="ig-subtitle">{subtitle}</p>}
+        </div>
+      )}
       <div className="ig-body">
-        {style === "process" && <ProcessLayout points={points} />}
-        {style === "quadrant" && <QuadrantLayout points={points} />}
-        {style === "comparison" && <ComparisonLayout points={points} />}
-        {style === "numbered_list" && <NumberedListLayout points={points} />}
-        {style === "timeline" && <TimelineLayout points={points} />}
+        {style === "process"        && <ProcessLayout       points={points} />}
+        {style === "quadrant"       && <QuadrantLayout      points={points} />}
+        {style === "comparison"     && <ComparisonLayout    points={points} />}
+        {style === "numbered_list"  && <NumberedListLayout  points={points} />}
+        {style === "timeline"       && <TimelineLayout      points={points} />}
+        {style === "stat_spotlight" && <StatSpotlightLayout points={points} />}
+        {style === "pyramid"        && <PyramidLayout       points={points} />}
+        {style === "cycle"          && <CycleLayout         points={points} />}
+        {style === "five_forces"    && <FiveForcesLayout    points={points} title={title} subtitle={subtitle} />}
       </div>
     </div>
   );
@@ -189,6 +210,200 @@ function TimelineLayout({ points }: { points: InfographicPoint[] }) {
     </div>
   );
 }
+
+// ─── Style: Stat Spotlight ───────────────────────────────────────────────────
+//
+// Each point is a hero stat: heading reads as the BIG number / fact
+// (e.g. "73%", "$2.1B", "10×"), body explains the context. Layout
+// puts the heading in oversize gradient type so the eye lands on the
+// number first, then drifts to the caption. The small accent rule on
+// top of each cell ties into the brand cascade.
+
+function StatSpotlightLayout({ points }: { points: InfographicPoint[] }) {
+  return (
+    <div className="ig-stat-spotlight">
+      {points.map((p, i) => (
+        <div key={i} className="ig-stat-cell">
+          <div className="ig-stat-rule" aria-hidden="true" />
+          <div className="ig-stat-icon">
+            <Icon hint={p.iconHint} fallback={STAT_DEFAULTS[i % STAT_DEFAULTS.length]} size={28} />
+          </div>
+          <div className="ig-stat-headline">{p.heading}</div>
+          <p className="ig-stat-body">{p.body}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const STAT_DEFAULTS: BcgIconName[] = ["BarChart", "DataAnalysis", "Trophy", "Target", "Innovation"];
+
+// ─── Style: Pyramid ──────────────────────────────────────────────────────────
+//
+// 3-5 levels stack from apex (most strategic) to base (most tactical).
+// Each level is a trapezoid — top narrower than bottom — with the
+// heading inside and the body floating to the right. The visual move
+// is "vision narrows down to action": a classic LD framing.
+
+function PyramidLayout({ points }: { points: InfographicPoint[] }) {
+  // Pyramid reads cleanest with 3-5 levels. We accept the agent's count
+  // as-is and let CSS scale the trapezoid widths via --pyramid-level
+  // (computed inline below).
+  const levels = points.slice(0, 5);
+  const overflow = points.length - 5;
+  const totalLevels = levels.length;
+
+  return (
+    <div className="ig-pyramid">
+      <div className="ig-pyramid-stack">
+        {levels.map((p, i) => {
+          // Width scales linearly from 40% (apex, i=0) to 100% (base).
+          // Narrow apex emphasizes the "few critical / many tactical"
+          // visual. minWidth 40% keeps the apex readable even on a 3-
+          // level pyramid.
+          const span = totalLevels === 1
+            ? 100
+            : 40 + ((100 - 40) * i) / (totalLevels - 1);
+          return (
+            <div
+              key={i}
+              className="ig-pyramid-level"
+              style={{ width: `${span}%` }}
+            >
+              <div className="ig-pyramid-level-inner">
+                <div className="ig-pyramid-level-icon">
+                  <Icon hint={p.iconHint} fallback={PYRAMID_DEFAULTS[i % PYRAMID_DEFAULTS.length]} size={26} />
+                </div>
+                <div className="ig-pyramid-level-text">
+                  <div className="ig-pyramid-level-eyebrow">Level {totalLevels - i}</div>
+                  <h3 className="ig-pyramid-level-heading">{p.heading}</h3>
+                </div>
+              </div>
+              <p className="ig-pyramid-level-body">{p.body}</p>
+            </div>
+          );
+        })}
+      </div>
+      {overflow > 0 && (
+        <div className="ig-overflow-note">
+          +{overflow} additional level{overflow === 1 ? "" : "s"} not shown — pyramid fits 5
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Apex (i=0) → base (i=4). Vision / Strategy / Plan / Execution / Measurement.
+const PYRAMID_DEFAULTS: BcgIconName[] = ["Target", "Strategy", "BusinessProcess", "GroupCollaboration", "BarChart"];
+
+// ─── Style: Cycle / Loop ─────────────────────────────────────────────────────
+//
+// Phases arranged around a center hub. The agent emits 4-6 phases;
+// CSS positions them at evenly-spaced angles around a circle, with
+// connector arrows showing flow direction. Center hub displays a
+// summary glyph.
+
+function CycleLayout({ points }: { points: InfographicPoint[] }) {
+  const phases = points.slice(0, 6);
+  const overflow = points.length - 6;
+  const n = phases.length;
+
+  return (
+    <div className="ig-cycle">
+      <div className="ig-cycle-ring">
+        {/* Center hub — pulses on hover, anchors the loop visually. */}
+        <div className="ig-cycle-hub">
+          <Icon hint="ContinuousTesting" fallback="ContinuousTesting" size={42} />
+        </div>
+        {phases.map((p, i) => {
+          // Distribute phases around the circle starting at top (-90°)
+          // going clockwise. CSS uses --angle to place each card via
+          // transform: rotate(var(--angle)) translateY(-radius)
+          // rotate(calc(var(--angle) * -1)).
+          const angle = -90 + (360 * i) / n;
+          return (
+            <div
+              key={i}
+              className="ig-cycle-node"
+              style={{ ["--angle" as unknown as string]: `${angle}deg` }}
+            >
+              <div className="ig-cycle-node-inner">
+                <div className="ig-cycle-node-step">{i + 1}</div>
+                <div className="ig-cycle-node-icon">
+                  <Icon hint={p.iconHint} fallback={CYCLE_DEFAULTS[i % CYCLE_DEFAULTS.length]} size={22} />
+                </div>
+                <h3 className="ig-cycle-node-heading">{p.heading}</h3>
+                <p className="ig-cycle-node-body">{p.body}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {overflow > 0 && (
+        <div className="ig-overflow-note">
+          +{overflow} additional phase{overflow === 1 ? "" : "s"} not shown — cycle fits 6
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CYCLE_DEFAULTS: BcgIconName[] = ["MagnifyingGlass", "BrainNetwork", "Strategy", "BusinessProcess", "BetaTest", "Survey"];
+
+// ─── Style: Five Forces ──────────────────────────────────────────────────────
+//
+// Porter-style: a central concept (the infographic title) surrounded
+// by 4-5 forces in cardinal positions (top / right / bottom / left /
+// optional center-second). 5 points = 5 forces; we display all in a
+// cross layout with the title in the middle disc.
+
+function FiveForcesLayout({
+  points,
+  title,
+  subtitle,
+}: {
+  points: InfographicPoint[];
+  title: string;
+  subtitle: string;
+}) {
+  const forces = points.slice(0, 5);
+  const overflow = points.length - 5;
+  // Position labels for the cross layout — the agent emits in any
+  // order; we fill positions clockwise from top: top, right, bottom,
+  // left, then a 5th in the bottom-right diagonal slot.
+  const positions = ["top", "right", "bottom", "left", "diag"];
+
+  return (
+    <div className="ig-five-forces">
+      <div className="ig-five-forces-grid">
+        <div className="ig-five-forces-center">
+          <div className="ig-five-forces-center-eyebrow">Central question</div>
+          <h2 className="ig-five-forces-center-title">{title}</h2>
+          {subtitle && <p className="ig-five-forces-center-subtitle">{subtitle}</p>}
+        </div>
+        {forces.map((p, i) => (
+          <div
+            key={i}
+            className={`ig-five-forces-node ig-five-forces-node-${positions[i] || "diag"}`}
+          >
+            <div className="ig-five-forces-node-icon">
+              <Icon hint={p.iconHint} fallback={FORCES_DEFAULTS[i % FORCES_DEFAULTS.length]} size={26} />
+            </div>
+            <h3 className="ig-five-forces-node-heading">{p.heading}</h3>
+            <p className="ig-five-forces-node-body">{p.body}</p>
+          </div>
+        ))}
+      </div>
+      {overflow > 0 && (
+        <div className="ig-overflow-note">
+          +{overflow} additional force{overflow === 1 ? "" : "s"} not shown — five forces fits 5
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FORCES_DEFAULTS: BcgIconName[] = ["GroupCollaboration", "CustomerInsight", "Innovation", "Coach", "Alert"];
 
 // ─── Icon resolver ───────────────────────────────────────────────────────────
 

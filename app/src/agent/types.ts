@@ -1,4 +1,5 @@
 import type { Course, CourseShape } from "../course/types";
+import type { InfographicStyle } from "../store/infographics";
 
 export type ClientMessage =
   | { type: "user_message"; text: string }
@@ -31,7 +32,7 @@ export type ClientMessage =
       type: "build_infographic";
       infographicId: string;
       topic: string;
-      style: "process" | "quadrant" | "comparison" | "numbered_list" | "timeline";
+      style: InfographicStyle;
       pointCount: number;
       notes?: string;
     };

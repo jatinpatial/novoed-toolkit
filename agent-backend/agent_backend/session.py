@@ -417,7 +417,8 @@ class Session:
             infographicId: str,
             topic: str,
             style: "process" | "quadrant" | "comparison"
-                 | "numbered_list" | "timeline",
+                 | "numbered_list" | "timeline"
+                 | "stat_spotlight" | "pyramid" | "cycle" | "five_forces",
             pointCount: int (3-7),
             notes: str (optional),
           }

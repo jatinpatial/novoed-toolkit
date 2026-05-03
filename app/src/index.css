@@ -2128,6 +2128,353 @@
   .ig-timeline-marker .ig-icon { color: white; }
   .ig-timeline-content { flex: 1; min-width: 0; padding-top: 2px; }
 
+  /* ──────────────────────────────────────────────────────────────────
+     Track-X2 — visual upgrades for the original 5 + 4 new specialized
+     layouts. The shared moves across all 9: brand-cascade gradients
+     (--brand-50 → --brand-100), accent rules in --brand-500, hover
+     elevation, mixed-typography (eyebrow + heading + body), generous
+     padding. Pre-X2 saves still render via the same class names; the
+     CSS just looks more polished.
+     ────────────────────────────────────────────────────────────────── */
+
+  /* Polish to existing styles (rendered cards get subtle gradient
+     wash + soft shadow on hover instead of flat bordered boxes). */
+  .ig-process-item,
+  .ig-quadrant-cell,
+  .ig-comparison-col {
+    background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 100%);
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+  .ig-process-item:hover,
+  .ig-quadrant-cell:hover,
+  .ig-comparison-col:hover {
+    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+    transform: translateY(-1px);
+  }
+  .ig-quadrant-cell {
+    background:
+      radial-gradient(circle at top right, theme("colors.brand.50") 0%, white 60%),
+      white;
+  }
+
+  /* Style: Stat Spotlight — hero numbers + caption */
+  .ig-stat-spotlight {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .ig-stat-cell {
+    position: relative;
+    padding: 24px 20px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 120%);
+    border: 1px solid theme("colors.ink.100");
+    overflow: hidden;
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+  .ig-stat-cell:hover {
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.16);
+    transform: translateY(-2px);
+  }
+  .ig-stat-rule {
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand-500, #29BA74), var(--brand-700, #1B7A4F));
+    border-radius: 0 0 2px 2px;
+  }
+  .ig-stat-icon {
+    margin-bottom: 8px;
+    color: theme("colors.brand.700");
+  }
+  .ig-stat-headline {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    color: var(--brand-700, #1B7A4F);
+    background: linear-gradient(135deg, var(--brand-700, #1B7A4F) 0%, var(--brand-500, #29BA74) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ig-stat-body {
+    font-size: 13px;
+    color: theme("colors.ink.700");
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Style: Pyramid — stacked levels narrowing toward apex */
+  .ig-pyramid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+  }
+  .ig-pyramid-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+  .ig-pyramid-level {
+    background: linear-gradient(135deg,
+      var(--brand-700, #1B7A4F) 0%,
+      var(--brand-500, #29BA74) 100%);
+    color: white;
+    border-radius: 6px;
+    padding: 14px 22px;
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.18);
+    transition: transform 220ms ease, box-shadow 220ms ease;
+    margin: 0 auto;
+    position: relative;
+  }
+  .ig-pyramid-level:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.22);
+  }
+  /* Each level lightens slightly toward the base for depth. */
+  .ig-pyramid-level:nth-child(1) { background: linear-gradient(135deg, theme("colors.brand.900") 0%, theme("colors.brand.700") 100%); }
+  .ig-pyramid-level:nth-child(2) { background: linear-gradient(135deg, theme("colors.brand.800") 0%, theme("colors.brand.600") 100%); }
+  .ig-pyramid-level:nth-child(3) { background: linear-gradient(135deg, theme("colors.brand.700") 0%, theme("colors.brand.500") 100%); }
+  .ig-pyramid-level:nth-child(4) { background: linear-gradient(135deg, theme("colors.brand.600") 0%, theme("colors.brand.400") 100%); }
+  .ig-pyramid-level:nth-child(5) { background: linear-gradient(135deg, theme("colors.brand.500") 0%, theme("colors.brand.300") 100%); }
+  .ig-pyramid-level-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ig-pyramid-level-icon {
+    color: white;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+  .ig-pyramid-level-icon .ig-icon { color: white; }
+  .ig-pyramid-level-text { flex: 1; min-width: 0; }
+  .ig-pyramid-level-eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    color: white;
+    margin-bottom: 2px;
+  }
+  .ig-pyramid-level-heading {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.2;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .ig-pyramid-level-body {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.45;
+    margin: 6px 0 0;
+  }
+
+  /* Style: Cycle / Loop — phases around a center hub */
+  .ig-cycle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+  }
+  .ig-cycle-ring {
+    position: relative;
+    width: 480px;
+    height: 480px;
+    max-width: 100%;
+  }
+  @media (max-width: 600px) {
+    .ig-cycle-ring { width: 360px; height: 360px; }
+  }
+  .ig-cycle-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, var(--brand-500, #29BA74) 0%, var(--brand-700, #1B7A4F) 70%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.25), 0 0 0 8px rgba(255, 255, 255, 0.6);
+    z-index: 2;
+  }
+  .ig-cycle-hub .ig-icon { color: white; }
+  .ig-cycle-node {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* Place the node along the ring (radius 165px), then rotate the
+       inner card back so text reads upright. */
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--angle))
+      translateY(-165px)
+      rotate(calc(var(--angle) * -1));
+    width: 160px;
+  }
+  .ig-cycle-node-inner {
+    background: white;
+    border: 1px solid theme("colors.ink.200");
+    border-top: 3px solid var(--brand-500, #29BA74);
+    border-radius: 12px;
+    padding: 10px 12px 12px;
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.12);
+    text-align: center;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+  .ig-cycle-node:hover .ig-cycle-node-inner {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.2);
+  }
+  .ig-cycle-node-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--brand-700, #1B7A4F);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .ig-cycle-node-icon {
+    color: theme("colors.brand.700");
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: center;
+  }
+  .ig-cycle-node-heading {
+    font-size: 12px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    margin: 0;
+    line-height: 1.25;
+  }
+  .ig-cycle-node-body {
+    font-size: 10px;
+    color: theme("colors.ink.600");
+    margin: 4px 0 0;
+    line-height: 1.4;
+  }
+
+  /* Style: Five Forces — central concept + cardinal forces */
+  .ig-five-forces {
+    padding: 8px 0;
+  }
+  .ig-five-forces-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      ".    top    ."
+      "left center right"
+      ".    bottom diag";
+    gap: 12px;
+    align-items: stretch;
+  }
+  .ig-five-forces-center {
+    grid-area: center;
+    background: linear-gradient(135deg,
+      var(--brand-700, #1B7A4F) 0%,
+      var(--brand-500, #29BA74) 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 22px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.3);
+  }
+  .ig-five-forces-center-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.78;
+    margin-bottom: 8px;
+  }
+  .ig-five-forces-center-title {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+    color: white;
+  }
+  .ig-five-forces-center-subtitle {
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .ig-five-forces-node {
+    background: white;
+    border: 1px solid theme("colors.ink.200");
+    border-top: 3px solid var(--brand-500, #29BA74);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+  .ig-five-forces-node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.14);
+  }
+  .ig-five-forces-node-top    { grid-area: top; }
+  .ig-five-forces-node-right  { grid-area: right; }
+  .ig-five-forces-node-bottom { grid-area: bottom; }
+  .ig-five-forces-node-left   { grid-area: left; }
+  .ig-five-forces-node-diag   { grid-area: diag; }
+  .ig-five-forces-node-icon {
+    color: theme("colors.brand.700");
+    margin-bottom: 6px;
+  }
+  .ig-five-forces-node-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: theme("colors.ink.900");
+    margin: 0 0 4px;
+    line-height: 1.25;
+  }
+  .ig-five-forces-node-body {
+    font-size: 12px;
+    color: theme("colors.ink.700");
+    line-height: 1.45;
+    margin: 0;
+  }
+  /* Mobile: collapse cross to vertical stack */
+  @media (max-width: 720px) {
+    .ig-five-forces-grid {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "top"
+        "right"
+        "center"
+        "left"
+        "bottom"
+        "diag";
+    }
+  }
+
   /* Track-Q: WelcomeModal — three-stage Netflix-style flow.
      Splash → Name → Tour. Background gradient + floating orbs
      animate behind each stage; stage-specific cards fade-in on
