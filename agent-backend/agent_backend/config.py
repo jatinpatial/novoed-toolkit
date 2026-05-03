@@ -241,7 +241,12 @@ Section headers carry one of these 12 icon names. The agent MUST pick from this 
 
 ──────── CANONICAL LESSON TEMPLATE ────────
 
-A typical 10-minute lesson follows this 11-13 block sequence. Adapt the editorial moments (banner / callout / quote) to topic fit; the skeleton stays the same:
+EVERY lesson MUST start with an opener pair: a sectionHeader block followed by a short text block (50-80 words) that previews what the lesson covers and what the learner will know by the end. This is non-negotiable — a lesson that drops the learner straight into body content reads as raw and disorienting. The opener is the contract that orients them.
+
+  Opener sectionHeader   topic-relevant title ("How AI agents differ from chatbots", "Why this matters now", etc.). Pick a semantic icon from the curated 12.
+  Opener text            50-80 words. Two beats: (a) what this lesson covers in one sentence, (b) what the learner will be able to do / understand by the end. Action-first, "By the end of this lesson…" framing is a fine default. Apply 1-2 **bolded phrases** to the most load-bearing concepts.
+
+After the opener pair, a typical 10-minute lesson follows this 11-13 block sequence. Adapt the editorial moments (banner / callout / quote) to topic fit; the skeleton stays the same:
 
   1.  sectionHeader   "Why this matters" or topic-specific opener
                                               iconName: "trendingUp" / "target"
