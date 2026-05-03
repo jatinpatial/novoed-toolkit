@@ -320,20 +320,37 @@ function derivePhaseLabel(
 }
 
 /**
- * polish-7c: confetti burst on course_completed.
+ * polish-7c + polish-15e: confetti burst on build completion.
  *
  * Returns null — this is an effect-host component. Mount it
  * alongside BuildProgressBand inside the canvas pane; it watches
- * lastBuildProgress and fires a brand-colored burst when the build
- * actually completes.
+ * orchestratorState.phase and fires a brand-colored burst when the
+ * build transitions building → completed.
  *
- * Critically, only `course_completed` fires the confetti — NOT a
- * build_state with phase=completed. The BE only emits the progress
- * event during the actual build run; on page rehydration it pushes
- * build_state alone (no progress event). So a refresh after the
- * build finished doesn't re-trigger the celebration. The
- * firedForBuildRef double-guard belt-and-suspenders against any
- * duplicate event delivery.
+ * polish-15e bug fix
+ *   Pre-15e the trigger was lastBuildProgress.kind === "course_completed".
+ *   The orchestrator emits course_completed + course_export_ready
+ *   in rapid succession (no await between them in build_full_course).
+ *   React 18 batches the two setLastBuildProgress calls within the
+ *   same microtask, so the effect with [lastBuildProgress] dep sees
+ *   only the LATEST value (course_export_ready, kind !== "course_completed").
+ *   The course_completed event was effectively swallowed and the
+ *   confetti never fired.
+ *
+ *   Fix: trigger on orchestratorState.phase transition. The phase
+ *   updates via build_state events (a SEPARATE state slice from
+ *   lastBuildProgress), so the building → completed transition
+ *   reliably triggers the effect. Tracks lastPhaseRef to detect
+ *   the actual transition (vs just observing phase=completed which
+ *   would also fire on rehydration of an already-completed build).
+ *
+ * Suppress on rehydration
+ *   Page-refresh / WS-reconnect AFTER a build finished pushes a
+ *   build_state with phase=completed but the FE didn't observe the
+ *   transition. The lastPhaseRef starts as null on mount; only when
+ *   we see building first AND THEN completed do we fire. That makes
+ *   the celebration tied to the lived experience of the build
+ *   finishing, not to any time the FE is in a "completed" state.
  *
  * Two-tap pattern (150 particles spread 80 → 200ms → 50 particles
  * spread 60) gives a satisfying bloom + secondary pop without
@@ -342,26 +359,20 @@ function derivePhaseLabel(
  * each get their own palette automatically.
  */
 export function BuildCompletionConfetti() {
-  const { lastBuildProgress } = useAgent();
-  const firedForBuildRef = useRef(false);
+  const { orchestratorState } = useAgent();
+  const lastPhaseRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!lastBuildProgress) return;
-    // Reset the fire-once latch when a new build begins. course_started
-    // doesn't exist as a kind today; lesson_started on idx 0 is the
-    // de-facto build-start signal.
-    if (
-      lastBuildProgress.kind === "lesson_started" &&
-      lastBuildProgress.payload.idx === 0
-    ) {
-      firedForBuildRef.current = false;
-      return;
+    const phase = orchestratorState.phase;
+    const prev = lastPhaseRef.current;
+    lastPhaseRef.current = phase;
+    // Only fire on the transition from "building" → "completed".
+    // Other transitions (e.g. completed on first mount via rehydration)
+    // don't celebrate — the LD wasn't there to see the build.
+    if (prev === "building" && phase === "completed") {
+      fireBurst();
     }
-    if (lastBuildProgress.kind !== "course_completed") return;
-    if (firedForBuildRef.current) return;
-    firedForBuildRef.current = true;
-    fireBurst();
-  }, [lastBuildProgress]);
+  }, [orchestratorState.phase]);
 
   return null;
 }
