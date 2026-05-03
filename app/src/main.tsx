@@ -7,6 +7,8 @@ import CourseStudio from "./pages/CourseStudio";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import CreateScriptPage from "./pages/CreateScriptPage";
 import ScriptStudio from "./pages/ScriptStudio";
+import CreateKcPage from "./pages/CreateKcPage";
+import KcStudio from "./pages/KcStudio";
 import ScormPlayer from "./pages/ScormPlayer";
 import ProjectsLibrary from "./pages/ProjectsLibrary";
 import { BrandBodyAttribute } from "./shell/TopBar";
@@ -44,6 +46,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             Script from localStorage; agent runs MODE 3 against a
             synthetic-course wrapper around the script. */}
         <Route path="/scripts/:id" element={<ScriptStudio />} />
+        {/* Track-B-Quiz: standalone KC builder. Brief form +
+            result view both wrap in AgentProvider — KC Studio uses
+            useAgent for sendBuildKc / kcBuilds / pendingMaterials.
+            (Reminder for the AgentProvider-hoist refactor: these
+            wrappers go away once provider lives at the root.) */}
+        <Route path="/kcs/new" element={<AgentProvider><CreateKcPage /></AgentProvider>} />
+        <Route path="/kcs/:id" element={<AgentProvider><KcStudio /></AgentProvider>} />
         <Route path="/player" element={<ScormPlayer />} />
         <Route path="/projects" element={<ProjectsLibrary />} />
         {/* Legacy routes */}
