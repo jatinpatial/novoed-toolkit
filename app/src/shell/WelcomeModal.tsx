@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight, BarChart3, BookOpen, ClipboardCheck,
@@ -115,26 +115,45 @@ const STUDIO_PILLS: {
 ];
 
 export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
-  // Initial stage: splash for first-load (no user yet) or name for
-  // returning users without a saved tour. Manual reopen lands on
-  // NAME so the LD can edit their info.
-  const [stage, setStage] = useState<Stage>(() => {
-    const u = getUser();
-    if (!u) return "splash";
-    if (!u.tourCompleted) return "tour";
-    return "name";
-  });
+  // Track-U: splash plays on EVERY open. User feedback: "the netflix
+  // style splash can come everytime its fun." Pre-U the splash was
+  // gated to first-visit (no user yet); now it's always the entry
+  // stage. After splash auto-advances:
+  //   no user             → NAME
+  //   user, !tourCompleted → TOUR
+  //   user, tourCompleted  → close (handled in the splash effect
+  //                          below — auto-close after 2s instead
+  //                          of advancing further)
+  // Manual reopen via SidebarFooter / Avatar menu still lands on
+  // NAME directly (skips splash) — that's an LD-initiated edit
+  // path, not an entry experience.
+  const [stage, setStage] = useState<Stage>("splash");
   const [name, setName] = useState(() => getUser()?.name ?? "");
   const [tourStep, setTourStep] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // Splash auto-advance — 1800ms gives the fade + scale animation
-  // time to complete plus a beat to read the wordmark.
+  // Track-U: splash auto-advance — 2000ms gives the layered
+  // animations time to complete plus a beat to read the wordmark.
+  // Routes to the right next stage based on user state:
+  //   no user      → NAME (collect name)
+  //   no tour       → TOUR (run the 4-step walkthrough)
+  //   tour done     → close (purely decorative splash on revisit)
   useEffect(() => {
     if (!open) return;
     if (stage !== "splash") return;
-    const t = setTimeout(() => setStage("name"), 1800);
+    const t = setTimeout(() => {
+      const u = getUser();
+      if (!u) {
+        setStage("name");
+      } else if (!u.tourCompleted) {
+        setStage("tour");
+      } else {
+        // Returning user, tour done — splash is purely decorative.
+        // Close, don't advance.
+        onClose();
+      }
+    }, 2000);
     return () => clearTimeout(t);
-  }, [open, stage]);
+  }, [open, stage, onClose]);
 
   // Auto-focus the input when the NAME stage is active.
   useEffect(() => {
@@ -236,8 +255,44 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
 }
 
 function SplashStage() {
+  // Track-U: 24-particle background field. Random delays + drift
+  // distances + sizes per particle so the field feels organic.
+  // Particles rendered as simple white dots with blur; CSS keyframes
+  // handle the animation (no JS animation loop, no perf concern).
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 24 }, (_, i) => ({
+        id: i,
+        leftPct: Math.random() * 100,
+        topPct: Math.random() * 100,
+        size: 2 + Math.random() * 4,
+        delay: Math.random() * 4,
+        duration: 6 + Math.random() * 6,
+        opacity: 0.3 + Math.random() * 0.4,
+      })),
+    [],
+  );
+
   return (
     <div className="welcome-splash">
+      <div className="welcome-splash-particles" aria-hidden="true">
+        {particles.map((p) => (
+          <span
+            key={p.id}
+            className="welcome-splash-particle"
+            style={{
+              left: `${p.leftPct}%`,
+              top: `${p.topPct}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              opacity: p.opacity,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="welcome-splash-sweep" aria-hidden="true" />
       <img
         src={`${import.meta.env.BASE_URL}bcg-u-logo-light.png`}
         alt="BCG U"
@@ -248,7 +303,7 @@ function SplashStage() {
         <span className="welcome-splash-wordmark-studio">Studio</span>
       </div>
       <div className="welcome-splash-tagline">
-        AI-powered course design
+        Learning, designed by you.
       </div>
     </div>
   );

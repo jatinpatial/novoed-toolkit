@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { MaterialsDropZone } from "../shell/MaterialsDropZone";
 import { useAgent } from "../agent/AgentContext";
+import { useActiveBrand } from "../shell/TopBar";
+import { B, type BrandKey } from "../brand/tokens";
 import {
   saveInfographic,
   type InfographicFormat,
@@ -70,6 +72,12 @@ const FORMAT_OPTIONS: {
 export default function CreateInfographicPage() {
   const navigate = useNavigate();
   const { sendBuildInfographic, pendingMaterials } = useAgent();
+  // Track-X4: brand selection lives in the form's Style options
+  // section (was previously in the global TopBar). The active brand
+  // is still the global state — picking here writes it via setBrand
+  // so the InfographicStudio result page reads the same value when
+  // it renders.
+  const [brand, setBrand] = useActiveBrand();
 
   const [topic, setTopic] = useState("");
   const [style, setStyle] = useState<InfographicStyle>("numbered_list");
@@ -275,7 +283,38 @@ export default function CreateInfographicPage() {
               optional
               hint="Make the output match your brand and audience."
             >
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {/* Track-X4: brand chip group lives in the form, not
+                    the TopBar. Contextual to the infographic being
+                    built. Writes to the active-brand global so the
+                    result page picks up the same value via
+                    --brand-* cascade vars. */}
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-ink-500 mb-2">
+                    Brand
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(B) as BrandKey[]).map((k) => (
+                      <button
+                        type="button"
+                        key={k}
+                        onClick={() => setBrand(k)}
+                        className={
+                          brand === k
+                            ? "form-chip form-chip-active inline-flex items-center gap-2"
+                            : "form-chip inline-flex items-center gap-2"
+                        }
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                          style={{ background: B[k].pri }}
+                          aria-hidden="true"
+                        />
+                        {B[k].n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="flex items-start gap-2.5 cursor-pointer p-2 -mx-2 rounded-md hover:bg-ink-50 transition">
                   <input
                     type="checkbox"
@@ -288,7 +327,7 @@ export default function CreateInfographicPage() {
                       Use brand colors and font
                     </span>
                     <span className="text-xs text-ink-500 leading-relaxed">
-                      Inherit the active brand from the top-bar toggle (BCG / BCG U / Client).
+                      The infographic uses the brand selected above.
                     </span>
                   </span>
                 </label>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { Command, HelpCircle, LogOut, Search, Settings } from "lucide-react";
 import { B, type BrandKey } from "../brand/tokens";
 import { clearUser, getUser, initialsFor, subscribeUser, type StudioUser } from "../store/user";
@@ -67,17 +66,17 @@ const BRAND_TOOLTIP = "Theme used in preview & export";
 
 export function TopBar({ onSearch, onShowHelp, onShowWelcome }: Props) {
   const [brand, setBrand] = useActiveBrand();
-  // Track-P / P5: scope the brand toggle to surfaces where it
-  // matters. User feedback: brand toggle on the home page is
-  // cognitive overhead — the LD hasn't picked a Studio yet, so
-  // there's nothing to brand. Show it only on Infographic Studio
-  // routes (where the rendered output uses the brand colors).
-  // Course / Script / KC studios have their own brand handling
-  // baked into the export path; they don't need the top-level
-  // toggle either. Future: surface it on lesson canvas only when
-  // an export is in progress.
-  const location = useLocation();
-  const showBrandToggle = location.pathname.startsWith("/infographics");
+  // Track-P / P5 + Track-X4: brand toggle is now contextual to the
+  // surface where the brand actually applies. User feedback evolved:
+  //   P5: hide the toggle on the home page (was on every route).
+  //   X4: hide it on Infographic Studio routes too — the brand
+  //       chip group lives INSIDE the form's "Style options" section
+  //       now, contextual to the infographic being built.
+  // Net result: TopBar's brand toggle stays mounted but hidden on
+  // any route. Course Studio's existing in-page brand handling +
+  // the new in-form chip group on Infographic cover all the
+  // legitimate cases.
+  const showBrandToggle = false;
   // Track-H: local user profile. Subscribes to studio.user changes so
   // a fresh save (WelcomeModal submit) updates the avatar without a
   // page refresh.

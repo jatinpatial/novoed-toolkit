@@ -10,8 +10,27 @@ import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
 import { CourseCardPhoto } from "../components/CourseCardPhoto";
 import {
-  WelcomeModal, hasSeenWelcome, markWelcomeSeen, clearWelcomeSeen,
+  WelcomeModal, markWelcomeSeen, clearWelcomeSeen,
 } from "../shell/WelcomeModal";
+
+// Track-U: sessionStorage flag so the splash plays once per browser
+// session (not on every nav back to /). Cleared automatically when
+// the tab closes.
+const SPLASH_SESSION_KEY = "studio.splash.played";
+function shouldPlaySplash(): boolean {
+  try {
+    return sessionStorage.getItem(SPLASH_SESSION_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+function markSplashPlayed(): void {
+  try {
+    sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
 import { listProjects, subscribeProjects, type Project } from "../store/projects";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
@@ -148,8 +167,15 @@ export default function Dashboard() {
   // re-opens when the SidebarFooter Help button is clicked.
   const [welcomeOpen, setWelcomeOpen] = useState(false);
 
+  // Track-U: open WelcomeModal on every dashboard mount IF the
+  // splash hasn't played yet this browser session. The modal's
+  // internal state machine routes to the right stage (splash →
+  // name / tour / close) based on the user record.
   useEffect(() => {
-    if (!hasSeenWelcome()) setWelcomeOpen(true);
+    if (shouldPlaySplash()) {
+      setWelcomeOpen(true);
+      markSplashPlayed();
+    }
   }, []);
 
   function focusComposer() {
@@ -180,8 +206,10 @@ export default function Dashboard() {
       <WelcomeModal open={welcomeOpen} onClose={dismissWelcome} />
 
       <MeshHero>
-        {/* Track-P / P3: BCG U logo at the top of the hero. Dark
-            version since the mesh hero background is light. */}
+        {/* Track-V: BCG U logo sits IMMEDIATELY ABOVE the
+            eyebrow pill, centered. Stack order: logo → eyebrow →
+            headline → subtitle. User feedback was that the logo +
+            eyebrow should read as a single brand-mark group. */}
         <img
           src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
           alt="BCG U"
