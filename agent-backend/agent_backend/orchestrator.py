@@ -202,6 +202,25 @@ class BuildOrchestrator:
 
     # ─── public API (called from session.py message router) ────────
 
+    def update_sender(self, send: SendFn) -> None:
+        """polish-13a: swap the WS sender after a reconnect.
+
+        The orchestrator is a module-level singleton in session.py so
+        a build-in-flight survives FE refreshes (HMR, manual reload,
+        network blips). Each new Session calls this to point the
+        orchestrator's emit calls at the new WS's send. Subsequent
+        state events + progress events route through the new pipe.
+
+        Existing tool_calls still in flight on the bridge keep their
+        original future targets — the bridge's bind_sender is updated
+        separately by the new Session, so future bridge.call(...)
+        invocations route through the new WS too. Tool_calls that were
+        already sent to the now-dead WS but didn't get a tool_result
+        back will time out and trigger the orchestrator's retry path,
+        which sends through the new pipe automatically.
+        """
+        self._send = send
+
     async def get_state(self) -> dict[str, Any]:
         """Return the current state for the FE to rehydrate after refresh."""
         return self._state.to_dict()

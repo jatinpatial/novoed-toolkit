@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
@@ -20,34 +21,98 @@ from .ui_tools import ALLOWED_TOOL_NAMES, build_ui_mcp_server
 log = logging.getLogger(__name__)
 
 
+# polish-13a: module-level singletons. Bridge + orchestrator persist
+# across WebSocket reconnects so a build started in one WS keeps
+# running and reattaches to the next WS without a halt.
+#
+# Trigger that motivated this: an FE refresh mid-build (Vite HMR,
+# manual reload, network blip) tore down the WS while the orchestrator
+# was actively writing lessons. Pre-fix:
+#   - The orchestrator's _send pointed at the dead WS.
+#   - Starlette raised RuntimeError("Unexpected ASGI message...")
+#     on the next state-event send.
+#   - The asyncio task carrying the build crashed silently.
+#   - The new WS connected to a fresh per-session orchestrator with
+#     empty state, so the FE saw idle while the OLD orchestrator was
+#     either crashed or trying to talk to a dead pipe.
+#
+# Per-LD localhost = single user per backend instance, so a
+# module-level singleton is the right abstraction. If we ever go
+# multi-user (Phase 3 / Electron), this becomes a registry keyed
+# by session token.
+_shared_bridge: ToolBridge | None = None
+_shared_orchestrator: BuildOrchestrator | None = None
+
+
 class Session:
-    """One WebSocket connection ↔ one ClaudeSDKClient. Multi-turn conversation state lives in the SDK."""
+    """One WebSocket connection ↔ one ClaudeSDKClient. Multi-turn
+    conversation state lives in the SDK.
+
+    polish-13a: the bridge + orchestrator are SHARED across Session
+    instances (module-level singletons). Each new Session:
+      1. Binds the bridge's sender to its own WS-write
+      2. Swaps the orchestrator's sender to its own WS-write
+      3. Creates a fresh chat-side ClaudeSDKClient (chat IS per-WS)
+
+    Builds-in-flight survive reconnects via the singletons. Pending
+    tool_call futures on the bridge are NOT cancelled on Session
+    close — stalled calls (sent to the now-dead WS, FE never replied)
+    time out and trigger the orchestrator's retry path, which sends
+    them through the NEW WS via the updated bind_sender target.
+    """
 
     def __init__(self, websocket: WebSocket):
+        global _shared_bridge, _shared_orchestrator
         self.ws = websocket
-        self.bridge = ToolBridge(timeout_seconds=TOOL_CALL_TIMEOUT_SECONDS)
+
+        # Reuse the bridge across reconnects so pending tool-call
+        # futures survive. Timeout-based recovery handles stalled
+        # calls (the orchestrator's retry path takes care of them).
+        if _shared_bridge is None:
+            _shared_bridge = ToolBridge(timeout_seconds=TOOL_CALL_TIMEOUT_SECONDS)
+        self.bridge = _shared_bridge
+        # ALWAYS re-bind the sender to THIS session's WS. Every reconnect
+        # gets a fresh send target — old WS references go stale.
         self.bridge.bind_sender(self._send)
+
+        # sprint-2-1: orchestrator gets the SAME bridge as the main
+        # session. ToolBridge call_ids are global UUIDs so tool_result
+        # routing-by-id Just Works.
+        # sprint-2-3: locked fork #2 — same bridge means write_lesson /
+        # list_structure / etc. from mini-sessions hit the same FE-side
+        # AgentActions as the manual chat path.
+        # polish-13a: orchestrator is also a singleton — reuse if a
+        # build is already in flight, just swap its sender to the new
+        # WS. New WS = same build, new pipe.
+        if _shared_orchestrator is None:
+            _shared_orchestrator = BuildOrchestrator(send=self._send, bridge=self.bridge)
+        else:
+            _shared_orchestrator.update_sender(self._send)
+        self.orchestrator = _shared_orchestrator
+
         self._client: ClaudeSDKClient | None = None
-        self._lock = asyncio.Lock()  # one turn at a time
-        # sprint-2-1: per-session orchestrator. Owns its own asyncio.Lock
-        # internally so build coroutines don't contend with self._lock —
-        # chat stays responsive during a build (locked fork #3, independent
-        # queues). Orchestrator messages are routed via asyncio.create_task
-        # below so they fan out from the chat router.
-        #
-        # sprint-2-3: orchestrator gets the SAME bridge as the main session.
-        # ToolBridge call_ids are global UUIDs (see bridge.py line 30) so
-        # tool_result routing-by-id Just Works across sessions — the FE
-        # doesn't care which session originated a tool_call. This also
-        # means write_lesson / list_structure / etc. from the orchestrator's
-        # mini-sessions hit the same FE actions (registered by CourseCanvas)
-        # as the main chat path. Path parity = no behavior divergence
-        # between manual ("write Lesson 3" via Studio Copilot) and
-        # orchestrated (the build loop). Locked fork #2.
-        self.orchestrator = BuildOrchestrator(send=self._send, bridge=self.bridge)
+        self._lock = asyncio.Lock()  # one chat turn at a time
 
     async def _send(self, payload: dict[str, Any]) -> None:
-        await self.ws.send_text(json.dumps(payload))
+        """polish-13a: defensive — WS may have closed mid-build (HMR
+        reload, manual refresh, network blip). Log & continue silently
+        instead of crashing the asyncio task. The FE rehydrates via
+        get_orchestrator_state on reconnect (sprint-2-1 wired this),
+        so missed state events are recoverable.
+        """
+        try:
+            await self.ws.send_text(json.dumps(payload))
+        except (RuntimeError, WebSocketDisconnect) as exc:
+            # RuntimeError covers Starlette's "Unexpected ASGI message
+            # 'websocket.send', after sending 'websocket.close'…"
+            # WebSocketDisconnect can land on send paths in some
+            # transport states.
+            log.warning("ws send dropped (closed): %s", type(exc).__name__)
+        except Exception as exc:
+            # Catch-all so a transient transport issue can't crash the
+            # build's asyncio task. Includes connection errors that
+            # don't subclass the two above on different ASGI servers.
+            log.warning("ws send unexpected error: %s", exc, exc_info=True)
 
     async def start(self) -> None:
         ui_server = build_ui_mcp_server(self.bridge)
@@ -144,7 +209,18 @@ class Session:
                 await self._send({"type": "error", "message": str(exc)})
 
     async def close(self) -> None:
-        self.bridge.cancel_all("session closed")
+        # polish-13a: do NOT tear down the shared bridge or orchestrator
+        # on session close. They survive reconnects so a build started
+        # in one WS keeps running and reattaches to the next WS.
+        #
+        # Pre-fix this called self.bridge.cancel_all("session closed")
+        # which cancelled every pending tool_call future, including
+        # those owned by an in-flight build. With the singleton bridge,
+        # cancelling on per-session close would break recovery —
+        # so it's removed. Stalled futures (sent to the now-dead WS,
+        # never resolved) time out via TOOL_CALL_TIMEOUT_SECONDS and
+        # trip the orchestrator's retry path; the retry sends through
+        # the new WS via bind_sender's updated target.
         if self._client is not None:
             try:
                 await self._client.disconnect()
