@@ -149,6 +149,46 @@ export function AgentChat() {
     return () => clearTimeout(timer);
   }, [outlineProposal, open, setOpen]);
 
+  // polish-6e (sub-item 5): auto-close the chat panel 2s after a
+  // script_completed event lands. Detection: lastTarget.kind ===
+  // "script" + the most recent turn just finished (isThinking
+  // dropped to false). Gives the LD a moment to read the agent's
+  // closing message, then makes room for the canvas / Script Studio
+  // surface.
+  //
+  // Skipped if outlineProposal lands (proposal takes priority via
+  // polish-A bug 4) or if the build is still active (polish-7b owns
+  // the open/close during builds).
+  const scriptJustCompletedRef = useRef(false);
+  useEffect(() => {
+    // Track "we're inside a write_script turn" state so the close
+    // fires only on the actual transition out (not on every render
+    // where lastTarget is stale-set).
+    if (lastTarget?.kind === "script" && isThinking) {
+      scriptJustCompletedRef.current = true;
+      return;
+    }
+    if (
+      scriptJustCompletedRef.current &&
+      !isThinking &&
+      lastTarget?.kind === "script" &&
+      open &&
+      orchestratorState.phase !== "building" &&
+      !outlineProposal
+    ) {
+      // Turn ended for a script-writing turn. Schedule the close.
+      scriptJustCompletedRef.current = false;
+      const timer = setTimeout(() => {
+        setClosing(true);
+        setTimeout(() => {
+          setOpen(false);
+          setClosing(false);
+        }, 250);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isThinking, lastTarget, open, orchestratorState.phase, outlineProposal, setOpen]);
+
   // polish-7b: auto-collapse the chat panel during a full-course
   // build, restore it when the build ends. The chat panel sits
   // fixed-positioned over the right ~360px of the canvas; during a

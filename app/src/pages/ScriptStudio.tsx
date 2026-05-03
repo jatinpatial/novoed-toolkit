@@ -1,6 +1,6 @@
 import { Component, useCallback, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Mic } from "lucide-react";
+import { ArrowLeft, Download, Mic, Sparkles } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import {
   AgentProvider,
@@ -390,10 +390,14 @@ function ScriptStudioInner() {
         </div>
 
         {/* Script content — scenes view (read-only structured) /
-            raw view (editable textarea). Empty state explains the
-            agent is drafting. */}
+            transcript view (cleaned, readonly, downloadable). Empty
+            state explains the agent is drafting. polish-6e: raw view
+            renamed to transcript, control tags stripped, download
+            button surfaced, "Ready to add to Synthesia" callout
+            above. */}
         <ScriptContent
           content={script.content}
+          title={script.title}
           onChange={updateContent}
         />
       </div>
@@ -460,14 +464,38 @@ function parseScenes(text: string): Scene[] | null {
 
 function ScriptContent({
   content,
+  title,
   onChange,
 }: {
   content: string;
+  title: string;
   onChange: (next: string) => void;
 }) {
-  const [view, setView] = useState<"scenes" | "raw">("scenes");
+  const [view, setView] = useState<"scenes" | "transcript">("scenes");
   const scenes = useMemo(() => (content ? parseScenes(content) : null), [content]);
-  const effectiveView = scenes ? view : "raw";
+  const effectiveView = scenes ? view : "transcript";
+
+  // polish-6e: produce a cleaned transcript with Synthesia control
+  // tags stripped — what the LD pastes into Synthesia is the prose,
+  // not the timing markup. The original content (with tags) stays
+  // in the underlying script string; this is display-only.
+  const transcript = useMemo(() => stripSynthesiaControlTags(content), [content]);
+
+  // polish-6e: download the cleaned transcript as a .txt file with
+  // a filename derived from the script title. Filename sanitization
+  // matches the script-docx download pattern in CourseStudio.
+  function downloadTranscript() {
+    const stem = (title || "script-transcript").replace(/[^\w\-_.]/g, "_");
+    const blob = new Blob([transcript], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${stem}-transcript.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   // Empty state — the script is a freshly-created Script with no
   // content yet (autosend is dispatching the brief; agent is on its
@@ -499,25 +527,52 @@ function ScriptContent({
 
   return (
     <div className="card p-6">
-      {/* View toggle — only meaningful when scenes parse cleanly */}
+      {/* View toggle — only meaningful when scenes parse cleanly.
+          polish-6e: Raw → Transcript label change, Download button
+          surfaces in transcript view. */}
       {scenes && (
-        <div className="mb-4 flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
-          {(["scenes", "raw"] as const).map((v) => {
-            const active = effectiveView === v;
-            return (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 h-7 rounded text-xs font-semibold capitalize transition ${
-                  active
-                    ? "bg-white text-ink-900 shadow-sm"
-                    : "text-ink-500 hover:text-ink-800"
-                }`}
-              >
-                {v === "scenes" ? "Scenes" : "Raw text"}
-              </button>
-            );
-          })}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-ink-100 w-fit">
+            {(["scenes", "transcript"] as const).map((v) => {
+              const active = effectiveView === v;
+              return (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-3 h-7 rounded text-xs font-semibold capitalize transition ${
+                    active
+                      ? "bg-white text-ink-900 shadow-sm"
+                      : "text-ink-500 hover:text-ink-800"
+                  }`}
+                >
+                  {v === "scenes" ? "Scenes" : "Transcript"}
+                </button>
+              );
+            })}
+          </div>
+          {effectiveView === "transcript" && transcript && (
+            <button
+              onClick={downloadTranscript}
+              className="inline-flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-semibold text-brand-700 hover:text-white hover:bg-brand-600 border border-brand-200 hover:border-brand-600 transition"
+              title="Download transcript as .txt"
+            >
+              <Download size={12} /> Download .txt
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* polish-6e: "Ready to add to Synthesia" callout banner above
+          the transcript view. Brand-tinted, minimal — frames the
+          export step for the LD. Hidden on the scenes view since
+          that's the working surface, not the export surface. */}
+      {effectiveView === "transcript" && transcript && (
+        <div className="mb-4 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-brand-50 border border-brand-200 text-xs text-brand-800">
+          <Sparkles size={14} className="text-brand-600 flex-shrink-0" />
+          <span>
+            <strong className="font-semibold">Ready to add to Synthesia.</strong>{" "}
+            Control tags stripped — paste this transcript directly.
+          </span>
         </div>
       )}
 
@@ -551,13 +606,49 @@ function ScriptContent({
           ))}
         </div>
       ) : (
+        /* polish-6e: transcript view shows the cleaned export-ready
+           text. Readonly because edits to the cleaned version would
+           be destructive of the underlying control tags (timing
+           markers needed in Synthesia). To edit the script, use the
+           agent ("regenerate scene 3 with shorter narration") — that
+           preserves tags. */
         <textarea
-          value={content}
-          onChange={(e) => onChange(e.target.value)}
-          rows={Math.max(20, content.split("\n").length + 2)}
-          className="w-full font-mono text-xs text-ink-900 leading-relaxed bg-ink-50 border border-ink-200 rounded-md p-3 outline-none focus:border-brand-500 resize-y"
+          value={transcript}
+          readOnly
+          rows={Math.max(20, transcript.split("\n").length + 2)}
+          className="w-full font-mono text-xs text-ink-900 leading-relaxed bg-ink-50 border border-ink-200 rounded-md p-3 outline-none resize-y"
         />
       )}
     </div>
+  );
+}
+
+/**
+ * polish-6e: strip Synthesia control tags from script content for
+ * the transcript view + .txt download.
+ *
+ * Synthesia uses inline tags for pacing and audio direction:
+ *   <break time="1.5s"/>   <break time="500ms"/>
+ *   <breaktime="1s"/>      (mistyped variant from older drafts)
+ *   <pause/>               <pause time="2s"/>
+ *   <emphasis level="strong">…</emphasis>
+ *
+ * The transcript is for sharing / pasting — strip all <…/> tags and
+ * collapse whitespace runs back to single spaces. Keep paragraph
+ * breaks (\n\n stays as \n\n).
+ */
+function stripSynthesiaControlTags(content: string): string {
+  if (!content) return "";
+  return (
+    content
+      // Self-closing tags: <break .../> <pause/> etc.
+      .replace(/<\s*\/?[a-zA-Z]+(?:\s[^>]*?)?\/?\s*>/g, "")
+      // Collapse runs of spaces but preserve paragraph breaks.
+      .split("\n")
+      .map((line) => line.replace(/[ \t]{2,}/g, " ").trim())
+      .join("\n")
+      // Collapse 3+ consecutive newlines down to 2 (paragraph break).
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
   );
 }
