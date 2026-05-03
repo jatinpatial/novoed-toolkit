@@ -366,6 +366,9 @@ class BuildOrchestrator:
                 "tokensIn": metrics["tokens_in_total"],
                 "tokensOut": metrics["tokens_out"],
                 "model": metrics["model"],
+                # polish-7d-fix: SDK-computed cost. Aggregates cleanly
+                # across all lessons for the completion toast.
+                "costUsd": metrics["cost_usd"],
                 # Breakdown — for cost analysis. cache reads are
                 # ~10% the price of uncached input on Anthropic's
                 # pricing, so the breakdown matters for $-estimation.
@@ -375,7 +378,8 @@ class BuildOrchestrator:
             })
             log.info(
                 "lesson %d done — %dms (init %dms) tokens in=%s "
-                "(uncached=%s cache_read=%s cache_creation=%s) out=%s model=%s",
+                "(uncached=%s cache_read=%s cache_creation=%s) out=%s "
+                "model=%s cost=$%s",
                 t.idx, duration_ms, init_ms,
                 metrics["tokens_in_total"],
                 metrics["tokens_in_uncached"],
@@ -383,6 +387,7 @@ class BuildOrchestrator:
                 metrics["tokens_in_cache_creation"],
                 metrics["tokens_out"],
                 metrics["model"],
+                f"{metrics['cost_usd']:.4f}" if metrics["cost_usd"] is not None else "?",
             )
 
         # Loop ended without cancel/error → completed.
@@ -426,15 +431,32 @@ class BuildOrchestrator:
             usage: dict[str, Any] = {}
             async for event in client.receive_response():
                 if isinstance(event, ResultMessage):
-                    # event.usage is the SDK's normalized usage dict.
-                    # Field names vary across SDK versions; we read
-                    # both snake_case and camelCase below.
+                    # event.usage  → tokens dict (input_tokens,
+                    #                 cache_read_input_tokens, etc.)
+                    # event.model_usage  → dict keyed by model name
+                    #                      with per-model token usage.
+                    #                      polish-7d-fix: this is where
+                    #                      the model name actually
+                    #                      lives — pre-fix we were
+                    #                      reading event.model which
+                    #                      doesn't exist on this SDK.
+                    # event.total_cost_usd  → SDK-computed cost (better
+                    #                         than back-of-envelope
+                    #                         from tokens since cache
+                    #                         pricing varies by tier).
                     usage = dict(event.usage or {})
-                    # Some SDKs surface model on the ResultMessage; if
-                    # absent, leave it None and tooltip falls back to
-                    # the env-default.
-                    if hasattr(event, "model") and event.model:
-                        usage.setdefault("model", event.model)
+                    model_usage = event.model_usage or {}
+                    if model_usage:
+                        # First (typically only) model key — most
+                        # builds run a single model end-to-end.
+                        # Multi-model turns (rare) collapse to the
+                        # first key, which is the primary model used
+                        # for the actual generation.
+                        model_name = next(iter(model_usage), None)
+                        if model_name:
+                            usage["model"] = model_name
+                    if event.total_cost_usd is not None:
+                        usage["total_cost_usd"] = event.total_cost_usd
                     break
             return usage, init_ms
         finally:
@@ -577,6 +599,17 @@ def _extract_usage(usage: dict[str, Any]) -> dict[str, Any]:
 
     model = usage.get("model") or _model_from_env()
 
+    # polish-7d-fix: SDK-computed cost (in USD) when available.
+    # ResultMessage.total_cost_usd accounts for cache-tier pricing
+    # which is hard to back-of-envelope from raw token counts. The
+    # FE's tooltip / aggregate toast can use this directly.
+    cost_usd = usage.get("total_cost_usd")
+    if cost_usd is not None:
+        try:
+            cost_usd = float(cost_usd)
+        except (TypeError, ValueError):
+            cost_usd = None
+
     return {
         "tokens_in_total": total_in if total_in > 0 else None,
         "tokens_in_uncached": uncached if uncached > 0 else None,
@@ -586,4 +619,5 @@ def _extract_usage(usage: dict[str, Any]) -> dict[str, Any]:
         ),
         "tokens_out": out,
         "model": model,
+        "cost_usd": cost_usd,
     }
