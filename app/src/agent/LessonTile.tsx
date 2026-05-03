@@ -88,6 +88,76 @@ export function LessonTile({
 }
 
 /**
+ * polish-16c: module knowledge-check state chip. Mirrors LessonTile's
+ * vocabulary (orb pulse / green check / red dot) for the [KC] row in
+ * the outline tree. Reads orchestratorState.kcStates keyed by
+ * "module:<moduleId>" — the wire format the orchestrator emits in
+ * sprint-2-8.
+ */
+export function ModuleKcTile({ moduleId }: { moduleId: string }) {
+  const { orchestratorState } = useAgent();
+  const status = orchestratorState.kcStates[`module:${moduleId}`];
+  if (!status || status === "idle") {
+    return <span className="outline-lesson-count-chip">·</span>;
+  }
+  if (status === "building") {
+    return (
+      <span className="lesson-tile-building" title="Writing the module final assessment…" aria-label="Building module knowledge check">
+        <span className="lesson-tile-orb" aria-hidden="true" />
+      </span>
+    );
+  }
+  if (status === "done") {
+    return (
+      <span className="lesson-tile-done" title="Final assessment written" aria-label="Final assessment written">
+        <Check size={10} className="text-brand-700" strokeWidth={3} />
+      </span>
+    );
+  }
+  return (
+    <span className="lesson-tile-error" title="Final assessment failed" aria-label="Final assessment failed">
+      <span className="lesson-tile-error-dot" aria-hidden="true" />
+    </span>
+  );
+}
+
+/**
+ * polish-16c: case-study state chip for the [CS] row. Reads
+ * orchestratorState.csStates keyed by case-study slot id. `designed`
+ * prop is from the FE's own state (whether the slot has content) —
+ * if designed but orchestrator hasn't tracked state, show the
+ * "done" check anyway so a hand-edited case study looks complete.
+ */
+export function CaseStudyTile({ caseStudyId, designed }: { caseStudyId: string; designed: boolean }) {
+  const { orchestratorState } = useAgent();
+  const status = orchestratorState.csStates[caseStudyId];
+  if (status === "building") {
+    return (
+      <span className="lesson-tile-building" title="Designing case study…" aria-label="Designing case study">
+        <span className="lesson-tile-orb" aria-hidden="true" />
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="lesson-tile-error" title="Case study design failed" aria-label="Case study failed">
+        <span className="lesson-tile-error-dot" aria-hidden="true" />
+      </span>
+    );
+  }
+  // Done OR no orchestrator state but designed (hand-authored)
+  if (status === "done" || designed) {
+    return (
+      <span className="lesson-tile-done" title="Case study designed" aria-label="Case study designed">
+        <Check size={10} className="text-brand-700" strokeWidth={3} />
+      </span>
+    );
+  }
+  // Planted but never designed.
+  return <span className="outline-lesson-count-chip">·</span>;
+}
+
+/**
  * sprint-2-2: aggregate build-progress band.
  *
  * Sticky at the top of the lesson canvas pane (NOT the full window

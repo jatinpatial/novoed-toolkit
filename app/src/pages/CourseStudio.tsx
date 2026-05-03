@@ -26,7 +26,7 @@ import { deleteProject, getProject, listProjects, saveProject, subscribeProjects
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
-import { BuildCompletionConfetti, BuildProgressBand, LessonTile } from "../agent/LessonTile";
+import { BuildCompletionConfetti, BuildProgressBand, CaseStudyTile, LessonTile, ModuleKcTile } from "../agent/LessonTile";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
 
@@ -1453,6 +1453,51 @@ function CourseOutlineBody({ course, am, al, viewMode, onSelect, onSelectModule,
                 );
               })}
             </div>
+            {/* polish-16c: module-level extras shown as outline rows so
+                the LD sees what's been built for this module beyond
+                the lessons. Module KC + planted case-study slot each
+                get a visual entry. Click navigates to module summary
+                view (which shows their full content). State chips
+                mirror LessonTile's orb / check / dot vocabulary. */}
+            {(m.knowledgeCheck || m.caseStudyId) && (
+              <div className="outline-extras">
+                {m.knowledgeCheck && m.knowledgeCheck.questions && m.knowledgeCheck.questions.length > 0 && (
+                  <div
+                    className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
+                      viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
+                    }`}
+                    onClick={() => onSelectModule(mi)}
+                    title="Module final assessment"
+                  >
+                    <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[KC]</span>
+                    <span className="text-[13px] flex-1 truncate text-ink-700 italic">
+                      Final assessment · {m.knowledgeCheck.questions.length} question{m.knowledgeCheck.questions.length === 1 ? "" : "s"}
+                    </span>
+                    <ModuleKcTile moduleId={m.id} />
+                  </div>
+                )}
+                {m.caseStudyId && (() => {
+                  const cs = course.caseStudies?.find((c: CaseStudy) => c.id === m.caseStudyId);
+                  if (!cs) return null;
+                  const designed = (cs.context || "").trim().length > 0 || (cs.stakeholders || []).length > 0;
+                  return (
+                    <div
+                      className={`outline-extra-row group rounded-md flex items-center gap-1.5 px-2 py-1.5 cursor-pointer ${
+                        viewMode === "module" && am === mi ? "bg-brand-50" : "hover:bg-ink-50"
+                      }`}
+                      onClick={() => onSelectModule(mi)}
+                      title={designed ? `Case study: ${cs.title}` : `Case study (planted, not yet designed): ${cs.title}`}
+                    >
+                      <span className="text-[10px] font-bold flex-shrink-0 text-ink-400">[CS]</span>
+                      <span className={`text-[13px] flex-1 truncate italic ${designed ? "text-ink-700" : "text-ink-400"}`}>
+                        {cs.title}
+                      </span>
+                      <CaseStudyTile caseStudyId={cs.id} designed={designed} />
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             {!isBuilding && (
               <button onClick={() => addLesson(mi)} className="outline-add-lesson">
                 + lesson

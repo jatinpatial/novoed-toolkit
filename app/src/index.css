@@ -1525,6 +1525,18 @@
     transition: background var(--duration-fast) var(--ease-sana),
                 color var(--duration-fast) var(--ease-sana);
   }
+  /* polish-16c: outline-tree extras (Module KC, Case Study) sit
+     below the lesson list, indented with the same .outline-lessons
+     padding. Visually separated from lessons by a subtle top
+     border. Click navigates to module summary view. */
+  .outline-extras {
+    margin: 4px 8px 0;
+    padding-top: 4px;
+    border-top: 1px dashed theme("colors.ink.100");
+  }
+  .outline-extra-row {
+    transition: background var(--duration-fast) var(--ease-sana);
+  }
   .outline-add-lesson:hover {
     color: theme("colors.brand.700");
     background: theme("colors.brand.50");
