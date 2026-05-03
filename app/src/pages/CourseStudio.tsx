@@ -3638,16 +3638,61 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
       /* polish-9b-preview: flipcard flip-on-click */
       .flipcard-prev.flipcard-prev-flipped .flipcard-prev-inner { transform: rotateY(180deg); }
       .flipcard-prev:hover .flipcard-prev-inner { box-shadow: 0 4px 14px rgba(0,0,0,0.10); }
+      /* polish-9b-preview-accordion: accordion expand/collapse with
+         smooth max-height transition + chevron rotation. Mirrors
+         the InteractiveAccordion behavior on the editor canvas
+         (polish-9d) so editor and preview reads identically. */
+      .accordion-prev-item {
+        transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .accordion-prev-item-open {
+        box-shadow: 0 4px 12px rgba(0, 166, 81, 0.10);
+        border-color: rgba(0, 166, 81, 0.30) !important;
+      }
+      .accordion-prev-title {
+        transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .accordion-prev-title:hover { background: rgba(0, 166, 81, 0.06) !important; }
+      .accordion-prev-item-open .accordion-prev-title { background: rgba(0, 166, 81, 0.10) !important; }
+      .accordion-prev-chevron {
+        transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+        transform: rotate(0deg);
+      }
+      .accordion-prev-item-open .accordion-prev-chevron {
+        transform: rotate(180deg);
+        color: ${b.priDk} !important;
+      }
+      .accordion-prev-body {
+        max-height: 0;
+        padding: 0 16px;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 260ms cubic-bezier(0.4, 0, 0.2, 1),
+                    padding 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .accordion-prev-item-open .accordion-prev-body {
+        max-height: 1000px;
+        padding: 12px 16px;
+        opacity: 1;
+      }
     `;
     const previewScript = `
-      // polish-9b-preview: wire click handlers on flipcards.
-      // Idempotent — one listener at the document level, delegated
-      // by class match, so re-renders + dynamically-added cards
-      // both work without re-binding.
+      // polish-9b-preview + polish-9b-preview-accordion: delegated
+      // click handlers for both interactive block types. One listener
+      // at the document level; class-match dispatch keeps the script
+      // small and re-render safe.
       document.addEventListener('click', function(e) {
-        var card = e.target.closest && e.target.closest('.flipcard-prev');
-        if (!card) return;
-        card.classList.toggle('flipcard-prev-flipped');
+        if (!e.target || !e.target.closest) return;
+        var card = e.target.closest('.flipcard-prev');
+        if (card) { card.classList.toggle('flipcard-prev-flipped'); return; }
+        var title = e.target.closest('.accordion-prev-title');
+        if (title) {
+          var item = title.closest('.accordion-prev-item');
+          if (item) item.classList.toggle('accordion-prev-item-open');
+          return;
+        }
       });
     `;
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="hdr"><div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div></div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';

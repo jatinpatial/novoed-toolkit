@@ -176,7 +176,30 @@ export function previewBlock(blk: Block, brand: BrandKey): string {
       // polish-6b: accordion item descriptions now respect **bold**
       // markdown (was esc-only). Titles stay esc'd — single-line
       // labels don't need inline marks.
-      const acc = items.slice(0, 3).map((it, i) => '<div style="border:1px solid ' + b.n2 + ';border-radius:7px;margin-bottom:5px;overflow:hidden;"><div style="padding:10px 14px;font-size:12px;font-weight:600;color:' + b.tx + ";background:" + (i === 0 ? b.priLt : b.wh) + ';display:flex;justify-content:space-between;">' + esc(it.title) + "<span>" + (i === 0 ? "▲" : "▼") + "</span></div>" + (i === 0 ? '<div style="padding:10px 14px;font-size:12px;color:' + b.txL + ';line-height:1.7;">' + renderInlineMd(it.desc || "") + "</div>" : "") + "</div>").join("");
+      //
+      // polish-9b-preview-accordion: emit interactive markup with
+      // class hooks (.accordion-prev-item / .accordion-prev-title
+      // / .accordion-prev-body / .accordion-prev-chevron) so the
+      // iframe-injected click handler can toggle open/closed
+      // state. Bodies are ALWAYS rendered (was first-only); the
+      // iframe CSS handles the closed-state collapse. First item
+      // gets the .accordion-prev-item-open default so the preview
+      // opens to the same initial state as the previous static
+      // version.
+      const acc = items.slice(0, 3).map((it, i) => {
+        const openClass = i === 0 ? " accordion-prev-item-open" : "";
+        return (
+          '<div class="accordion-prev-item' + openClass + '" style="border:1px solid ' + b.n2 + ';border-radius:7px;margin-bottom:5px;overflow:hidden;background:' + b.wh + ';">' +
+            '<button type="button" class="accordion-prev-title" style="width:100%;padding:12px 16px;font-size:12px;font-weight:600;color:' + b.tx + ';background:transparent;display:flex;justify-content:space-between;align-items:center;border:none;cursor:pointer;text-align:left;">' +
+              '<span>' + esc(it.title) + '</span>' +
+              '<span class="accordion-prev-chevron" aria-hidden="true" style="display:inline-block;font-size:10px;color:' + b.txL + ';">▼</span>' +
+            '</button>' +
+            '<div class="accordion-prev-body" style="font-size:12px;color:' + b.txL + ';line-height:1.7;">' +
+              renderInlineMd(it.desc || "") +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
       return acc + (items.length > 3 ? '<div style="font-size:10px;color:' + b.txL + ';text-align:center;padding-top:4px;">+' + (items.length - 3) + " more sections</div>" : "");
     }
 
