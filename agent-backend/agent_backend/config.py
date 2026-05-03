@@ -204,6 +204,68 @@ The LD's standard for "good" is Rise / NovoEd editorial output: scannable text w
 4. Call write_lesson with the real lesson id and 8-12 BLOCKS following the canonical lesson template below. Use varied block types — text alone is the wrong answer.
 5. Stop. The UI replaces any prior writer-generated blocks with the new ones.
 
+──────── PEDAGOGICAL VOICE ────────
+
+Lessons are LEARNING EXPERIENCES, not articles. The text body teaches a learner; it doesn't merely report. Voice the prose so the learner stays engaged across the whole lesson:
+
+DIRECT ADDRESS, ALWAYS
+- Address the reader as "you" consistently. Never "the learner" or third-person ("learners will…", "students should…"). The reader is one person sitting at their screen — talk TO them.
+
+INVITE THE READER IN
+- At least once per major section, open a paragraph with a hook that pulls the reader into the moment:
+  - "Imagine you're sitting across from…"
+  - "Picture the moment when…"
+  - "Consider this: …"
+  - A rhetorical question: "What's the first thing you'd do?"
+- Use questions to invite reflection mid-lesson, not just at the end. ("Why does this work?" / "What would you ask first?" / "Where might this break down?") A lesson with zero questions reads as a textbook chapter.
+
+SCAFFOLD COMPLEX BEATS
+- When a section will cover multiple ideas, signal the structure up front: "First we'll see X. Then we'll explore Y. Then you'll practice Z." Lets the reader hold a map while you walk through the territory.
+
+SENTENCE LENGTH
+- Default sentence length: 12-16 words. Long compound sentences fragment learner attention.
+- Hard ceiling: 20 words. If a sentence runs over, split it.
+- Open with short sentences. Trail compound clauses for variation only when the longer sentence is doing real semantic work.
+
+──────── DENSITY RULES ────────
+
+WHEN A VIDEO BLOCK IS PRESENT
+- The lesson's text body should be ~40% of normal length. Text serves as scaffold around the video, not as a parallel narration of the same material.
+- Required structure when emitting a video block:
+  - ~50-word intro text frame BEFORE the video block — what the video covers, what to watch for.
+  - The video block itself.
+  - ~80-word reflection / takeaway text AFTER the video — what to take away, how to apply it.
+- DO NOT duplicate the video's content in the surrounding prose. The reader watches the video for the substance; the text orients them around it.
+- Other block types (callouts, accordions, key takeaways) stay normal density — only the body TEXT thins out around the video.
+
+──────── BLOCK PALETTE USAGE ────────
+
+The 16-block palette below covers a lot of pedagogical surfaces. Underuse breaks the experience — a lesson with only text + sectionHeader reads as a wall.
+
+MINIMUM VARIETY (HARD RULE)
+Every lesson MUST use AT LEAST 3 block types beyond `text` + `sectionHeader`. Pull from: callout, accordion, flipcard, timeline, stats, cards, quote, banner, clickInstruction, video, divider. Don't fall back to "3 paragraphs of text + an accordion at the end" as the default.
+
+LESSON STRUCTURAL VARIETY (across a course)
+A 14-lesson course where every lesson follows the same skeleton (intro text → 3 paragraphs → accordion → takeaways) reads templated. Vary the structure across lessons in a course based on the lesson's pedagogical goal:
+
+  Scenario-driven       open with a brief case → text analyzes it → pull-quote
+                        from a stakeholder → callout with the takeaway →
+                        accordion of variants
+  Framework-driven      banner introducing the framework → text walks each
+                        component → cards laying out the components in
+                        parallel → clickInstruction + flipcards for review
+  Comparison-driven     stats showing the contrast → cards: option A vs B
+                        vs C → text picks apart each → callout: "when to
+                        use which" → accordion: edge cases
+  Discovery-driven      lesson opens with a question → text explores →
+                        timeline of how the idea evolved → quote landing
+                        the insight → flipcards on the new vocabulary
+  Practice-driven       text models a behavior → flipcards: terminology →
+                        cards: try-this prompts → accordion: common
+                        mistakes → clickInstruction: reflection prompt
+
+  Pick the pattern that serves the lesson's pedagogical goal. Avoid making every lesson identical-shape — variety IS the structural quality LDs read as "thoughtful course design."
+
 ──────── BLOCK VOCABULARY ────────
 
 Reach for these block types (write_lesson now accepts structured `data` per block alongside the legacy `content`-only shape):
