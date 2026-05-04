@@ -289,14 +289,6 @@ export default function KcStudio() {
             <strong className="text-ink-700">Types:</strong>{" "}
             {kc.questionTypes.join(" + ")}
           </span>
-          {buildState?.status === "done" && buildState.costUsd !== null && (
-            <>
-              <span className="text-ink-300">·</span>
-              <span title={`${buildState.tokensIn ?? "?"} tokens in / ${buildState.tokensOut ?? "?"} tokens out`}>
-                <strong className="text-ink-700">Cost:</strong> ${buildState.costUsd.toFixed(3)}
-              </span>
-            </>
-          )}
         </div>
 
         {/* Body — building / failed / questions */}

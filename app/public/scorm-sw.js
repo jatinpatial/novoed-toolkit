@@ -70,7 +70,7 @@ function mimeFor(path) {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  // Match /novoed-toolkit/scorm-fs/<session>/<path...> or /scorm-fs/<session>/<path...>
+  // Match /scorm-fs/<session>/<path...> at any base path
   const m = url.pathname.match(/\/scorm-fs\/([^/]+)\/(.*)$/);
   if (!m) return;
   const sessionId = m[1];

@@ -50,6 +50,33 @@ const POINT_COUNT_OPTIONS: { value: number; label: string; hint: string }[] = [
   { value: 7, label: "7", hint: "Most depth (numbered list works best at 7)" },
 ];
 
+// Y3: per-style valid point counts. Quadrant is locked at 4 (one per
+// quadrant), Five Forces at 5 (one per force), the other specialized
+// layouts have a sweet-spot range. Generic layouts accept the full
+// 3-7 spread. The form filters chips and snaps the current selection
+// when the user picks a new style.
+const VALID_POINT_COUNTS: Record<InfographicStyle, number[]> = {
+  quadrant: [4],
+  five_forces: [5],
+  pyramid: [3, 4, 5],
+  cycle: [4, 5, 6],
+  stat_spotlight: [3, 4, 5],
+  process: [3, 4, 5, 6, 7],
+  numbered_list: [3, 4, 5, 6, 7],
+  timeline: [3, 4, 5, 6, 7],
+  comparison: [3, 4, 5, 6, 7],
+};
+
+function snapPointCountToStyle(style: InfographicStyle, current: number): number {
+  const valid = VALID_POINT_COUNTS[style];
+  if (valid.includes(current)) return current;
+  // Pick the valid count closest to the current value (ties prefer
+  // the lower count — e.g. 6 with valid=[3,4,5] snaps to 5).
+  return valid.reduce((closest, n) =>
+    Math.abs(n - current) < Math.abs(closest - current) ? n : closest,
+  );
+}
+
 // Track-S: output format options. PNG ships now; HTML + SCORM are
 // surfaced as "soon" so LDs can express intent — selecting either
 // at submit shows a toast and falls back to PNG.
@@ -163,25 +190,15 @@ export default function CreateInfographicPage() {
     navigate(`/infographics/${id}`);
   }
 
-  // Track-X2: per-style point-count nudge. Each specialized layout has
-  // a sweet-spot count where it reads cleanest; this surfaces a gentle
-  // hint without blocking the LD from picking what they want.
+  // Y3: with point-count chips filtered to valid-for-style values,
+  // the user can no longer pick an invalid count. styleHint is kept
+  // as a tiny advisory note for the constrained-range layouts so the
+  // LD knows why the chips look short. The locked-to-1 cases get
+  // their own copy in the JSX below.
   const styleHint = (() => {
-    if (style === "quadrant" && pointCount !== 4) {
-      return "Quadrant style works best with exactly 4 points (one per quadrant).";
-    }
-    if (style === "five_forces" && pointCount !== 5) {
-      return "Five Forces is designed for exactly 5 points (one per force).";
-    }
-    if (style === "pyramid" && (pointCount < 3 || pointCount > 5)) {
-      return "Hierarchy Pyramid reads best with 3–5 levels.";
-    }
-    if (style === "cycle" && (pointCount < 4 || pointCount > 6)) {
-      return "Cycle layouts read best with 4–6 phases around the loop.";
-    }
-    if (style === "stat_spotlight" && (pointCount < 3 || pointCount > 5)) {
-      return "Stat Spotlight reads best with 3–5 hero numbers.";
-    }
+    if (style === "pyramid") return "Hierarchy Pyramid reads best with 3–5 levels.";
+    if (style === "cycle") return "Cycle layouts read best with 4–6 phases around the loop.";
+    if (style === "stat_spotlight") return "Stat Spotlight reads best with 3–5 hero numbers.";
     return null;
   })();
 
@@ -243,7 +260,13 @@ export default function CreateInfographicPage() {
                   <button
                     type="button"
                     key={opt.value}
-                    onClick={() => setStyle(opt.value)}
+                    onClick={() => {
+                      // Y3: snap point count to the nearest valid
+                      // value for the new style (e.g. switching to
+                      // Quadrant from 5 points lands on 4).
+                      setStyle(opt.value);
+                      setPointCount((prev) => snapPointCountToStyle(opt.value, prev));
+                    }}
                     className={style === opt.value ? "form-chip form-chip-active" : "form-chip"}
                     title={opt.hint}
                   >
@@ -255,11 +278,14 @@ export default function CreateInfographicPage() {
 
             <FormField label="Number of points" required>
               <div className="flex flex-wrap gap-2">
-                {POINT_COUNT_OPTIONS.map((opt) => (
+                {POINT_COUNT_OPTIONS.filter((opt) =>
+                  VALID_POINT_COUNTS[style].includes(opt.value),
+                ).map((opt) => (
                   <button
                     type="button"
                     key={opt.value}
                     onClick={() => setPointCount(opt.value)}
+                    disabled={VALID_POINT_COUNTS[style].length === 1}
                     className={
                       pointCount === opt.value ? "form-chip form-chip-active" : "form-chip"
                     }
@@ -269,7 +295,14 @@ export default function CreateInfographicPage() {
                   </button>
                 ))}
               </div>
-              {styleHint && (
+              {VALID_POINT_COUNTS[style].length === 1 && (
+                <div className="mt-2 text-xs text-ink-500 italic">
+                  {style === "quadrant"
+                    ? "Quadrant style is locked to 4 points — one per quadrant."
+                    : "Five Forces is locked to 5 points — one per force."}
+                </div>
+              )}
+              {styleHint && VALID_POINT_COUNTS[style].length > 1 && (
                 <div className="mt-2 text-xs text-ink-500 italic">{styleHint}</div>
               )}
             </FormField>

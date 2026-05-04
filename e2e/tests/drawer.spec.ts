@@ -12,7 +12,7 @@ import { seedCourseInStorage, clearStorage, openCourse } from "../utils/storage"
  *
  * Catches regressions in:
  *   - Storage seed plumbing
- *   - Course → CourseStudio routing under the /novoed-toolkit base
+ *   - Course → CourseStudio routing under the / base
  *   - BlockDrawer mount + visibility of the size-toggle button
  *   - The narrow → wide → fullscreen → narrow cycle in #5a's CSS
  */

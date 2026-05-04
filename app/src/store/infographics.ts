@@ -73,6 +73,12 @@ export interface Infographic {
   coverImageUrl?: string;
   coverPhotographer?: string;
   coverPhotographerUrl?: string;
+  /** BB2: per-element color overrides applied on top of the base
+   *  brand cascade. Keyed by element id (e.g. "title", "subtitle",
+   *  "point-0-heading", "point-2-body"); value is any valid CSS
+   *  color string. Empty / missing entries fall back to the brand
+   *  cascade defaults. */
+  styleOverrides?: Record<string, string>;
   createdAt: number;
   updatedAt: number;
 }
