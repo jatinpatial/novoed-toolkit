@@ -162,7 +162,7 @@ function ProjectCard({ project }: { project: Project }) {
             gradient when no cover has resolved yet. Tooltip surfaces
             photographer attribution when present (Pexels override). */}
         <div
-          className="project-card-cover"
+          className={`project-card-cover${project.coverImageUrl ? " bcg-editorial-image-tint" : ""}`}
           style={
             project.coverImageUrl
               ? {

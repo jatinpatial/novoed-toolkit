@@ -2209,6 +2209,340 @@
     background: theme("colors.brand.50");
   }
 
+  /* QQ1d: lesson preview device-frame wrapper. Three width modes
+     (desktop full-width, tablet 768px, mobile 400px) with a phone-
+     style chrome on mobile so the LD sees how content fits at each
+     viewport without leaving the app. */
+  .pv-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: max-width 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .pv-frame-mobile {
+    border-radius: 28px;
+    border: 8px solid #111;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+  .pv-frame-mobile iframe {
+    border-radius: 0;
+  }
+  .pv-frame-tablet {
+    border-radius: 14px;
+    border: 4px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+  }
+  /* QQ1c: lesson nav slide-in. Direction-keyed animation runs once
+     when the iframe re-mounts on lesson change. */
+  .pv-iframe-enter-forward {
+    animation: pv-slide-in-from-right 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pv-iframe-enter-back {
+    animation: pv-slide-in-from-left 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes pv-slide-in-from-right {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pv-slide-in-from-left {
+    from { opacity: 0; transform: translateX(-40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* QQ2: streaming block reveal. Each BlockCard gets the .block-
+     card-enter class which runs a fade-up animation on mount. The
+     toolExecutor's write_lesson handler stages writes 80ms apart so
+     each block lands and animates in sequentially — the LD watches
+     content form rather than seeing a single atomic dump. */
+  .block-card-enter {
+    animation: block-card-fade-up 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes block-card-fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* QQ4: course-level theme overrides. Applied via .theme-{key} on
+     the lesson canvas root in CourseStudio. Each theme overrides
+     typography + the per-theme accent without touching the brand
+     cascade vars (--brand-* still flow through). LDs swap themes
+     per-course to differentiate Modern/Editorial/Classic/Minimal
+     deliveries without leaving the app. */
+
+  /* Modern (default) — current behavior. No overrides. */
+  .lesson-canvas-pane.theme-modern { /* default */ }
+
+  /* Editorial — magazine-style serif headings, more whitespace,
+     brand green used sparingly as accents only. */
+  .lesson-canvas-pane.theme-editorial {
+    --theme-heading-font: "Tiempos Headline", "Lora", Georgia, serif;
+    --theme-body-font: "Inter", system-ui, -apple-system, sans-serif;
+    --theme-accent-weight: 0.55;
+  }
+  .lesson-canvas-pane.theme-editorial h1,
+  .lesson-canvas-pane.theme-editorial h2,
+  .lesson-canvas-pane.theme-editorial h3,
+  .lesson-canvas-pane.theme-editorial .lesson-eyebrow,
+  .lesson-canvas-pane.theme-editorial .lesson-title-input {
+    font-family: var(--theme-heading-font);
+    letter-spacing: -0.015em;
+  }
+  .lesson-canvas-pane.theme-editorial p,
+  .lesson-canvas-pane.theme-editorial textarea,
+  .lesson-canvas-pane.theme-editorial input {
+    font-family: var(--theme-body-font);
+  }
+  .lesson-canvas-pane.theme-editorial .lesson-hero {
+    background: white;
+    border-bottom: 1px solid theme("colors.ink.100");
+  }
+
+  /* Classic — Georgia headings + Times body, muted brand. The BCG-
+     report feel. Suits leadership reports + traditional deliveries. */
+  .lesson-canvas-pane.theme-classic {
+    --theme-heading-font: Georgia, "Times New Roman", serif;
+    --theme-body-font: Georgia, "Times New Roman", serif;
+  }
+  .lesson-canvas-pane.theme-classic h1,
+  .lesson-canvas-pane.theme-classic h2,
+  .lesson-canvas-pane.theme-classic h3,
+  .lesson-canvas-pane.theme-classic p,
+  .lesson-canvas-pane.theme-classic textarea,
+  .lesson-canvas-pane.theme-classic input,
+  .lesson-canvas-pane.theme-classic .lesson-eyebrow,
+  .lesson-canvas-pane.theme-classic .lesson-title-input {
+    font-family: var(--theme-heading-font);
+  }
+  .lesson-canvas-pane.theme-classic {
+    /* Mute the brand green slightly toward a more reportorial tone. */
+    filter: saturate(0.92);
+  }
+
+  /* Minimal — Inter throughout, very light brand wash. The Notion /
+     Linear feel: tight typography, deemphasized chrome, more
+     content density. */
+  .lesson-canvas-pane.theme-minimal {
+    --theme-heading-font: "Inter", system-ui, -apple-system, sans-serif;
+    --theme-body-font: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  .lesson-canvas-pane.theme-minimal h1,
+  .lesson-canvas-pane.theme-minimal h2,
+  .lesson-canvas-pane.theme-minimal h3,
+  .lesson-canvas-pane.theme-minimal p,
+  .lesson-canvas-pane.theme-minimal textarea,
+  .lesson-canvas-pane.theme-minimal input,
+  .lesson-canvas-pane.theme-minimal .lesson-eyebrow,
+  .lesson-canvas-pane.theme-minimal .lesson-title-input {
+    font-family: var(--theme-heading-font);
+    letter-spacing: -0.01em;
+  }
+  .lesson-canvas-pane.theme-minimal .lesson-hero {
+    background: theme("colors.ink.50");
+    border-bottom: none;
+  }
+
+  /* QQ5: Cmd+K command palette. cmdk handles fuzzy match + keyboard
+     nav; styling here is pure presentational. Modal anchors top-
+     center with backdrop dimming, animates in 140ms ease-out. */
+  .cmdk-dialog[data-state="open"],
+  [cmdk-dialog][data-state="open"] {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 12vh 24px 24px;
+    background: rgba(15, 23, 28, 0.42);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: cmdk-backdrop-in 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes cmdk-backdrop-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .cmdk-shell {
+    width: 100%;
+    max-width: 600px;
+    background: white;
+    border-radius: 14px;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.20),
+      0 8px 24px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    animation: cmdk-shell-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes cmdk-shell-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .cmdk-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid theme("colors.ink.100");
+  }
+  .cmdk-input-icon {
+    color: theme("colors.ink.400");
+    flex-shrink: 0;
+  }
+  .cmdk-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: theme("colors.ink.900");
+  }
+  .cmdk-input::placeholder {
+    color: theme("colors.ink.400");
+  }
+  .cmdk-kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: theme("colors.ink.100");
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    color: theme("colors.ink.500");
+    border: 1px solid theme("colors.ink.200");
+  }
+  .cmdk-list {
+    overflow-y: auto;
+    padding: 8px 8px 0;
+    flex: 1;
+  }
+  .cmdk-list::-webkit-scrollbar { width: 8px; }
+  .cmdk-list::-webkit-scrollbar-thumb {
+    background: theme("colors.ink.200");
+    border-radius: 4px;
+  }
+  .cmdk-empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: theme("colors.ink.500");
+  }
+  .cmdk-group {
+    padding: 6px 0;
+  }
+  .cmdk-group [cmdk-group-heading] {
+    padding: 6px 12px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: theme("colors.ink.400");
+  }
+  .cmdk-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 100ms ease;
+    color: theme("colors.ink.800");
+    font-size: 14px;
+  }
+  .cmdk-row[data-selected="true"] {
+    background: theme("colors.brand.50");
+    color: theme("colors.brand.800");
+  }
+  .cmdk-row[data-selected="true"] .cmdk-row-icon {
+    color: theme("colors.brand.700");
+  }
+  .cmdk-row-icon {
+    color: theme("colors.ink.400");
+    flex-shrink: 0;
+    transition: color 100ms ease;
+  }
+  .cmdk-row-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cmdk-row-hint {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: theme("colors.ink.400");
+    flex-shrink: 0;
+  }
+  .cmdk-footer {
+    display: flex;
+    gap: 16px;
+    padding: 10px 16px;
+    border-top: 1px solid theme("colors.ink.100");
+    font-size: 11px;
+    color: theme("colors.ink.500");
+    background: theme("colors.ink.50");
+  }
+  .cmdk-footer span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* QQ3: editorial filter pipeline. Applied to every photo surface
+     in the app (lesson banners, themed cover thumbnails, project
+     card covers, infographic photo thumbs). Three layered moves:
+       1. CSS filter: saturate(0.85) contrast(1.05) brightness(0.95)
+          desaturates slightly + lifts contrast + dims midtones so
+          stock photos read as editorial.
+       2. Brand-tint overlay (::after) at multiply blend mode tints
+          the photo toward the brand cascade — every photo in the app
+          shares a subtle green wash that reads as a curated set.
+       3. Toggle via body[data-editorial-filter="off"] disables both
+          for LDs who want raw photos.
+     For <img> tags the ::after pseudo is silently ignored (replaced
+     elements can't have generated content); the filter still applies.
+     For containers with background-image (project covers, themed
+     tiles), both filter + tint layer correctly. */
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image {
+    filter: saturate(0.85) contrast(1.05) brightness(0.95);
+  }
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-frame {
+    /* Wrapper variant — for containers that already isolate the
+       photo (e.g. .lesson-banner has .lesson-banner-img inside).
+       Apply filter to the child img and tint via ::after. */
+    position: relative;
+    isolation: isolate;
+  }
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-frame > img,
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-frame > .bcg-editorial-image {
+    filter: saturate(0.85) contrast(1.05) brightness(0.95);
+  }
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-frame::after,
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-tint::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+      rgba(41, 186, 116, 0.12),
+      rgba(13, 59, 38, 0.18)
+    );
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* tint variant alone — for elements with background-image directly
+     (covers / tiles). Just adds the brand-color overlay. */
+  body:not([data-editorial-filter="off"]) .bcg-editorial-image-tint {
+    position: relative;
+    isolation: isolate;
+  }
+
   /* BB1: in-place text editing affordances. .ig-editable-blur is the
      blurred state — looks identical to the rendered tag at rest, but
      a hover tint + dotted underline + cursor-text hint that this

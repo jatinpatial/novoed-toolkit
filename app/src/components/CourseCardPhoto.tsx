@@ -80,7 +80,7 @@ export function CourseCardPhoto({
   const inner = (
     <>
       <div
-        className={imageUrl ? "course-cover course-cover-photo" : "course-cover"}
+        className={imageUrl ? "course-cover course-cover-photo bcg-editorial-image-tint" : "course-cover"}
         style={coverStyle}
       >
         <div className="course-cover-shape" />

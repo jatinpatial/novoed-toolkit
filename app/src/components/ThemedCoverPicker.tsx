@@ -119,7 +119,7 @@ export function ThemedCoverPicker({
                     key={theme}
                     type="button"
                     onClick={() => onPick(url)}
-                    className={`themed-cover-tile${active ? " themed-cover-tile-active" : ""}`}
+                    className={`themed-cover-tile bcg-editorial-image-tint${active ? " themed-cover-tile-active" : ""}`}
                     style={{ backgroundImage: `url(${url})` }}
                     title={THEME_LABELS[theme]}
                   >
@@ -181,7 +181,7 @@ export function ThemedCoverPicker({
                     key={r.id}
                     type="button"
                     onClick={() => onPick(r.url)}
-                    className="themed-cover-tile"
+                    className="themed-cover-tile bcg-editorial-image-tint"
                     style={{ backgroundImage: `url(${r.thumb})` }}
                     title={`Photo by ${r.photographer} on Pexels`}
                   >

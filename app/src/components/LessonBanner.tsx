@@ -163,7 +163,7 @@ export function LessonBanner({
         <img
           src={imageUrl}
           alt=""
-          className={`lesson-banner-img${loaded ? " is-loaded" : ""}`}
+          className={`lesson-banner-img bcg-editorial-image${loaded ? " is-loaded" : ""}`}
           onLoad={() => setLoaded(true)}
           onError={() => setLoaded(false)}
         />
@@ -420,7 +420,7 @@ function BannerPexelsSearchDialog({
                   key={r.id}
                   type="button"
                   onClick={() => onPick(r)}
-                  className="themed-cover-tile"
+                  className="themed-cover-tile bcg-editorial-image-tint"
                   style={{ backgroundImage: `url(${r.thumb})` }}
                   title={`Photo by ${r.photographer} on Pexels`}
                 >

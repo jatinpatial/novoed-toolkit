@@ -1265,7 +1265,7 @@ function Icon({
       <img
         src={photoUrl}
         alt=""
-        className="ig-photo-thumb"
+        className="ig-photo-thumb bcg-editorial-image"
         style={{ width: size, height: size }}
       />
     );

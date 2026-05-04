@@ -173,11 +173,18 @@ export interface CourseShape {
   interactivity?: "light" | "mixed" | "heavy";
 }
 
+/** QQ4: course-level theme key. Cascades to a CSS class on the
+ *  lesson canvas root so the LD's pick changes typography + color
+ *  emphasis across the whole course without leaving the app. */
+export type CourseTheme = "modern" | "editorial" | "classic" | "minimal";
+
 export interface Course {
   id: string;
   title: string;
   client: string;
   brand: BrandKey;
+  /** QQ4: optional. Defaults to "modern" when unset (current look). */
+  themeKey?: CourseTheme;
   modules: Module[];
   materials?: Material[];
   // 2-3 case-study slots planted by Course Architect; filled later by

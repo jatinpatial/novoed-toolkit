@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Command, HelpCircle, LogOut, Search, Settings } from "lucide-react";
 import { B, type BrandKey } from "../brand/tokens";
 import { clearUser, getUser, initialsFor, subscribeUser, type StudioUser } from "../store/user";
+import { isEditorialFilterOff, subscribeEditorialFilter } from "../lib/editorialFilter";
 
 const KEY = "bcgu_studio_active_brand";
 
@@ -44,6 +45,18 @@ export function BrandBodyAttribute() {
   useEffect(() => {
     document.body.dataset.brand = brand;
   }, [brand]);
+  // QQ3: also sync the editorial-filter pref onto the body so CSS
+  // can key off body[data-editorial-filter="off"] to disable the
+  // photo treatment app-wide. Default = filter on (no attribute or
+  // attribute="on"); off branch sets the explicit attribute.
+  const [filterOff, setFilterOff] = useState<boolean>(() => isEditorialFilterOff());
+  useEffect(() => {
+    return subscribeEditorialFilter(() => setFilterOff(isEditorialFilterOff()));
+  }, []);
+  useEffect(() => {
+    if (filterOff) document.body.dataset.editorialFilter = "off";
+    else document.body.dataset.editorialFilter = "on";
+  }, [filterOff]);
   return null;
 }
 
