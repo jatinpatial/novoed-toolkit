@@ -81,21 +81,31 @@ export function normalizeQuery(raw: string): string {
   return `${q} professional`;
 }
 
-/** Fresh fetch — bypasses cache. Used by the Regenerate button.
+/** Fresh fetch — bypasses the frontend in-memory cache. By default
+ *  the backend's own 30-min cache may still serve a cached payload;
+ *  pass `bust: true` to skip the backend cache too (used by the
+ *  Regenerate button so the LD gets genuinely new photos).
  *
- *  The query is normalized once before both the API call and the
+ *  GG1: without `bust`, Regenerate returned the same five photos for
+ *  30 minutes because (a) the backend cached the payload and (b)
+ *  Pexels' page=1 is deterministic. With `bust`, the backend skips
+ *  its cache and randomizes the Pexels page (1-5).
+ *
+ *  The query is normalized once before both the API call and the FE
  *  cache write, so subsequent searchImagesCached calls for the same
- *  raw input hit the cache without a second API round-trip. */
+ *  raw input hit the cache without another round-trip. */
 export async function searchImages(
   query: string,
   type: ImageType = "banner",
+  options: { bust?: boolean } = {},
 ): Promise<PexelsResult[]> {
   const normalized = normalizeQuery(query);
   if (!normalized) return [];
   try {
+    const bustParam = options.bust ? "&bust=1" : "";
     const url = `${HTTP_URL}/api/images/search?query=${encodeURIComponent(
       normalized,
-    )}&type=${type}`;
+    )}&type=${type}${bustParam}`;
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
@@ -110,7 +120,8 @@ export async function searchImages(
 }
 
 /** Cached fetch. Returns the cached result list when present;
- *  otherwise hits the API and populates the cache. */
+ *  otherwise hits the API (without busting the backend cache) and
+ *  populates the FE cache. */
 export async function searchImagesCached(
   query: string,
   type: ImageType = "banner",

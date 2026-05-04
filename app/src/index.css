@@ -946,6 +946,37 @@
   .lesson-banner-img.is-loaded {
     opacity: 1;
   }
+  /* II4: brand-color tint overlay. Sits above the photo and below
+     the action chrome so the photo blends with the brand cascade.
+     Reads the live --brand-500 / --brand-700 vars so a brand swap
+     repaints without a re-render. The CSS-vars fallback to BCG U
+     hexes if the cascade isn't set yet. */
+  .lesson-banner-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 166, 81, 0.30),
+      rgba(0, 59, 34, 0.50)
+    );
+    /* When --brand-* are present, override the constants above. */
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--brand-500, #00A651) 30%, transparent),
+      color-mix(in srgb, var(--brand-700, #003B22) 50%, transparent)
+    );
+  }
+  /* II4: "Tint on" button uses the brand-active variant so the LD
+     can see at a glance whether the overlay is showing. */
+  .lesson-banner-btn-active {
+    background: theme("colors.brand.50");
+    color: theme("colors.brand.700");
+    box-shadow: 0 2px 8px rgba(0, 166, 81, 0.20);
+  }
+  .lesson-banner-btn-active:hover {
+    background: theme("colors.brand.100");
+  }
   .lesson-banner-actions {
     position: absolute;
     top: 12px;
@@ -1900,32 +1931,33 @@
   }
   .suite-tile-compact {
     padding: 14px 16px 16px;
-    /* Y4: subtle contextual photo background per tile. Each tile
-       sets `--tile-photo` inline; the gradient overlay holds the
-       white card surface (90% opacity at the top fading to 70% at
-       the bottom-right corner) so the photo reads as a soft tint
-       rather than a busy image. Saturation reduced by the photo
-       layer's filter via mix-blend / opacity. */
+    /* GG5: contextual photo background per tile, ALWAYS visible. The
+       Y4 baseline used a near-opaque white overlay that made the
+       photos read as faint tints — user feedback was the Script tile
+       looked "missing an image". Default is ~75% white overlay so
+       the photo reads at ~25% visibility; hover drops to ~50% white
+       so the photo brightens to ~50% visibility. Filter desaturates
+       the photo slightly so its colors don't clash with the brand
+       palette. */
     background-image:
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.97) 0%,
-        rgba(255, 255, 255, 0.85) 60%,
-        rgba(255, 255, 255, 0.78) 100%
+        rgba(255, 255, 255, 0.78) 0%,
+        rgba(255, 255, 255, 0.72) 100%
       ),
       var(--tile-photo, none);
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
+    transition: background-image 220ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .suite-tile-compact:hover,
   .suite-tile-compact:focus-visible {
     background-image:
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.94) 0%,
-        rgba(255, 255, 255, 0.78) 60%,
-        rgba(255, 255, 255, 0.68) 100%
+        rgba(255, 255, 255, 0.52) 0%,
+        rgba(255, 255, 255, 0.46) 100%
       ),
       var(--tile-photo, none);
   }
@@ -2169,6 +2201,17 @@
   }
   .ig-icon { color: theme("colors.brand.700"); flex-shrink: 0; }
   .ig-icon-large { color: theme("colors.brand.700"); flex-shrink: 0; width: 22px; height: 22px; }
+  /* GG4: when includePeopleImages is on, the per-point Icon slot is
+     swapped for a circular cropped photo at the same physical size.
+     Border accents the brand color so the swap reads as deliberate
+     (vs. a leftover img tag). */
+  .ig-photo-thumb {
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px theme("colors.brand.500"), 0 1px 4px rgba(0, 0, 0, 0.10);
+    background: theme("colors.brand.50");
+  }
 
   /* BB1: in-place text editing affordances. .ig-editable-blur is the
      blurred state — looks identical to the rendered tag at rest, but
@@ -2276,14 +2319,14 @@
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.08);
   }
-  /* Popover — anchored below the trigger, opens to the right by
-     default. Width clamps so it fits comfortably inside the
-     infographic frame. */
+  /* GG3: popover is portaled to document.body and positioned via
+     viewport coordinates with `position: fixed`. This decouples it
+     from the parent .ig-frame's stacking / overflow context, so a
+     popover always floats above design elements regardless of where
+     in the canvas the trigger sits. z-index 9999 keeps it above
+     even other portal content (modals etc. — those should sit
+     higher than 9999 if they need to cover the picker). */
   .ig-color-picker-popover {
-    position: absolute;
-    top: 26px;
-    right: 0;
-    z-index: 50;
     background: white;
     border: 1px solid theme("colors.ink.200");
     border-radius: 10px;
@@ -2294,6 +2337,17 @@
     flex-direction: column;
     gap: 10px;
     color: theme("colors.ink.900");
+  }
+  .ig-color-picker-popover-portal {
+    position: fixed;
+    width: 200px;
+    z-index: 9999;
+    /* Subtle scale-in so the popover lands rather than snaps. */
+    animation: ig-color-picker-pop 140ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  @keyframes ig-color-picker-pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
   .ig-color-picker-section {
     display: flex;
@@ -2870,14 +2924,30 @@
   .welcome-stage-tour .welcome-bg {
     opacity: 0.08;
   }
-  /* Track Z: splash background is black, not brand gradient. The
-     orbs are also hidden during splash so the morph reads cleanly
-     against pure black. */
+  /* Track Z + Z2: splash background is BCG green (not the previous
+     pure black), so the unlock-morph plays on the brand surface.
+     Orbs hidden so the morph reads clean. The whole modal also
+     gets a fade-out animation when .welcome-modal-exiting is on,
+     so the splash crossfades INTO the dashboard underneath rather
+     than hard-cutting at the end of the 4-second sequence. */
   .welcome-stage-splash .welcome-bg {
-    background: #000;
+    background: linear-gradient(
+      135deg,
+      var(--brand-700, #00723D) 0%,
+      var(--brand-500, #00A651) 100%
+    );
   }
   .welcome-stage-splash .welcome-orb {
     display: none;
+  }
+  /* Z2: when set on the modal during splash exit, fades the entire
+     overlay (bg + content) over 700ms so the dashboard underneath
+     is revealed via crossfade. Pointer-events disabled mid-fade so
+     a click doesn't land on a half-faded splash. */
+  .welcome-modal-exiting {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 700ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .welcome-stage-name::before,
   .welcome-stage-tour::before {
@@ -3390,6 +3460,80 @@
     background-size: cover;
     background-position: center;
     border-bottom: 1px solid theme("colors.ink.100");
+  }
+
+  /* HH4: hover-revealed "Change cover" button on the project card.
+     Sits in the top-right of the cover band; opacity-0 by default,
+     fades in on group hover. Click → opens ThemedCoverPicker. */
+  .project-card-cover-edit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: theme("colors.ink.700");
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1),
+                background 180ms ease,
+                color 180ms ease;
+  }
+  .group:hover .project-card-cover-edit,
+  .group:focus-within .project-card-cover-edit {
+    opacity: 1;
+  }
+  .project-card-cover-edit:hover {
+    background: white;
+    color: theme("colors.brand.700");
+  }
+
+  /* HH4: ThemedCoverPicker tile — square thumbnail with a label
+     overlay that fades in on hover. Active state outlines in brand
+     green so the LD knows which cover is currently in use. */
+  .themed-cover-tile {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+    background-color: theme("colors.ink.100");
+    border: 2px solid transparent;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+  .themed-cover-tile:hover {
+    transform: translateY(-2px);
+    border-color: theme("colors.brand.300");
+    box-shadow: 0 8px 20px rgba(0, 166, 81, 0.18);
+  }
+  .themed-cover-tile-active {
+    border-color: theme("colors.brand.500");
+    box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.18);
+  }
+  .themed-cover-tile-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 18px 8px 6px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.78), transparent);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
   }
 
   /* Track-R4b: Pexels cover thumbnail in place of the lucide icon

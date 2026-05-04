@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw, RotateCw, Upload } from "lucide-react";
+import { Droplet, RefreshCw, RotateCw, Upload } from "lucide-react";
 import {
   peekCachedImages,
   searchImages,
@@ -35,11 +35,16 @@ interface LessonBannerProps {
   imageUrl?: string;
   photographer?: string;
   photographerUrl?: string;
+  /** II4: when true, the brand-gradient tint overlay is hidden so the
+   *  photo renders pure. Default false → overlay shown. */
+  overlayOff?: boolean;
   onChange: (
     url: string | undefined,
     photographer: string | undefined,
     photographerUrl: string | undefined,
   ) => void;
+  /** II4: toggle the brand-color tint overlay on / off. */
+  onToggleOverlay?: () => void;
 }
 
 export function LessonBanner({
@@ -47,7 +52,9 @@ export function LessonBanner({
   imageUrl,
   photographer,
   photographerUrl,
+  overlayOff = false,
   onChange,
+  onToggleOverlay,
 }: LessonBannerProps) {
   const [loaded, setLoaded] = useState(false);
   const [cached, setCached] = useState<PexelsResult[]>(
@@ -105,7 +112,12 @@ export function LessonBanner({
   }
 
   async function handleRegenerate() {
-    const fresh = await searchImages(query, "banner");
+    // GG1: bust the backend cache so we get a genuinely new set of
+    // photos rather than the same payload Pexels returned 5 minutes
+    // ago. Without `bust`, both the FE cache (skipped by this call
+    // path already) and the backend's 30-min cache + Pexels' fixed
+    // page=1 conspired to return the same five photos.
+    const fresh = await searchImages(query, "banner", { bust: true });
     if (fresh.length === 0) return;
     setCached(fresh);
     applyResult(fresh[0]);
@@ -153,6 +165,13 @@ export function LessonBanner({
         />
       )}
 
+      {/* II4: brand-gradient tint overlay. Sits between the image and
+          the actions/credit so the buttons stay legible. Hidden when
+          overlayOff is true (LD chose pure photo). */}
+      {showImage && !overlayOff && (
+        <div className="lesson-banner-overlay" aria-hidden="true" />
+      )}
+
       {/* Hover affordances — only meaningful once we've got an image
           (or at least an attempt). The buttons themselves still work
           on the placeholder so the LD can force a regenerate. */}
@@ -187,6 +206,22 @@ export function LessonBanner({
           <Upload size={13} />
           <span>Upload</span>
         </button>
+        {/* II4: brand-tint overlay toggle. The button reflects current
+            state — "Tint on" when the overlay is showing, "Tint off"
+            when the photo is pure. Click flips it. */}
+        {onToggleOverlay && (
+          <button
+            type="button"
+            onClick={onToggleOverlay}
+            className={`lesson-banner-btn${overlayOff ? "" : " lesson-banner-btn-active"}`}
+            title={overlayOff ? "Add brand tint overlay" : "Show pure photo (remove tint)"}
+            aria-label="Toggle brand tint overlay"
+            aria-pressed={!overlayOff}
+          >
+            <Droplet size={13} />
+            <span>{overlayOff ? "Tint off" : "Tint on"}</span>
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"

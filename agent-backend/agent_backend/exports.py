@@ -22,8 +22,14 @@ app via include_router.
 from __future__ import annotations
 
 import contextvars
+import base64
 import io
+import logging
 import re
+import ssl
+
+import certifi
+import httpx
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -31,6 +37,27 @@ from pydantic import BaseModel
 
 from docx import Document
 from docx.shared import Cm, Pt, RGBColor
+
+_log = logging.getLogger(__name__)
+
+# KK: shared SSL context for the banner fetch — same shape used in
+# images.py's Pexels client. Falls back to certifi if truststore
+# isn't available.
+def _build_banner_ssl_context() -> ssl.SSLContext:
+    try:
+        import truststore  # type: ignore[import-not-found]
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        pass
+    except Exception:
+        pass
+    try:
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+_BANNER_SSL_CONTEXT = _build_banner_ssl_context()
 
 
 router = APIRouter(prefix="/export", tags=["export"])
@@ -579,6 +606,12 @@ class LessonModel(BaseModel):
     blocks: list[BlockModel] = []
     objectives: list[str] | None = None
     knowledgeCheck: QuizModel | None = None
+    # KK: lesson hero banner. Embedded at the top of each lesson's
+    # .docx section as a full-width image with photographer credit
+    # underneath. Mirrors the FE Lesson type fields; safe to omit.
+    bannerImageUrl: str | None = None
+    bannerPhotographer: str | None = None
+    bannerPhotographerUrl: str | None = None
 
 
 class CourseModuleModel(BaseModel):
@@ -1262,7 +1295,63 @@ def _render_knowledge_check(doc: Document, quiz: QuizModel, scope_label: str) ->
                     _bullet(doc, hint)
 
 
+def _fetch_banner_bytes(url: str) -> bytes | None:
+    """KK: fetch the banner image bytes for embedding into the .docx.
+
+    Handles both data: URLs (LD-uploaded files, where the image is
+    inline-encoded) and remote HTTPS URLs (Pexels). Returns None on
+    any failure — caller falls through to "no banner" rendering so
+    the export never breaks because of a missing image.
+    """
+    if not url:
+        return None
+    if url.startswith("data:"):
+        try:
+            header, _, b64 = url.partition(",")
+            if not b64 or "base64" not in header:
+                return None
+            return base64.b64decode(b64)
+        except Exception as exc:
+            _log.info("KK banner: data-URL decode failed: %s", exc)
+            return None
+    try:
+        with httpx.Client(timeout=8.0, verify=_BANNER_SSL_CONTEXT) as client:
+            resp = client.get(url, follow_redirects=True)
+            resp.raise_for_status()
+            return resp.content
+    except Exception as exc:
+        _log.info("KK banner: fetch %s failed: %s", url[:80], exc)
+        return None
+
+
+def _render_lesson_banner(doc: Document, lesson: LessonModel) -> None:
+    """KK: embed the lesson's banner photo at the top of its .docx
+    section, sized to the page width, with a small attribution
+    caption underneath when the photographer is known. Silent on
+    failure so the lesson body still renders.
+    """
+    if not lesson.bannerImageUrl:
+        return
+    img_bytes = _fetch_banner_bytes(lesson.bannerImageUrl)
+    if not img_bytes:
+        return
+    try:
+        # Page text width on A4 with 2.5cm side margins is ~16cm.
+        doc.add_picture(io.BytesIO(img_bytes), width=Cm(16))
+    except Exception as exc:
+        _log.info("KK banner: add_picture failed: %s", exc)
+        return
+    if lesson.bannerPhotographer:
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(8)
+        r = p.add_run(f"Photo by {lesson.bannerPhotographer} on Pexels")
+        r.italic = True
+        r.font.size = Pt(8)
+        r.font.color.rgb = _BCG_INK_LT()
+
+
 def _render_lesson(doc: Document, lesson: LessonModel, mi: int, li: int) -> None:
+    _render_lesson_banner(doc, lesson)
     _h2(doc, f"{mi}.{li}  {lesson.title or 'Untitled lesson'}")
     _body(doc, f"{lesson.duration} min · {len(lesson.blocks)} block{'s' if len(lesson.blocks) != 1 else ''}", italic=True, light=True)
 

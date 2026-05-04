@@ -23,7 +23,7 @@ start "BCG U Studio - Frontend" cmd /k "cd /d %~dp0app && npm run dev"
 
 echo.
 echo Both servers launching. Wait ~60s for vite to be ready.
-echo Then open: http://localhost:5173/
+echo Then open: http://localhost:5173/bcg-u-studio/
 echo.
 echo Close this window when both servers are visible.
 pause

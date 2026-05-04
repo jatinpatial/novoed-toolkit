@@ -1,7 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import type { BcgIconName } from "../icons/BcgIcon";
 import * as BcgIcons from "../icons/bcg";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ComponentType, SVGProps } from "react";
 import type { InfographicPoint, InfographicStyle } from "../store/infographics";
 
@@ -83,6 +84,11 @@ interface RendererProps {
   /** BB2: open / close the color-picker popover for an element key.
    *  Pass null to close. */
   setOpenPickerKey?: (key: string | null) => void;
+  /** GG4: per-point Pexels photo URLs. Index aligns with `points[]`.
+   *  When set, the layout swaps the BCG icon for a circular photo
+   *  crop. Null entries fall through to the icon. Undefined entries
+   *  mean "fetch hasn't run yet". */
+  pointPhotoUrls?: (string | null)[];
 }
 
 export function InfographicRenderer({
@@ -98,6 +104,7 @@ export function InfographicRenderer({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: RendererProps) {
   // Track-X2: Five Forces shifts the title into the center of the frame
   // (it's the central concept the forces surround), so the standard
@@ -111,6 +118,7 @@ export function InfographicRenderer({
     onStyleOverride,
     openPickerKey,
     setOpenPickerKey,
+    pointPhotoUrls,
   };
 
   return (
@@ -169,6 +177,7 @@ export function InfographicRenderer({
             onStyleOverride={onStyleOverride}
             openPickerKey={openPickerKey}
             setOpenPickerKey={setOpenPickerKey}
+            pointPhotoUrls={pointPhotoUrls}
           />
         )}
       </div>
@@ -192,6 +201,7 @@ type LayoutEditableProps = {
   onStyleOverride?: StyleOverrideSetter;
   openPickerKey?: string | null;
   setOpenPickerKey?: (key: string | null) => void;
+  pointPhotoUrls?: (string | null)[];
 };
 
 interface EditableTextProps {
@@ -333,13 +343,27 @@ function EditableText({
 // The popover anchors to the top-right of its parent .ig-editable-wrap.
 // Closes on outside click via a window-mousedown listener while open.
 
+// II2: expanded BCG / BCG U brand palette. Twelve swatches grouped by
+// role so the LD can pick a primary, an accent, a neutral, or an
+// emphasis color in one place. Same flat list keeps the picker UI
+// simple — the chip grid is 6 cols × 2 rows.
 const BB2_BRAND_PALETTE: { name: string; hex: string }[] = [
-  { name: "BCG Green",   hex: "#00723D" },
-  { name: "BCG U Green", hex: "#00A651" },
-  { name: "Teal",        hex: "#00857C" },
-  { name: "Lime",        hex: "#A4D65E" },
-  { name: "Deep Green",  hex: "#003B22" },
-  { name: "Charcoal",    hex: "#1A1A1A" },
+  // Primaries (BCG + BCG U)
+  { name: "BCG Green",     hex: "#00723D" },
+  { name: "BCG U Green",   hex: "#00A651" },
+  { name: "Deep Green",    hex: "#003B22" },
+  // Accents
+  { name: "Teal",          hex: "#00857C" },
+  { name: "Lime",          hex: "#A4D65E" },
+  { name: "Cream",         hex: "#F1EEEA" },
+  // Neutrals
+  { name: "Charcoal",      hex: "#1A1A1A" },
+  { name: "Mid Gray",      hex: "#666666" },
+  { name: "Light Gray",    hex: "#E8E8E8" },
+  // Emphasis
+  { name: "Alert Red",     hex: "#DC2626" },
+  { name: "Caution Amber", hex: "#F59E0B" },
+  { name: "Info Blue",     hex: "#2563EB" },
 ];
 
 function ColorPicker({
@@ -357,20 +381,63 @@ function ColorPicker({
   onPick: (color: string) => void;
   onReset: () => void;
 }) {
-  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  // GG3: popover is portaled to document.body, so its DOM position
+  // is detached from the trigger. We measure the trigger's viewport
+  // rect when the popover opens (and on scroll/resize while open) so
+  // the popover anchors to the trigger's bottom-right corner. Using
+  // viewport coordinates with `position: fixed` keeps it stable
+  // through page scroll without re-measuring on every scroll tick.
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    function measure() {
+      if (!triggerRef.current) return;
+      const rect = triggerRef.current.getBoundingClientRect();
+      // Anchor 6px below the trigger's bottom edge, right-aligned
+      // to the trigger so the popover doesn't shift the layout when
+      // it opens. Width is 200px; clamp left so the popover stays
+      // inside the viewport with a small margin.
+      const popoverWidth = 200;
+      const margin = 8;
+      const desiredLeft = rect.right - popoverWidth;
+      const left = Math.max(
+        margin,
+        Math.min(desiredLeft, window.innerWidth - popoverWidth - margin),
+      );
+      setPos({ top: rect.bottom + 6, left });
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function handle(e: MouseEvent) {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      // Outside-click closes the popover. The portal means a click
+      // inside the popover lands on a DOM node OUTSIDE the trigger
+      // wrapper, so we have to check both refs.
+      const insideTrigger = triggerRef.current?.contains(target) ?? false;
+      const insidePopover = popoverRef.current?.contains(target) ?? false;
+      if (!insideTrigger && !insidePopover) onClose();
     }
     window.addEventListener("mousedown", handle);
     return () => window.removeEventListener("mousedown", handle);
   }, [open, onClose]);
 
   return (
-    <span ref={wrapperRef} className="ig-color-picker-wrap">
+    <span ref={triggerRef} className="ig-color-picker-wrap">
       <button
         type="button"
         className={`ig-color-picker-trigger${open ? " ig-color-picker-trigger-active" : ""}`}
@@ -386,8 +453,13 @@ function ColorPicker({
           style={{ background: currentColor ?? "var(--brand-700, #00723D)" }}
         />
       </button>
-      {open && (
-        <div className="ig-color-picker-popover" onClick={(e) => e.stopPropagation()}>
+      {open && pos && createPortal(
+        <div
+          ref={popoverRef}
+          className="ig-color-picker-popover ig-color-picker-popover-portal"
+          style={{ top: pos.top, left: pos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="ig-color-picker-section">
             <button
               type="button"
@@ -422,7 +494,8 @@ function ColorPicker({
               className="ig-color-picker-hex"
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </span>
   );
@@ -438,6 +511,7 @@ function ProcessLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-process">
@@ -446,7 +520,7 @@ function ProcessLayout({
           <div className="ig-process-number">{i + 1}</div>
           <div className="ig-process-content">
             <div className="ig-process-heading-row">
-              <Icon hint={p.iconHint} fallback="BusinessProcess" size={32} />
+              <Icon hint={p.iconHint} fallback="BusinessProcess" size={32} photoUrl={pointPhotoUrls?.[i]} />
               <EditableText
                 as="h3"
                 className="ig-point-heading"
@@ -495,6 +569,7 @@ function QuadrantLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Pad / clip to exactly 4 quadrants. If the agent emitted fewer, fill
   // remaining slots with empty placeholders so the 2x2 grid stays
@@ -512,7 +587,7 @@ function QuadrantLayout({
         {quad.map((p, i) => (
           <div key={i} className="ig-quadrant-cell">
             <div className="ig-quadrant-heading-row">
-              <Icon hint={p.iconHint} fallback={QUAD_DEFAULTS[i]} size={36} />
+              <Icon hint={p.iconHint} fallback={QUAD_DEFAULTS[i]} size={36} photoUrl={pointPhotoUrls?.[i]} />
               <EditableText
                 as="h3"
                 className="ig-point-heading"
@@ -568,6 +643,7 @@ function ComparisonLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Comparison styles read best with 2-3 columns; clip if more.
   const cols = points.slice(0, 3);
@@ -576,7 +652,7 @@ function ComparisonLayout({
       {cols.map((p, i) => (
         <div key={i} className="ig-comparison-col">
           <div className="ig-comparison-header">
-            <Icon hint={p.iconHint} fallback="CustomerInsight" size={44} />
+            <Icon hint={p.iconHint} fallback="CustomerInsight" size={44} photoUrl={pointPhotoUrls?.[i]} />
             <EditableText
               as="h3"
               className="ig-point-heading-large"
@@ -626,6 +702,7 @@ function NumberedListLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-numbered-list">
@@ -634,7 +711,7 @@ function NumberedListLayout({
           <div className="ig-numbered-large">{i + 1}</div>
           <div className="ig-numbered-content">
             <div className="ig-numbered-heading-row">
-              <Icon hint={p.iconHint} fallback="FiveSteps" size={32} />
+              <Icon hint={p.iconHint} fallback="FiveSteps" size={32} photoUrl={pointPhotoUrls?.[i]} />
               <EditableText
                 as="h3"
                 className="ig-point-heading"
@@ -680,6 +757,7 @@ function TimelineLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-timeline">
@@ -687,7 +765,7 @@ function TimelineLayout({
       {points.map((p, i) => (
         <div key={i} className="ig-timeline-item">
           <div className="ig-timeline-marker">
-            <Icon hint={p.iconHint} fallback="Clock" size={28} />
+            <Icon hint={p.iconHint} fallback="Clock" size={28} photoUrl={pointPhotoUrls?.[i]} />
           </div>
           <div className="ig-timeline-content">
             <EditableText
@@ -740,6 +818,7 @@ function StatSpotlightLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-stat-spotlight">
@@ -747,7 +826,7 @@ function StatSpotlightLayout({
         <div key={i} className="ig-stat-cell">
           <div className="ig-stat-rule" aria-hidden="true" />
           <div className="ig-stat-icon">
-            <Icon hint={p.iconHint} fallback={STAT_DEFAULTS[i % STAT_DEFAULTS.length]} size={28} />
+            <Icon hint={p.iconHint} fallback={STAT_DEFAULTS[i % STAT_DEFAULTS.length]} size={28} photoUrl={pointPhotoUrls?.[i]} />
           </div>
           <EditableText
             as="div"
@@ -799,6 +878,7 @@ function PyramidLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Pyramid reads cleanest with 3-5 levels. We accept the agent's count
   // as-is and let CSS scale the trapezoid widths via --pyramid-level
@@ -826,7 +906,7 @@ function PyramidLayout({
             >
               <div className="ig-pyramid-level-inner">
                 <div className="ig-pyramid-level-icon">
-                  <Icon hint={p.iconHint} fallback={PYRAMID_DEFAULTS[i % PYRAMID_DEFAULTS.length]} size={26} />
+                  <Icon hint={p.iconHint} fallback={PYRAMID_DEFAULTS[i % PYRAMID_DEFAULTS.length]} size={26} photoUrl={pointPhotoUrls?.[i]} />
                 </div>
                 <div className="ig-pyramid-level-text">
                   <div className="ig-pyramid-level-eyebrow">Level {totalLevels - i}</div>
@@ -890,6 +970,7 @@ function CycleLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: { points: InfographicPoint[] } & LayoutEditableProps) {
   const phases = points.slice(0, 6);
   const overflow = points.length - 6;
@@ -917,7 +998,7 @@ function CycleLayout({
               <div className="ig-cycle-node-inner">
                 <div className="ig-cycle-node-step">{i + 1}</div>
                 <div className="ig-cycle-node-icon">
-                  <Icon hint={p.iconHint} fallback={CYCLE_DEFAULTS[i % CYCLE_DEFAULTS.length]} size={22} />
+                  <Icon hint={p.iconHint} fallback={CYCLE_DEFAULTS[i % CYCLE_DEFAULTS.length]} size={22} photoUrl={pointPhotoUrls?.[i]} />
                 </div>
                 <EditableText
                   as="h3"
@@ -981,6 +1062,7 @@ function FiveForcesLayout({
   onStyleOverride,
   openPickerKey,
   setOpenPickerKey,
+  pointPhotoUrls,
 }: {
   points: InfographicPoint[];
   title: string;
@@ -993,6 +1075,7 @@ function FiveForcesLayout({
   onStyleOverride?: StyleOverrideSetter;
   openPickerKey?: string | null;
   setOpenPickerKey?: (key: string | null) => void;
+  pointPhotoUrls?: (string | null)[];
 }) {
   const forces = points.slice(0, 5);
   const overflow = points.length - 5;
@@ -1041,7 +1124,7 @@ function FiveForcesLayout({
             className={`ig-five-forces-node ig-five-forces-node-${positions[i] || "diag"}`}
           >
             <div className="ig-five-forces-node-icon">
-              <Icon hint={p.iconHint} fallback={FORCES_DEFAULTS[i % FORCES_DEFAULTS.length]} size={26} />
+              <Icon hint={p.iconHint} fallback={FORCES_DEFAULTS[i % FORCES_DEFAULTS.length]} size={26} photoUrl={pointPhotoUrls?.[i]} />
             </div>
             <EditableText
               as="h3"
@@ -1171,11 +1254,26 @@ function Icon({
   hint,
   fallback,
   size = 28,
+  photoUrl,
 }: {
   hint?: string;
   fallback: BcgIconName;
   size?: number;
+  /** GG4: when set, replaces the icon glyph with a circular photo at
+   *  the same size. Used by the includePeopleImages flow to inject
+   *  Pexels professional-people photos per point. */
+  photoUrl?: string | null;
 }) {
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        className="ig-photo-thumb"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   const name = resolveBcgName(hint, fallback);
   const Resolved = BcgIcons[name] as ComponentType<SVGProps<SVGSVGElement>>;
   return <Resolved width={size} height={size} className="ig-icon" />;

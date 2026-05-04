@@ -23,8 +23,11 @@ import type { CSSProperties } from "react";
  */
 const HERO_PHOTO_URL =
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1600&q=80";
+// GG5: Script Studio gets a podcast / mic photo (cleaner "video
+// scripting" read than the previous movie-set photo). KC + Infographic
+// photos held over from Y4.
 const SCRIPT_TILE_PHOTO =
-  "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=600&q=80";
+  "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600&q=80";
 const KC_TILE_PHOTO =
   "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80";
 const INFOGRAPHIC_TILE_PHOTO =

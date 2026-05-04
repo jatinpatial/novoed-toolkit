@@ -34,6 +34,9 @@ function markSplashPlayed(): void {
   }
 }
 import { listProjects, saveProject, subscribeProjects, type Project } from "../store/projects";
+import { listScripts, subscribeScripts, saveScript, type Script } from "../store/scripts";
+import { listKcs, subscribeKcs, saveKc, type Kc } from "../store/kcs";
+import { listInfographics, subscribeInfographics, saveInfographic, type Infographic } from "../store/infographics";
 import { seedSampleCoursesIfNeeded } from "../store/sampleCourses";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
@@ -132,6 +135,13 @@ function metaFor(project: Project): string[] {
  */
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
+  // JJ1: per-kind recent work for the four categorized sections on
+  // the home page. Each store is independent — listProjects covers
+  // courses, listScripts/Kcs/Infographics cover their respective
+  // single-piece studios.
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [kcs, setKcs] = useState<Kc[]>([]);
+  const [infographics, setInfographics] = useState<Infographic[]>([]);
   // Brief state lives at the Dashboard level so the try-a-prompt pills
   // can fill the composer with example briefs (Q8a — fill, don't
   // auto-submit; user reviews and presses Enter).
@@ -184,7 +194,33 @@ export default function Dashboard() {
     return subscribeProjects(refresh);
   }, []);
 
-  const recent = projects.slice(0, 6);
+  // JJ1: subscribe to the three single-piece studio stores so each
+  // categorized section stays in sync as the LD edits / creates work
+  // in any Studio. Cheap — list functions read from localStorage.
+  useEffect(() => {
+    const refresh = () => setScripts(listScripts());
+    refresh();
+    return subscribeScripts(refresh);
+  }, []);
+  useEffect(() => {
+    const refresh = () => setKcs(listKcs());
+    refresh();
+    return subscribeKcs(refresh);
+  }, []);
+  useEffect(() => {
+    const refresh = () => setInfographics(listInfographics());
+    refresh();
+    return subscribeInfographics(refresh);
+  }, []);
+
+  // JJ1: 6 most-recent per kind, only the courses live in the Project
+  // store; scripts / KCs / infographics are in their own stores.
+  const recentCourses = projects.filter((p) => p.kind === "course").slice(0, 6);
+  const recentScripts = scripts.slice(0, 6);
+  const recentKcs = kcs.slice(0, 6);
+  const recentInfographics = infographics.slice(0, 6);
+  const hasAnyRecent =
+    recentCourses.length + recentScripts.length + recentKcs.length + recentInfographics.length > 0;
 
   return (
     <AppShell fullBleed onShowWelcome={reopenWelcome}>
@@ -234,27 +270,164 @@ export default function Dashboard() {
       <div className="max-w-[1208px] mx-auto px-8 md:px-16 py-12">
         <EntryCards onFocusComposer={focusComposer} />
 
-        {projects.length > 0 && (
-          <section className="mt-16">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Recent work.</h2>
-                <p className="section-sub">Pick up where you left off.</p>
-              </div>
-              <Link to="/projects" className="entry-link">
-                See all <ArrowRight size={14} strokeWidth={2.5} />
-              </Link>
-            </div>
-            <div className="courses stagger-children">
-              {recent.map((project) => (
-                <RecentProjectCard key={project.id} project={project} />
-              ))}
-            </div>
+        {hasAnyRecent && (
+          <>
+            {recentCourses.length > 0 && (
+              <RecentSection
+                title="Recent courses."
+                sub="Pick up where you left off."
+                seeAllHref="/projects?filter=course"
+              >
+                {recentCourses.map((project) => (
+                  <RecentProjectCard key={project.id} project={project} />
+                ))}
+              </RecentSection>
+            )}
+            {recentScripts.length > 0 && (
+              <RecentSection
+                title="Recent scripts."
+                sub="Synthesia-ready video scripts."
+                seeAllHref="/projects?filter=script"
+              >
+                {recentScripts.map((script) => (
+                  <RecentScriptCard key={script.id} script={script} />
+                ))}
+              </RecentSection>
+            )}
+            {recentKcs.length > 0 && (
+              <RecentSection
+                title="Recent knowledge checks."
+                sub="Standalone quiz banks."
+                seeAllHref="/projects?filter=kc"
+              >
+                {recentKcs.map((kc) => (
+                  <RecentKcCard key={kc.id} kc={kc} />
+                ))}
+              </RecentSection>
+            )}
+            {recentInfographics.length > 0 && (
+              <RecentSection
+                title="Recent infographics."
+                sub="Visual summaries from source."
+                seeAllHref="/projects?filter=infographic"
+              >
+                {recentInfographics.map((infographic) => (
+                  <RecentInfographicCard key={infographic.id} infographic={infographic} />
+                ))}
+              </RecentSection>
+            )}
             <PexelsAttribution />
-          </section>
+          </>
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * JJ1: section shell shared across all four "Recent X" strips on the
+ * home. Header + see-all link + a 3-column grid for the cards. Hides
+ * itself when its `children` are empty (the dashboard already gates
+ * each section on length, but the redundant check keeps this safe to
+ * reuse from anywhere).
+ */
+function RecentSection({
+  title,
+  sub,
+  seeAllHref,
+  children,
+}: {
+  title: string;
+  sub: string;
+  seeAllHref: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-12 first-of-type:mt-16">
+      <div className="section-header">
+        <div>
+          <h2 className="section-title">{title}</h2>
+          <p className="section-sub">{sub}</p>
+        </div>
+        <Link to={seeAllHref} className="entry-link">
+          See all <ArrowRight size={14} strokeWidth={2.5} />
+        </Link>
+      </div>
+      <div className="courses stagger-children">{children}</div>
+    </section>
+  );
+}
+
+function RecentScriptCard({ script }: { script: Script }) {
+  useCoverImage(script.title || script.topic, script.coverImageUrl, (url, photographer, photographerUrl) => {
+    saveScript({
+      ...script,
+      coverImageUrl: url,
+      coverPhotographer: photographer,
+      coverPhotographerUrl: photographerUrl,
+    });
+  });
+  const meta = [
+    script.audience || "Synthesia script",
+    `Updated ${relTime(script.updatedAt)}`,
+  ];
+  return (
+    <CourseCardPhoto
+      title={script.title || "Untitled script"}
+      meta={meta}
+      tag="Script"
+      imageUrl={script.coverImageUrl}
+      to={`/scripts/${script.id}`}
+    />
+  );
+}
+
+function RecentKcCard({ kc }: { kc: Kc }) {
+  useCoverImage(kc.title || kc.topic, kc.coverImageUrl, (url, photographer, photographerUrl) => {
+    saveKc({
+      ...kc,
+      coverImageUrl: url,
+      coverPhotographer: photographer,
+      coverPhotographerUrl: photographerUrl,
+    });
+  });
+  const meta = [
+    `${kc.questions.length} question${kc.questions.length === 1 ? "" : "s"}`,
+    `Updated ${relTime(kc.updatedAt)}`,
+  ];
+  return (
+    <CourseCardPhoto
+      title={kc.title || "Untitled KC"}
+      meta={meta}
+      tag="KC"
+      imageUrl={kc.coverImageUrl}
+      to={`/kcs/${kc.id}`}
+    />
+  );
+}
+
+function RecentInfographicCard({ infographic }: { infographic: Infographic }) {
+  useCoverImage(infographic.title || infographic.topic, infographic.coverImageUrl, (url, photographer, photographerUrl) => {
+    saveInfographic({
+      ...infographic,
+      coverImageUrl: url,
+      coverPhotographer: photographer,
+      coverPhotographerUrl: photographerUrl,
+    });
+  });
+  const meta = [
+    infographic.style.replace("_", " "),
+    `${infographic.pointCount} point${infographic.pointCount === 1 ? "" : "s"}`,
+    `Updated ${relTime(infographic.updatedAt)}`,
+  ];
+  return (
+    <CourseCardPhoto
+      title={infographic.title || "Untitled infographic"}
+      meta={meta}
+      tag="Infographic"
+      imageUrl={infographic.coverImageUrl}
+      to={`/infographics/${infographic.id}`}
+    />
   );
 }
 

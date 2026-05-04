@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Copy, Trash2, FolderOpen, Shapes, Sparkles, BookOpen, Plus } from "lucide-react";
+import { Copy, Trash2, FolderOpen, Shapes, Sparkles, BookOpen, Plus, Image as ImageIcon } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { PageHeader } from "../ui/PageHeader";
 import { EmptyState } from "../ui/EmptyState";
 import { deleteProject, duplicateProject, listProjects, saveProject, subscribeProjects, type Project, type ProjectKind } from "../store/projects";
 import { useCoverImage } from "../lib/useCoverImage";
 import { PexelsAttribution } from "../components/PexelsAttribution";
+import { ThemedCoverPicker } from "../components/ThemedCoverPicker";
 
 const FILTERS: { id: "all" | ProjectKind; label: string }[] = [
   { id: "all", label: "All" },
@@ -99,9 +100,12 @@ export default function ProjectsLibrary() {
 }
 
 function ProjectCard({ project }: { project: Project }) {
-  // Track-R4b: lazy Pexels cover. First mount kicks off a fetch by
-  // project name; the resolved url + photographer attribution land
-  // back on the Project record so the cover stays stable on reload.
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Track-R4b + HH: cover is now resolved synchronously via the
+  // themed-cover library on first render. Result lands on the
+  // Project record so the cover stays stable on reload AND so the
+  // LD's manual override (via ThemedCoverPicker) sticks.
   useCoverImage(project.name, project.coverImageUrl, (url, photographer, photographerUrl) => {
     saveProject({
       ...project,
@@ -110,6 +114,20 @@ function ProjectCard({ project }: { project: Project }) {
       coverPhotographerUrl: photographerUrl,
     });
   });
+
+  function applyCoverOverride(url: string) {
+    saveProject({
+      ...project,
+      coverImageUrl: url,
+      // Override clears the photographer fields — themed covers don't
+      // require attribution; Pexels search results that flow through
+      // here lose their per-image attribution which is acceptable
+      // (Pexels' license doesn't strictly require it).
+      coverPhotographer: "",
+      coverPhotographerUrl: "",
+    });
+    setPickerOpen(false);
+  }
 
   const href = project.kind === "course" ? `/courses?project=${project.id}` : `/infographics?project=${project.id}`;
   const Icon = project.kind === "course" ? BookOpen : project.kind === "scorm" ? Sparkles : Shapes;
@@ -120,11 +138,29 @@ function ProjectCard({ project }: { project: Project }) {
   const updated = new Date(project.updatedAt).toLocaleString();
 
   return (
-    <div className="card card-hover group overflow-hidden">
+    <div className="card card-hover group overflow-hidden relative">
+      {/* HH4: hover-revealed "Change cover" button on the cover band.
+          Sits in the top-right corner; click opens the themed-cover
+          picker modal. Click on the button stops propagation so the
+          parent <Link> doesn't fire and navigate away. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setPickerOpen(true);
+        }}
+        className="project-card-cover-edit"
+        title="Change cover"
+        aria-label="Change cover"
+      >
+        <ImageIcon size={13} />
+        <span>Cover</span>
+      </button>
       <Link to={href} className="block">
-        {/* Track-R4b: Pexels cover band. Falls back to a brand
-            gradient when the fetch hasn't resolved (or returned
-            empty). Tooltip surfaces photographer attribution. */}
+        {/* Track-R4b + HH: themed cover band. Falls back to a brand
+            gradient when no cover has resolved yet. Tooltip surfaces
+            photographer attribution when present (Pexels override). */}
         <div
           className="project-card-cover"
           style={
@@ -170,6 +206,13 @@ function ProjectCard({ project }: { project: Project }) {
           <Trash2 size={12} /> Delete
         </button>
       </div>
+      <ThemedCoverPicker
+        open={pickerOpen}
+        currentUrl={project.coverImageUrl}
+        searchHint={project.name}
+        onPick={applyCoverOverride}
+        onClose={() => setPickerOpen(false)}
+      />
     </div>
   );
 }
