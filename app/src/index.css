@@ -1931,35 +1931,10 @@
   }
   .suite-tile-compact {
     padding: 14px 16px 16px;
-    /* GG5: contextual photo background per tile, ALWAYS visible. The
-       Y4 baseline used a near-opaque white overlay that made the
-       photos read as faint tints — user feedback was the Script tile
-       looked "missing an image". Default is ~75% white overlay so
-       the photo reads at ~25% visibility; hover drops to ~50% white
-       so the photo brightens to ~50% visibility. Filter desaturates
-       the photo slightly so its colors don't clash with the brand
-       palette. */
-    background-image:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.78) 0%,
-        rgba(255, 255, 255, 0.72) 100%
-      ),
-      var(--tile-photo, none);
-    background-size: cover, cover;
-    background-position: center, center;
-    background-repeat: no-repeat, no-repeat;
-    transition: background-image 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .suite-tile-compact:hover,
-  .suite-tile-compact:focus-visible {
-    background-image:
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.52) 0%,
-        rgba(255, 255, 255, 0.46) 100%
-      ),
-      var(--tile-photo, none);
+    /* OO4: photo backgrounds removed (Y4/GG5 iterations didn't land
+       cleanly per user feedback). Tiles render as clean white cards
+       with the suite-tile shell handling brand-accent + hover lift.
+       The Course Studio HERO card (suite-hero) keeps its photo. */
   }
   .suite-tile-compact .suite-tile-icon {
     width: 32px;
@@ -2152,52 +2127,73 @@
     border: 1px solid theme("colors.ink.200");
     overflow: hidden;
   }
+  /* OO5a: BCG-grade sophistication pass — deeper shadows, tighter
+     typography, gradient brand-color combinations, generous breathing
+     room. Each layout reads as a real BCG slide rather than a generic
+     AI-generated graphic. Pre-OO5 saves still render via the same
+     class names; the geometry just looks more polished. */
   .ig-frame {
-    padding: 32px 36px 36px;
+    padding: 40px 44px 44px;
     background: white;
     color: theme("colors.ink.900");
   }
   .ig-header {
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
     border-bottom: 2px solid theme("colors.brand.500");
+    position: relative;
+  }
+  /* OO5a: subtle accent bar in deep brand green next to the main
+     border so the header reads as a deliberate brand mark. */
+  .ig-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 64px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-700, #1B7A4F), var(--brand-500, #29BA74));
+    border-radius: 2px;
   }
   .ig-title {
-    font-size: 26px;
+    font-size: 30px;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.18;
     color: theme("colors.ink.900");
-    letter-spacing: -0.015em;
-    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
   }
   .ig-subtitle {
-    font-size: 14px;
+    font-size: 15px;
     color: theme("colors.ink.600");
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.55;
+    max-width: 64ch;
   }
   .ig-body {
-    padding-top: 4px;
+    padding-top: 8px;
   }
   .ig-point-heading {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
-    color: theme("colors.ink.900");
+    color: var(--brand-700, #1B7A4F);
     margin: 0;
-    line-height: 1.3;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
   }
   .ig-point-heading-large {
-    font-size: 16px;
-    font-weight: 700;
-    color: theme("colors.ink.900");
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--brand-700, #1B7A4F);
     margin: 0;
-    line-height: 1.3;
+    line-height: 1.22;
+    letter-spacing: -0.02em;
   }
   .ig-point-body {
-    font-size: 13px;
+    font-size: 14px;
     color: theme("colors.ink.700");
-    line-height: 1.55;
-    margin: 6px 0 0;
+    line-height: 1.6;
+    margin: 8px 0 0;
   }
   .ig-icon { color: theme("colors.brand.700"); flex-shrink: 0; }
   .ig-icon-large { color: theme("colors.brand.700"); flex-shrink: 0; width: 22px; height: 22px; }
@@ -2415,245 +2411,374 @@
     text-align: center;
   }
 
-  /* Style: Process — vertical chain of numbered cards with arrows */
-  .ig-process { display: flex; flex-direction: column; gap: 10px; }
+  /* Style: Process — vertical chain of numbered cards. OO5a: cards
+     gain BCG-grade shadows (close + ambient pair), 28px padding,
+     16px radius. OO5b: numbered chevron between cards renders via
+     ::before on each item starting from the second. */
+  .ig-process { display: flex; flex-direction: column; gap: 28px; }
   .ig-process-item {
     position: relative;
     display: flex;
-    gap: 14px;
+    gap: 22px;
     align-items: flex-start;
-    padding: 14px 16px;
-    border: 1px solid theme("colors.ink.200");
-    border-radius: 10px;
+    padding: 28px 32px;
+    border: 1px solid rgba(0, 166, 81, 0.08);
+    border-radius: 16px;
     background: white;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
   }
+  /* OO5a: gradient circle number badge — radial highlight + brand
+     gradient + drop shadow makes it read as a polished design
+     element rather than a flat chip. */
   .ig-process-number {
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: var(--brand-500, #29BA74);
+    background: radial-gradient(circle at 30% 30%,
+      var(--brand-400, #4FCD96) 0%,
+      var(--brand-600, #008F4F) 60%,
+      var(--brand-800, #1B5C3D) 100%);
     color: white;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 800;
+    letter-spacing: -0.01em;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 4px 12px rgba(0, 166, 81, 0.32);
   }
   .ig-process-content { flex: 1; min-width: 0; }
-  .ig-process-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-  .ig-process-arrow {
+  .ig-process-heading-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  /* OO5b: chevron connector between consecutive process items. SVG
+     down-arrow centered between cards via the parent gap; sits in
+     the ::before pseudo of every item except the first so it reads
+     as a flow indicator. */
+  .ig-process-item:not(:first-child)::before {
+    content: "";
     position: absolute;
-    right: -2px;
-    bottom: -16px;
-    color: theme("colors.brand.500");
-    transform: rotate(90deg);
+    left: 24px;
+    top: -22px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid var(--brand-400, #4FCD96);
+    opacity: 0.7;
   }
 
-  /* Style: Quadrant — 2x2 grid */
+  /* Style: Quadrant — 2x2 grid. OO5a: BCG-grade card padding + radius;
+     each cell gets a subtle radial brand-tint to read as a confident
+     framework. */
   .ig-quadrant-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 10px;
+    gap: 22px;
   }
   .ig-quadrant-cell {
-    padding: 16px;
-    border: 1px solid theme("colors.ink.200");
-    border-top: 3px solid theme("colors.brand.500");
-    border-radius: 10px;
+    padding: 28px 26px;
+    border: 1px solid rgba(0, 166, 81, 0.10);
+    border-top: 4px solid var(--brand-500, #29BA74);
+    border-radius: 14px;
     background: theme("colors.brand.50");
-    min-height: 120px;
+    min-height: 150px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
   }
-  .ig-quadrant-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .ig-quadrant-heading-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 
-  /* Style: Comparison — side-by-side columns */
+  /* Style: Comparison — side-by-side columns. OO5a: deeper shadows,
+     larger padding, top-accent gradient bar. */
   .ig-comparison {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 28px;
   }
   .ig-comparison-col {
-    padding: 18px;
-    border: 1px solid theme("colors.ink.200");
-    border-top: 3px solid theme("colors.brand.500");
-    border-radius: 10px;
+    padding: 32px 28px;
+    border: 1px solid rgba(0, 166, 81, 0.10);
+    border-radius: 16px;
     background: white;
+    position: relative;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
   }
-  .ig-comparison-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ig-comparison-col::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-700, #1B7A4F), var(--brand-500, #29BA74));
+    border-radius: 16px 16px 0 0;
+  }
+  .ig-comparison-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 
-  /* Style: Numbered list — large numbers + content */
-  .ig-numbered-list { display: flex; flex-direction: column; gap: 14px; }
+  /* Style: Numbered list — large gradient numbers + content. OO5a:
+     numbers swap from flat color to a gradient text-fill; spacing
+     between items expands so each item reads as its own statement.
+     OO5b: subtle vertical connector line on the left edge linking
+     the numbered cards into a sequence. */
+  .ig-numbered-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    padding: 8px 0 8px 8px;
+  }
+  /* OO5b: vertical guide line that runs through the number column.
+     Drops into the background so the item shadows still pop. */
+  .ig-numbered-list::before {
+    content: "";
+    position: absolute;
+    left: 50px;
+    top: 32px;
+    bottom: 32px;
+    width: 2px;
+    background: linear-gradient(180deg,
+      rgba(0, 166, 81, 0.30) 0%,
+      rgba(0, 166, 81, 0.12) 100%);
+    border-radius: 1px;
+    z-index: 0;
+  }
   .ig-numbered-row {
     display: flex;
-    gap: 18px;
+    gap: 26px;
     align-items: flex-start;
-    padding: 14px 16px;
-    border-bottom: 1px solid theme("colors.ink.100");
+    padding: 20px 24px;
+    border-radius: 14px;
+    background: white;
+    border: 1px solid rgba(0, 166, 81, 0.08);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
+    position: relative;
+    z-index: 1;
   }
-  .ig-numbered-row:last-child { border-bottom: none; }
   .ig-numbered-large {
     flex-shrink: 0;
-    font-size: 36px;
+    font-size: 56px;
     font-weight: 800;
-    color: theme("colors.brand.500");
     line-height: 1;
-    width: 40px;
+    width: 64px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg,
+      var(--brand-700, #1B7A4F) 0%,
+      var(--brand-500, #29BA74) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  .ig-numbered-content { flex: 1; min-width: 0; }
-  .ig-numbered-heading-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .ig-numbered-content { flex: 1; min-width: 0; padding-top: 4px; }
+  .ig-numbered-heading-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
 
-  /* Style: Timeline — vertical with marker dots */
+  /* Style: Timeline — vertical with marker dots. OO5a: card body
+     for each item (was bare text); larger gradient marker; thicker
+     accent rule. */
   .ig-timeline {
     position: relative;
-    padding-left: 28px;
+    padding-left: 56px;
   }
   .ig-timeline-line {
     position: absolute;
-    left: 14px;
-    top: 8px;
-    bottom: 8px;
-    width: 2px;
-    background: theme("colors.brand.300");
-    border-radius: 1px;
+    left: 20px;
+    top: 16px;
+    bottom: 16px;
+    width: 3px;
+    background: linear-gradient(180deg,
+      var(--brand-500, #29BA74) 0%,
+      var(--brand-700, #1B7A4F) 100%);
+    border-radius: 2px;
   }
   .ig-timeline-item {
     position: relative;
     display: flex;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 18px;
+    margin-bottom: 32px;
   }
   .ig-timeline-item:last-child { margin-bottom: 0; }
   .ig-timeline-marker {
     position: absolute;
-    left: -28px;
-    top: 0;
-    width: 28px;
-    height: 28px;
+    left: -56px;
+    top: 8px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: var(--brand-500, #29BA74);
+    background: radial-gradient(circle at 30% 30%,
+      var(--brand-400, #4FCD96) 0%,
+      var(--brand-600, #008F4F) 60%,
+      var(--brand-800, #1B5C3D) 100%);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 4px 12px rgba(0, 166, 81, 0.32);
   }
   .ig-timeline-marker .ig-icon { color: white; }
-  .ig-timeline-content { flex: 1; min-width: 0; padding-top: 2px; }
+  .ig-timeline-content {
+    flex: 1;
+    min-width: 0;
+    padding: 18px 22px;
+    background: white;
+    border: 1px solid rgba(0, 166, 81, 0.08);
+    border-radius: 12px;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      0 6px 24px rgba(0, 0, 0, 0.04);
+  }
 
   /* ──────────────────────────────────────────────────────────────────
-     Track-X2 — visual upgrades for the original 5 + 4 new specialized
-     layouts. The shared moves across all 9: brand-cascade gradients
-     (--brand-50 → --brand-100), accent rules in --brand-500, hover
-     elevation, mixed-typography (eyebrow + heading + body), generous
-     padding. Pre-X2 saves still render via the same class names; the
-     CSS just looks more polished.
+     Track-X2 + OO5a — sophistication pass. Shared transition + hover
+     elevation across all card-style layouts; per-layout backgrounds +
+     padding live in their own blocks above.
      ────────────────────────────────────────────────────────────────── */
-
-  /* Polish to existing styles (rendered cards get subtle gradient
-     wash + soft shadow on hover instead of flat bordered boxes). */
   .ig-process-item,
   .ig-quadrant-cell,
-  .ig-comparison-col {
-    background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 100%);
-    transition: box-shadow 220ms ease, transform 220ms ease;
+  .ig-comparison-col,
+  .ig-numbered-row,
+  .ig-timeline-content {
+    transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .ig-process-item:hover,
   .ig-quadrant-cell:hover,
-  .ig-comparison-col:hover {
-    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
-    transform: translateY(-1px);
+  .ig-comparison-col:hover,
+  .ig-numbered-row:hover,
+  .ig-timeline-content:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      0 16px 48px rgba(0, 0, 0, 0.06);
   }
-  .ig-quadrant-cell {
-    background:
-      radial-gradient(circle at top right, theme("colors.brand.50") 0%, white 60%),
-      white;
+  /* OO5a: per-cell color variation on quadrants — alternating tints
+     across the 4 cells gives visual variety while staying inside
+     the brand cascade. */
+  .ig-quadrant-cell:nth-child(1) {
+    background: linear-gradient(135deg, theme("colors.brand.50") 0%, white 80%);
+    border-top-color: var(--brand-700, #1B7A4F);
+  }
+  .ig-quadrant-cell:nth-child(2) {
+    background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 100%);
+    border-top-color: var(--brand-500, #29BA74);
+  }
+  .ig-quadrant-cell:nth-child(3) {
+    background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 100%);
+    border-top-color: var(--brand-500, #29BA74);
+  }
+  .ig-quadrant-cell:nth-child(4) {
+    background: linear-gradient(135deg, theme("colors.brand.50") 0%, white 80%);
+    border-top-color: var(--brand-700, #1B7A4F);
   }
 
-  /* Style: Stat Spotlight — hero numbers + caption */
+  /* Style: Stat Spotlight — hero numbers + caption. OO5a: deeper
+     padding, shadows, larger headline, generous spacing. */
   .ig-stat-spotlight {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 28px;
   }
   .ig-stat-cell {
     position: relative;
-    padding: 24px 20px 20px;
-    border-radius: 14px;
+    padding: 36px 28px 28px;
+    border-radius: 16px;
     background: linear-gradient(135deg, white 0%, theme("colors.brand.50") 120%);
-    border: 1px solid theme("colors.ink.100");
+    border: 1px solid rgba(0, 166, 81, 0.08);
     overflow: hidden;
-    transition: box-shadow 220ms ease, transform 220ms ease;
+    transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
   }
   .ig-stat-cell:hover {
-    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.16);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.10),
+      0 20px 56px rgba(0, 0, 0, 0.06);
   }
   .ig-stat-rule {
     position: absolute;
     top: 0;
-    left: 16px;
-    right: 16px;
-    height: 3px;
-    background: linear-gradient(90deg, var(--brand-500, #29BA74), var(--brand-700, #1B7A4F));
-    border-radius: 0 0 2px 2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-700, #1B7A4F), var(--brand-500, #29BA74));
   }
   .ig-stat-icon {
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     color: theme("colors.brand.700");
   }
   .ig-stat-headline {
-    font-size: 44px;
+    font-size: 56px;
     font-weight: 800;
     line-height: 1;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.035em;
     color: var(--brand-700, #1B7A4F);
     background: linear-gradient(135deg, var(--brand-700, #1B7A4F) 0%, var(--brand-500, #29BA74) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     font-variant-numeric: tabular-nums;
   }
   .ig-stat-body {
-    font-size: 13px;
+    font-size: 14px;
     color: theme("colors.ink.700");
-    line-height: 1.5;
+    line-height: 1.6;
     margin: 0;
   }
 
-  /* Style: Pyramid — stacked levels narrowing toward apex */
+  /* Style: Pyramid — stacked levels narrowing toward apex. OO5a:
+     more padding, larger radius, deeper layered shadows. */
   .ig-pyramid {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 12px 0;
+    gap: 12px;
+    padding: 24px 0;
   }
   .ig-pyramid-stack {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    gap: 6px;
+    gap: 10px;
   }
   .ig-pyramid-level {
     background: linear-gradient(135deg,
       var(--brand-700, #1B7A4F) 0%,
       var(--brand-500, #29BA74) 100%);
     color: white;
-    border-radius: 6px;
-    padding: 14px 22px;
-    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.18);
-    transition: transform 220ms ease, box-shadow 220ms ease;
+    border-radius: 10px;
+    padding: 22px 32px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 4px 14px rgba(0, 166, 81, 0.20),
+      0 12px 32px rgba(0, 166, 81, 0.18);
+    transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
     margin: 0 auto;
     position: relative;
   }
   .ig-pyramid-level:hover {
     transform: scale(1.02);
-    box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.20),
+      0 8px 24px rgba(0, 166, 81, 0.32),
+      0 20px 48px rgba(0, 166, 81, 0.24);
   }
   /* Each level lightens slightly toward the base for depth. */
   .ig-pyramid-level:nth-child(1) { background: linear-gradient(135deg, theme("colors.brand.900") 0%, theme("colors.brand.700") 100%); }
@@ -2697,37 +2822,62 @@
     margin: 6px 0 0;
   }
 
-  /* Style: Cycle / Loop — phases around a center hub */
+  /* Style: Cycle / Loop — phases around a center hub. OO5a: larger
+     ring + hub, gradient connecting circle, gradient number badges
+     in cards. OO5b: SVG ring connector renders behind the nodes. */
   .ig-cycle {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px 0;
+    padding: 32px 0;
   }
   .ig-cycle-ring {
     position: relative;
-    width: 480px;
-    height: 480px;
+    width: 540px;
+    height: 540px;
     max-width: 100%;
   }
   @media (max-width: 600px) {
-    .ig-cycle-ring { width: 360px; height: 360px; }
+    .ig-cycle-ring { width: 400px; height: 400px; }
+  }
+  /* OO5b: SVG-style dashed ring connecting the phase nodes. CSS
+     border on a circle approximates the same effect without needing
+     a separate SVG element. */
+  .ig-cycle-ring::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 360px;
+    height: 360px;
+    border: 2px dashed rgba(0, 166, 81, 0.35);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  @media (max-width: 600px) {
+    .ig-cycle-ring::before { width: 280px; height: 280px; }
   }
   .ig-cycle-hub {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 110px;
-    height: 110px;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 30%, var(--brand-500, #29BA74) 0%, var(--brand-700, #1B7A4F) 70%);
+    background: radial-gradient(circle at 30% 30%,
+      var(--brand-400, #4FCD96) 0%,
+      var(--brand-600, #008F4F) 60%,
+      var(--brand-800, #1B5C3D) 100%);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.25), 0 0 0 8px rgba(255, 255, 255, 0.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 12px 32px rgba(0, 166, 81, 0.30),
+      0 0 0 10px rgba(255, 255, 255, 0.7);
     z-index: 2;
   }
   .ig-cycle-hub .ig-icon { color: white; }
@@ -2735,60 +2885,71 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    /* Place the node along the ring (radius 165px), then rotate the
-       inner card back so text reads upright. */
+    /* OO5a: larger radius (190px) so cards aren't crowded into the
+       hub; cards reset rotation so text reads upright. */
     transform:
       translate(-50%, -50%)
       rotate(var(--angle))
-      translateY(-165px)
+      translateY(-190px)
       rotate(calc(var(--angle) * -1));
-    width: 160px;
+    width: 178px;
   }
   .ig-cycle-node-inner {
     background: white;
-    border: 1px solid theme("colors.ink.200");
-    border-top: 3px solid var(--brand-500, #29BA74);
-    border-radius: 12px;
-    padding: 10px 12px 12px;
-    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 166, 81, 0.12);
+    border-radius: 14px;
+    padding: 18px 16px 16px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
     text-align: center;
-    transition: transform 220ms ease, box-shadow 220ms ease;
+    transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .ig-cycle-node:hover .ig-cycle-node-inner {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.10),
+      0 20px 48px rgba(0, 0, 0, 0.06);
   }
   .ig-cycle-node-step {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: var(--brand-700, #1B7A4F);
+    background: radial-gradient(circle at 30% 30%,
+      var(--brand-400, #4FCD96) 0%,
+      var(--brand-600, #008F4F) 60%,
+      var(--brand-800, #1B5C3D) 100%);
     color: white;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 800;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 3px 8px rgba(0, 166, 81, 0.32);
   }
   .ig-cycle-node-icon {
     color: theme("colors.brand.700");
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     display: flex;
     justify-content: center;
   }
   .ig-cycle-node-heading {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
-    color: theme("colors.ink.900");
+    color: var(--brand-700, #1B7A4F);
     margin: 0;
     line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .ig-cycle-node-body {
-    font-size: 10px;
+    font-size: 11px;
     color: theme("colors.ink.600");
-    margin: 4px 0 0;
-    line-height: 1.4;
+    margin: 6px 0 0;
+    line-height: 1.5;
   }
 
   /* Style: Five Forces — central concept + cardinal forces */
@@ -2806,53 +2967,73 @@
     gap: 12px;
     align-items: stretch;
   }
+  .ig-five-forces-grid { gap: 24px; }
   .ig-five-forces-center {
     grid-area: center;
     background: linear-gradient(135deg,
       var(--brand-700, #1B7A4F) 0%,
       var(--brand-500, #29BA74) 100%);
     color: white;
-    border-radius: 14px;
-    padding: 22px 20px;
+    border-radius: 18px;
+    padding: 32px 28px;
     text-align: center;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.20),
+      0 10px 32px rgba(0, 166, 81, 0.32),
+      0 24px 56px -16px rgba(0, 166, 81, 0.30);
   }
   .ig-five-forces-center-eyebrow {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    opacity: 0.78;
-    margin-bottom: 8px;
+    opacity: 0.82;
+    margin-bottom: 12px;
   }
   .ig-five-forces-center-title {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 800;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
-    margin: 0 0 6px;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
     color: white;
   }
   .ig-five-forces-center-subtitle {
-    font-size: 12px;
-    line-height: 1.4;
+    font-size: 13px;
+    line-height: 1.5;
     margin: 0;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.86);
   }
   .ig-five-forces-node {
     background: white;
-    border: 1px solid theme("colors.ink.200");
-    border-top: 3px solid var(--brand-500, #29BA74);
-    border-radius: 12px;
-    padding: 14px 16px;
-    transition: transform 220ms ease, box-shadow 220ms ease;
+    border: 1px solid rgba(0, 166, 81, 0.10);
+    border-radius: 14px;
+    padding: 22px 22px;
+    position: relative;
+    transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.04);
+  }
+  .ig-five-forces-node::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-700, #1B7A4F), var(--brand-500, #29BA74));
+    border-radius: 14px 14px 0 0;
   }
   .ig-five-forces-node:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.14);
+    transform: translateY(-3px);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.10),
+      0 20px 48px rgba(0, 0, 0, 0.06);
   }
   .ig-five-forces-node-top    { grid-area: top; }
   .ig-five-forces-node-right  { grid-area: right; }
@@ -2861,19 +3042,20 @@
   .ig-five-forces-node-diag   { grid-area: diag; }
   .ig-five-forces-node-icon {
     color: theme("colors.brand.700");
-    margin-bottom: 6px;
+    margin-bottom: 10px;
   }
   .ig-five-forces-node-heading {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
-    color: theme("colors.ink.900");
-    margin: 0 0 4px;
+    color: var(--brand-700, #1B7A4F);
+    margin: 0 0 6px;
     line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .ig-five-forces-node-body {
-    font-size: 12px;
+    font-size: 13px;
     color: theme("colors.ink.700");
-    line-height: 1.45;
+    line-height: 1.55;
     margin: 0;
   }
   /* Mobile: collapse cross to vertical stack */

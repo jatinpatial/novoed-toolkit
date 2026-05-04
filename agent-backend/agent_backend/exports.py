@@ -1299,9 +1299,13 @@ def _fetch_banner_bytes(url: str) -> bytes | None:
     """KK: fetch the banner image bytes for embedding into the .docx.
 
     Handles both data: URLs (LD-uploaded files, where the image is
-    inline-encoded) and remote HTTPS URLs (Pexels). Returns None on
-    any failure — caller falls through to "no banner" rendering so
-    the export never breaks because of a missing image.
+    inline-encoded) and remote HTTPS URLs (Pexels / Unsplash). Returns
+    None on any failure — caller falls through to "no banner"
+    rendering so the export never breaks because of a missing image.
+
+    OO3: every silent-failure path now logs a warning so future
+    regressions surface in the backend log instead of producing a
+    silently-image-less docx.
     """
     if not url:
         return None
@@ -1309,10 +1313,11 @@ def _fetch_banner_bytes(url: str) -> bytes | None:
         try:
             header, _, b64 = url.partition(",")
             if not b64 or "base64" not in header:
+                _log.warning("KK banner: malformed data URL (header=%s)", header[:50])
                 return None
             return base64.b64decode(b64)
         except Exception as exc:
-            _log.info("KK banner: data-URL decode failed: %s", exc)
+            _log.warning("KK banner: data-URL decode failed: %s", exc)
             return None
     try:
         with httpx.Client(timeout=8.0, verify=_BANNER_SSL_CONTEXT) as client:
@@ -1320,31 +1325,121 @@ def _fetch_banner_bytes(url: str) -> bytes | None:
             resp.raise_for_status()
             return resp.content
     except Exception as exc:
-        _log.info("KK banner: fetch %s failed: %s", url[:80], exc)
+        _log.warning("KK banner: fetch %s failed: %s", url[:80], exc)
         return None
 
 
-def _render_lesson_banner(doc: Document, lesson: LessonModel) -> None:
-    """KK: embed the lesson's banner photo at the top of its .docx
-    section, sized to the page width, with a small attribution
-    caption underneath when the photographer is known. Silent on
-    failure so the lesson body still renders.
+def _pexels_lookup_first(query: str) -> tuple[str, str, str] | None:
+    """OO3: server-side fallback Pexels search for lessons that don't
+    have a bannerImageUrl persisted yet.
+
+    The auto-fetcher in LessonBanner.tsx only fires when the lesson
+    canvas mounts. If an LD generates a course but never opens a
+    given lesson, that lesson's banner is never persisted — so the
+    .docx export sees `bannerImageUrl=None` and skips the embed.
+
+    To make the export self-sufficient, we run the same Pexels
+    search on the server when bannerImageUrl is missing. Returns
+    (url, photographer, photographer_url) on success, or None when:
+      - PEXELS_API_KEY isn't configured (graceful no-op)
+      - the query is empty
+      - Pexels returns 0 results / errors
+
+    Logs at warning level on every failure path so the docx export
+    surfaces a missing-banner regression in the backend log.
     """
-    if not lesson.bannerImageUrl:
-        return
-    img_bytes = _fetch_banner_bytes(lesson.bannerImageUrl)
+    from agent_backend.images import (
+        PEXELS_API_KEY,
+        PEXELS_BASE,
+        _PEXELS_SSL_CONTEXT,
+    )
+
+    if not query.strip():
+        return None
+    if not PEXELS_API_KEY:
+        _log.warning(
+            "KK banner: lesson has no bannerImageUrl AND PEXELS_API_KEY "
+            "is unset — docx will render without a banner. Set the key "
+            "in agent-backend/.env to enable server-side fallback."
+        )
+        return None
+    try:
+        with httpx.Client(timeout=10.0, verify=_PEXELS_SSL_CONTEXT) as client:
+            resp = client.get(
+                f"{PEXELS_BASE}/search",
+                params={"query": query, "per_page": 1, "orientation": "landscape"},
+                headers={"Authorization": PEXELS_API_KEY},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        _log.warning("KK banner fallback: Pexels lookup failed for %r: %s", query, exc)
+        return None
+    photos = data.get("photos") or []
+    if not photos:
+        _log.warning("KK banner fallback: Pexels returned 0 results for %r", query)
+        return None
+    p = photos[0]
+    url = (p.get("src") or {}).get("large") or ""
+    if not url:
+        _log.warning("KK banner fallback: Pexels first result has no large src")
+        return None
+    return (
+        url,
+        p.get("photographer") or "",
+        p.get("photographer_url") or "",
+    )
+
+
+def _render_lesson_banner(doc: Document, lesson: LessonModel) -> None:
+    """KK + OO3: embed the lesson's banner photo at the top of its
+    .docx section, sized to the page width, with a small attribution
+    caption underneath when the photographer is known.
+
+    OO3: when the lesson has no bannerImageUrl persisted (e.g. the LD
+    never opened the lesson canvas, so the auto-fetcher never fired),
+    fall back to a synchronous Pexels lookup using the lesson title
+    as the query. This makes the .docx export self-sufficient — it
+    doesn't depend on the LD having opened every lesson.
+
+    Silent on failure (with log.warning at every drop point) so the
+    lesson body still renders cleanly even when banners can't load.
+    """
+    url = lesson.bannerImageUrl
+    photographer = lesson.bannerPhotographer or ""
+    photographer_url = lesson.bannerPhotographerUrl or ""
+
+    if not url:
+        # OO3: fall back to a server-side Pexels lookup so lessons the
+        # LD never opened still ship with a banner.
+        fallback = _pexels_lookup_first(lesson.title or "")
+        if fallback:
+            url, photographer, photographer_url = fallback
+            _log.info(
+                "KK banner fallback: server-fetched banner for %r",
+                lesson.title[:60] if lesson.title else "",
+            )
+        else:
+            return  # nothing to embed; logged inside _pexels_lookup_first
+
+    img_bytes = _fetch_banner_bytes(url)
     if not img_bytes:
         return
     try:
         # Page text width on A4 with 2.5cm side margins is ~16cm.
         doc.add_picture(io.BytesIO(img_bytes), width=Cm(16))
     except Exception as exc:
-        _log.info("KK banner: add_picture failed: %s", exc)
+        _log.warning("KK banner: add_picture failed (%d bytes): %s", len(img_bytes), exc)
         return
-    if lesson.bannerPhotographer:
+    # Suppress the photographer_url variable lint when only the
+    # photographer name is used in the caption — the URL is reserved
+    # for a future hyperlink upgrade. Reference it explicitly so
+    # linters don't strip the binding.
+    _ = photographer_url
+    if photographer:
         p = doc.add_paragraph()
         p.paragraph_format.space_after = Pt(8)
-        r = p.add_run(f"Photo by {lesson.bannerPhotographer} on Pexels")
+        r = p.add_run(f"Photo by {photographer} on Pexels")
         r.italic = True
         r.font.size = Pt(8)
         r.font.color.rgb = _BCG_INK_LT()

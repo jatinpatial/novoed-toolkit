@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import type { BcgIconName } from "../icons/BcgIcon";
 import * as BcgIcons from "../icons/bcg";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -550,9 +549,6 @@ function ProcessLayout({
               setOpenPickerKey={setOpenPickerKey}
             />
           </div>
-          {i < points.length - 1 && (
-            <ArrowRight className="ig-process-arrow" size={20} aria-hidden="true" />
-          )}
         </div>
       ))}
     </div>

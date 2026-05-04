@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Image as ImageIcon } from "lucide-react";
+import { X, Search } from "lucide-react";
 import { searchImagesCached, type PexelsResult } from "../lib/images";
 import {
   THEME_LABELS,
@@ -8,16 +8,18 @@ import {
 } from "../lib/themedCover";
 
 /**
- * Track-HH4: per-project cover picker.
+ * Track-HH4 + OO1: per-project cover picker.
  *
- * Modal grid of the 12 themed covers. Click a thumb → onPick fires
- * with that URL. The "Search more…" link toggles a Pexels search
- * box for LDs who want something specific that doesn't fit the
- * curated set.
+ * Two stacked sections inside the modal:
+ *   1. "Themed covers" — the 12 curated local images. Click a thumb →
+ *      onPick fires with that URL.
+ *   2. "Search Pexels" — section header + always-visible search input
+ *      + result grid. Pre-OO1 this was collapsed behind a small text
+ *      button which LDs missed; the section is now always exposed.
  *
  * Pexels fallback is graceful: if the backend returns 503 (no key)
- * the search panel surfaces a friendly note, and the LD stays on
- * the curated grid.
+ * the search panel surfaces a friendly note inline, and the LD stays
+ * on the curated grid.
  */
 
 interface ThemedCoverPickerProps {
@@ -37,7 +39,6 @@ export function ThemedCoverPicker({
   onPick,
   onClose,
 }: ThemedCoverPickerProps) {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState(searchHint);
   const [results, setResults] = useState<PexelsResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -45,7 +46,6 @@ export function ThemedCoverPicker({
 
   useEffect(() => {
     if (!open) {
-      setSearchOpen(false);
       setResults(null);
       setSearchError(null);
     } else {
@@ -104,82 +104,93 @@ export function ThemedCoverPicker({
           </button>
         </header>
 
-        <div className="px-6 py-5 overflow-y-auto flex-1">
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {themes.map(([theme, url]) => {
-              const active = url === currentUrl;
-              return (
-                <button
-                  key={theme}
-                  type="button"
-                  onClick={() => onPick(url)}
-                  className={`themed-cover-tile${active ? " themed-cover-tile-active" : ""}`}
-                  style={{ backgroundImage: `url(${url})` }}
-                  title={THEME_LABELS[theme]}
-                >
-                  <span className="themed-cover-tile-label">{THEME_LABELS[theme]}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="px-6 py-5 overflow-y-auto flex-1 space-y-7">
+          {/* Section 1 — Themed covers */}
+          <section>
+            <div className="flex items-baseline justify-between mb-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Themed covers</h4>
+              <span className="text-[11px] text-ink-400">12 curated</span>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {themes.map(([theme, url]) => {
+                const active = url === currentUrl;
+                return (
+                  <button
+                    key={theme}
+                    type="button"
+                    onClick={() => onPick(url)}
+                    className={`themed-cover-tile${active ? " themed-cover-tile-active" : ""}`}
+                    style={{ backgroundImage: `url(${url})` }}
+                    title={THEME_LABELS[theme]}
+                  >
+                    <span className="themed-cover-tile-label">{THEME_LABELS[theme]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-          <div className="mt-5">
-            {!searchOpen ? (
+          {/* OO1: Section 2 — Pexels search. Always visible: section
+              header + search input + result grid. Pre-OO1 this was a
+              collapsed link inside the themed grid; LDs missed it. */}
+          <section>
+            <div className="flex items-baseline justify-between mb-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-500">
+                Search Pexels
+              </h4>
+              <span className="text-[11px] text-ink-400">More options →</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      runSearch();
+                    }
+                  }}
+                  placeholder="Search Pexels (e.g. innovation lab)"
+                  className="w-full pl-9 pr-3 h-9 text-sm rounded-md border border-ink-200 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
               <button
                 type="button"
-                onClick={() => setSearchOpen(true)}
-                className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1.5"
+                onClick={runSearch}
+                disabled={searching}
+                className="btn-primary btn-sm"
               >
-                <ImageIcon size={13} /> Search Pexels for more…
+                {searching ? "Searching…" : "Search"}
               </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    autoFocus
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        runSearch();
-                      }
-                    }}
-                    placeholder="Search Pexels (e.g. innovation lab)"
-                    className="flex-1 px-3 h-8 text-sm rounded-md border border-ink-200 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-                  />
+            </div>
+            {searchError && (
+              <div className="mt-2 text-xs text-red-600">{searchError}</div>
+            )}
+            {!results && !searchError && !searching && (
+              <p className="mt-2 text-xs text-ink-500 italic">
+                Type a query and press Enter — Pexels returns up to 5 landscape photos per search.
+              </p>
+            )}
+            {results && results.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-3">
+                {results.map((r) => (
                   <button
+                    key={r.id}
                     type="button"
-                    onClick={runSearch}
-                    disabled={searching}
-                    className="btn-secondary btn-sm"
+                    onClick={() => onPick(r.url)}
+                    className="themed-cover-tile"
+                    style={{ backgroundImage: `url(${r.thumb})` }}
+                    title={`Photo by ${r.photographer} on Pexels`}
                   >
-                    {searching ? "Searching…" : "Search"}
+                    <span className="themed-cover-tile-label">{r.photographer}</span>
                   </button>
-                </div>
-                {searchError && (
-                  <div className="text-xs text-red-600">{searchError}</div>
-                )}
-                {results && results.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {results.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => onPick(r.url)}
-                        className="themed-cover-tile"
-                        style={{ backgroundImage: `url(${r.thumb})` }}
-                        title={`Photo by ${r.photographer} on Pexels`}
-                      >
-                        <span className="themed-cover-tile-label">{r.photographer}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </div>

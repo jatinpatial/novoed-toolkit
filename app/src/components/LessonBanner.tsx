@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Droplet, RefreshCw, RotateCw, Upload } from "lucide-react";
+import { Droplet, RefreshCw, RotateCw, Search, Upload, X } from "lucide-react";
 import {
   peekCachedImages,
   searchImages,
@@ -61,6 +61,10 @@ export function LessonBanner({
     () => peekCachedImages(query, "banner") ?? [],
   );
   const [dragOver, setDragOver] = useState(false);
+  // OO2: Pexels-search dialog state. Open via the Search button in
+  // the action row; closes on Escape, backdrop click, or after a
+  // result is picked.
+  const [searchOpen, setSearchOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fetchedForRef = useRef<string | null>(null);
 
@@ -196,6 +200,20 @@ export function LessonBanner({
           <RefreshCw size={13} />
           <span>Regenerate</span>
         </button>
+        {/* OO2: Pexels search modal trigger. Opens an inline search
+            dialog with the lesson title pre-filled. Click any result →
+            replaces the banner via the same onChange flow as Replace
+            / Regenerate / Upload. */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="lesson-banner-btn"
+          title="Search Pexels for a specific photo"
+          aria-label="Search Pexels for banner image"
+        >
+          <Search size={13} />
+          <span>Search</span>
+        </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -261,6 +279,163 @@ export function LessonBanner({
           <span>Drop image to replace</span>
         </div>
       )}
+
+      {/* OO2: Pexels search dialog — opens when the LD clicks Search
+          in the action row. Same UX shape as ThemedCoverPicker's
+          search section: prefilled input + result grid; click a
+          result to replace. */}
+      {searchOpen && (
+        <BannerPexelsSearchDialog
+          initialQuery={query}
+          onPick={(r) => {
+            applyResult(r);
+            setSearchOpen(false);
+          }}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * OO2: small modal shared with the lesson banner. Mounted via React
+ * portal-equivalent (just a fixed overlay) so the dialog floats above
+ * the lesson canvas. Reuses the same `searchImagesCached` lib the
+ * banner uses for the auto-fetch + Replace cycle.
+ */
+function BannerPexelsSearchDialog({
+  initialQuery,
+  onPick,
+  onClose,
+}: {
+  initialQuery: string;
+  onPick: (r: PexelsResult) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [results, setResults] = useState<PexelsResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-run a search on mount with the prefilled lesson title — the
+  // LD usually wants the dialog to land showing photos, not an empty
+  // form. Falls through silently if Pexels is unconfigured.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!initialQuery.trim()) return;
+      setSearching(true);
+      try {
+        const r = await searchImagesCached(initialQuery, "banner");
+        if (!cancelled) setResults(r);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [initialQuery]);
+
+  // Esc closes.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function runSearch() {
+    if (!query.trim()) return;
+    setSearching(true);
+    setError(null);
+    try {
+      const r = await searchImagesCached(query, "banner");
+      if (r.length === 0) {
+        setError(
+          "No matches. Pexels may be unconfigured (set PEXELS_API_KEY in .env) or the query returned nothing.",
+        );
+      }
+      setResults(r);
+    } catch {
+      setError("Search failed. Try a different query or use Replace / Upload.");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-ink-950/70 flex items-center justify-center p-6"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between px-6 py-4 border-b border-ink-100">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
+              Banner image
+            </div>
+            <h3 className="text-lg font-bold text-ink-900">Search Pexels</h3>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-md hover:bg-ink-50 text-ink-500">
+            <X size={18} />
+          </button>
+        </header>
+        <div className="px-6 py-5 overflow-y-auto flex-1">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    runSearch();
+                  }
+                }}
+                placeholder="Search Pexels (e.g. innovation lab)"
+                className="w-full pl-9 pr-3 h-9 text-sm rounded-md border border-ink-200 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={runSearch}
+              disabled={searching}
+              className="btn-primary btn-sm"
+            >
+              {searching ? "Searching…" : "Search"}
+            </button>
+          </div>
+          {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
+          {results && results.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-4">
+              {results.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => onPick(r)}
+                  className="themed-cover-tile"
+                  style={{ backgroundImage: `url(${r.thumb})` }}
+                  title={`Photo by ${r.photographer} on Pexels`}
+                >
+                  <span className="themed-cover-tile-label">{r.photographer}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {results && results.length === 0 && !error && (
+            <p className="mt-3 text-xs text-ink-500 italic">
+              No results yet — try a broader query.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
