@@ -1477,8 +1477,8 @@
   }
   .build-progress-band-lottie {
     flex-shrink: 0;
-    width: 48px;
-    height: 48px;
+    width: 72px;
+    height: 72px;
     pointer-events: none;
   }
   .build-progress-band-lottie-fill {
@@ -1836,6 +1836,28 @@
   .suite-hero:hover .suite-hero-shimmer,
   .suite-hero:focus-visible .suite-hero-shimmer {
     background-position: 175% 0;
+  }
+  /* QQ1 v3: VISIBLE glow-loading Lottie on the right side of the
+     hero card. Bigger, brighter, no blend mode — the LD should
+     immediately notice the motion. */
+  .suite-hero-lottie {
+    position: absolute;
+    top: 50%;
+    right: 4%;
+    transform: translateY(-50%);
+    width: 280px;
+    height: 280px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.9;
+  }
+  .suite-hero-lottie-fill {
+    width: 100%;
+    height: 100%;
+  }
+  .suite-hero:hover .suite-hero-lottie {
+    opacity: 1;
+    transition: opacity 280ms ease-out;
   }
   .suite-hero-icon {
     position: relative;
@@ -2942,6 +2964,31 @@
   }
   .welcome-stage-name .welcome-lottie-particles { opacity: 0.25; }
   .welcome-stage-tour .welcome-lottie-particles { opacity: 0.12; }
+
+  /* QQ1 v3: HUGE glowing brain on the splash. Full opacity, no blend
+     mode, dominates the screen. The BCG U logo + wordmark sit on top
+     at z-index 2; the brain sits behind at z-index 1. */
+  .welcome-lottie-brain {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 1;
+    animation: welcome-brain-pulse 4s ease-in-out infinite;
+  }
+  .welcome-lottie-brain-fill {
+    width: 70vmin;
+    height: 70vmin;
+    max-width: 720px;
+    max-height: 720px;
+  }
+  @keyframes welcome-brain-pulse {
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
 
   .welcome-bg {
     position: absolute;

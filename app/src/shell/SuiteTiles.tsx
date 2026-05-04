@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-react";
 import type { CSSProperties } from "react";
+import { LottiePlayer } from "../components/LottiePlayer";
 
 /**
  * polish-18a (Track-E) + Track-P (P1) + Y4: two-tier Studio suite.
@@ -58,6 +59,12 @@ export function SuiteTiles() {
         </span>
         <div className="suite-hero-grain" aria-hidden="true" />
         <div className="suite-hero-shimmer" aria-hidden="true" />
+        {/* QQ1: glowing-loader Lottie sits behind the icon as ambient
+            visual energy on the hero card. Pointer-events disabled so
+            the entire tile click target stays intact. */}
+        <div className="suite-hero-lottie" aria-hidden="true">
+          <LottiePlayer src="glow-loading" className="suite-hero-lottie-fill" />
+        </div>
         <div className="suite-hero-icon">
           <BookOpen size={28} strokeWidth={2} />
         </div>

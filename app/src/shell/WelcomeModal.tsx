@@ -234,6 +234,14 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         <div className="welcome-lottie-particles">
           <LottiePlayer src="splash-particles" className="welcome-lottie-fill" />
         </div>
+        {/* QQ1 v2: Big glowing brain in the splash center, only on the
+            splash stage (auto-hides via CSS as we transition). Properly
+            visible difference vs the static welcome bg. */}
+        {stage === "splash" && (
+          <div className="welcome-lottie-brain">
+            <LottiePlayer src="brain" className="welcome-lottie-brain-fill" />
+          </div>
+        )}
       </div>
 
       {/* Top-right close. Hidden during splash. */}

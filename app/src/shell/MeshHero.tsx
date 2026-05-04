@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { LottiePlayer } from "../components/LottiePlayer";
 import "./MeshHero.css";
 
 /**
@@ -118,6 +119,23 @@ export function MeshHero({ children }: MeshHeroProps) {
         <div className="deco-shape s4" />
         <div className="deco-shape s5" />
         <div className="deco-shape s6" />
+      </div>
+
+      {/* QQ1 v3: ambient Lottie layer — three animations positioned at
+          corners for visible motion across the hero. Each has its own
+          float animation so they drift independently of each other.
+          aria-hidden because they're decorative; pointer-events none
+          so the entire hero stays interactive. */}
+      <div className="mesh-lottie-layer" aria-hidden="true">
+        <div className="mesh-lottie mesh-lottie-tr">
+          <LottiePlayer src="brain" className="mesh-lottie-fill" />
+        </div>
+        <div className="mesh-lottie mesh-lottie-bl">
+          <LottiePlayer src="glow-loading" className="mesh-lottie-fill" />
+        </div>
+        <div className="mesh-lottie mesh-lottie-br">
+          <LottiePlayer src="gears" className="mesh-lottie-fill" />
+        </div>
       </div>
 
       <div className="mesh-hero-content">{children}</div>

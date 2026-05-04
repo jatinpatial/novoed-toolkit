@@ -257,6 +257,64 @@
   to   { transform: rotate(360deg); }
 }
 
+/* ─── QQ1 v3: ambient Lottie layer ────────────────────────────────────────── */
+/* Three animations placed at hero corners. Visible but not loud —
+   each gets its own float animation so they drift naturally. */
+.mesh-lottie-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mesh-lottie {
+  position: absolute;
+  pointer-events: none;
+}
+.mesh-lottie-fill {
+  width: 100%;
+  height: 100%;
+}
+/* Top-right brain — primary visual anchor */
+.mesh-lottie-tr {
+  top: 5%;
+  right: 4%;
+  width: 200px;
+  height: 200px;
+  opacity: 0.35;
+  animation: mesh-lottie-float-1 12s ease-in-out infinite;
+}
+/* Bottom-left glow-loading — counter-balance */
+.mesh-lottie-bl {
+  bottom: 8%;
+  left: 3%;
+  width: 160px;
+  height: 160px;
+  opacity: 0.28;
+  animation: mesh-lottie-float-2 14s ease-in-out infinite;
+}
+/* Bottom-right gears — accent */
+.mesh-lottie-br {
+  bottom: 10%;
+  right: 18%;
+  width: 110px;
+  height: 110px;
+  opacity: 0.25;
+  animation: mesh-lottie-float-3 10s ease-in-out infinite;
+}
+@keyframes mesh-lottie-float-1 {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-18px) translateX(10px); }
+}
+@keyframes mesh-lottie-float-2 {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(14px) translateX(-8px); }
+}
+@keyframes mesh-lottie-float-3 {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(15deg); }
+}
+
 /* ─── Content slot ────────────────────────────────────────────────────────── */
 .mesh-hero-content {
   position: relative;
