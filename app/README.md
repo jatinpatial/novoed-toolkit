@@ -15,7 +15,7 @@ Migration of the NovoEd Component Toolkit to a modern Vite + React + TypeScript 
 ```bash
 cd app
 npm install
-npm run dev        # http://localhost:5173/
+npm run dev        # http://localhost:5173/bcg-u-studio/
 ```
 
 ## Build & deploy
@@ -26,7 +26,7 @@ npm run preview    # serve dist/ locally
 npm run deploy     # build + publish dist/ to gh-pages branch
 ```
 
-`vite.config.ts` sets `base: "/"` for local LD pilot installs (no subpath). If re-deploying to GitHub Pages, set `base` to match the repo name (e.g. `/bcg-u-studio/`).
+`vite.config.ts` sets `base: "/bcg-u-studio/"` so the URL has a meaningful product path during local LD pilot use (`http://localhost:5173/bcg-u-studio/`) and matches a future GitHub Pages subpath if the repo is renamed.
 
 ## Structure
 

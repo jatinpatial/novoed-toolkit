@@ -28,9 +28,9 @@ export default defineConfig({
 
   use: {
     // Trailing slash matters — vite serves the app under the
-    // / base. Without it, page.goto("courses?…") joins
+    // /bcg-u-studio/ base. Without it, page.goto("courses?…") joins
     // against the parent and lands on /courses?… (404 in vite).
-    baseURL: "http://localhost:5173/",
+    baseURL: "http://localhost:5173/bcg-u-studio/",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -57,7 +57,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     cwd: "../app",
-    url: "http://localhost:5173/",
+    url: "http://localhost:5173/bcg-u-studio/",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     stdout: "ignore",

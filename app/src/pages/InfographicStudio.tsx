@@ -22,6 +22,7 @@ import {
   type InfographicPoint,
 } from "../store/infographics";
 import { InfographicRenderer } from "../infographic/InfographicRenderer";
+import { searchImagesCached } from "../lib/images";
 
 /**
  * Track-G / G3: Infographic Studio result view.
@@ -72,6 +73,59 @@ export default function InfographicStudio() {
     setTriedLoad(true);
     return subscribeInfographics(() => setInfographic(getInfographic(id)));
   }, [id]);
+
+  // GG4: when includePeopleImages is on, fetch one Pexels professional-
+  // people photo per point that doesn't have one cached yet. Persists
+  // to infographic.pointPhotoUrls so reloads don't re-fetch. Runs
+  // sequentially so we hit the (cached) Pexels proxy at most N times
+  // — the lib's frontend cache + the backend's 30-min cache make
+  // common queries (e.g. "leadership person professional") return
+  // instantly across infographics.
+  useEffect(() => {
+    if (!infographic) return;
+    if (!infographic.includePeopleImages) return;
+    if (infographic.points.length === 0) return;
+    const existing = infographic.pointPhotoUrls ?? [];
+    // Find the first point without a fetched URL. We process one at
+    // a time so concurrent infographic.updates don't trample each
+    // other; subsequent iterations re-run as the dependency array
+    // changes after each persist.
+    const missingIndex = infographic.points.findIndex(
+      (_, i) => existing[i] === undefined,
+    );
+    if (missingIndex === -1) return;
+    let cancelled = false;
+    (async () => {
+      const point = infographic.points[missingIndex];
+      // Prefer an explicit "photo:<query>" iconHint from the agent
+      // (Track-S prompt instructs the agent to emit these when the
+      // toggle is on); fall back to the point heading + bias terms.
+      let q = "";
+      if (point.iconHint?.toLowerCase().startsWith("photo:")) {
+        q = point.iconHint.slice("photo:".length).trim();
+      }
+      if (!q) {
+        q = `${point.heading || infographic.topic} person professional`;
+      }
+      const results = await searchImagesCached(q, "banner");
+      if (cancelled) return;
+      // Reload the latest record before persisting — concurrent edits
+      // (text changes, etc.) shouldn't be lost.
+      const latest = getInfographic(infographic.id);
+      if (!latest) return;
+      const next = [...(latest.pointPhotoUrls ?? [])];
+      next[missingIndex] = results[0]?.url ?? null;
+      saveInfographic({ ...latest, pointPhotoUrls: next });
+    })();
+    return () => { cancelled = true; };
+  }, [
+    infographic?.id,
+    infographic?.includePeopleImages,
+    infographic?.points.length,
+    // Track the point-photo-url length so subsequent missing entries
+    // trigger another run after each persist.
+    (infographic?.pointPhotoUrls ?? []).filter((u) => u !== undefined).length,
+  ]);
 
   const buildState = id ? infographicBuilds[id] : undefined;
 
@@ -449,6 +503,7 @@ export default function InfographicStudio() {
                 onStyleOverride={updateStyleOverride}
                 openPickerKey={openPickerKey}
                 setOpenPickerKey={setOpenPickerKey}
+                pointPhotoUrls={infographic.pointPhotoUrls}
               />
             </div>
           </>

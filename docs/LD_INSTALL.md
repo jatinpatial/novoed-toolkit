@@ -36,7 +36,7 @@ Two terminal windows open:
 
 Wait ~60 seconds for both to settle. The frontend window prints a `ready in XXX ms` line when it's done.
 
-Open **http://localhost:5173** in Chrome or Edge.
+Open **http://localhost:5173/bcg-u-studio/** in Chrome or Edge.
 
 > First launch only: a Claude sign-in window opens automatically. Sign in with the same account you use for `claude.ai`. The Studio runs against your existing Claude subscription — no separate API key.
 

@@ -130,31 +130,46 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
   const [stage, setStage] = useState<Stage>("splash");
   const [name, setName] = useState(() => getUser()?.name ?? "");
   const [tourStep, setTourStep] = useState(0);
+  // Z2: while the splash is exiting, the entire modal fades out so
+  // the dashboard underneath is revealed via crossfade rather than a
+  // hard cut. Set at 3.5s; modal closes at 4.2s after the fade
+  // completes.
+  const [splashExiting, setSplashExiting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // Track Z: splash auto-advance — 4000ms accommodates the new
-  // BCG → UNLOCK → U morph sequence (BCG fade-in 0.3s, UNLOCK type
-  // 0.8s, morph 2.0s, hold + tagline 3.0s, fade-out 4.0s). Routes
-  // to the right next stage based on user state:
-  //   no user      → NAME (collect name)
-  //   no tour       → TOUR (run the 4-step walkthrough)
-  //   tour done     → close (purely decorative splash on revisit)
+  // Track Z + Z2: splash auto-advance.
+  //   Returning user (tour done): the splash is purely decorative.
+  //     Crossfade the whole modal out from 3.5s → 4.2s so the
+  //     dashboard underneath is revealed smoothly. onClose at 4.2s.
+  //   Otherwise: hand off to the next stage at 4.0s (existing
+  //     behavior, no full-modal fade — the modal stays up for NAME
+  //     or TOUR content).
   useEffect(() => {
     if (!open) return;
     if (stage !== "splash") return;
-    const t = setTimeout(() => {
-      const u = getUser();
-      if (!u) {
-        setStage("name");
-      } else if (!u.tourCompleted) {
-        setStage("tour");
-      } else {
-        // Returning user, tour done — splash is purely decorative.
-        // Close, don't advance.
-        onClose();
-      }
+    const u = getUser();
+    const isReturningUser = !!u && !!u.tourCompleted;
+
+    if (isReturningUser) {
+      const fadeAt = setTimeout(() => setSplashExiting(true), 3500);
+      const closeAt = setTimeout(() => onClose(), 4200);
+      return () => {
+        clearTimeout(fadeAt);
+        clearTimeout(closeAt);
+      };
+    }
+    const advanceAt = setTimeout(() => {
+      if (!u) setStage("name");
+      else if (!u.tourCompleted) setStage("tour");
     }, 4000);
-    return () => clearTimeout(t);
+    return () => clearTimeout(advanceAt);
   }, [open, stage, onClose]);
+
+  // Reset the exiting flag when the modal re-opens (e.g. after the
+  // user manually re-triggers it from the avatar menu) so a stale
+  // class from the previous run doesn't bleed in.
+  useEffect(() => {
+    if (!open) setSplashExiting(false);
+  }, [open]);
 
   // Auto-focus the input when the NAME stage is active.
   useEffect(() => {
@@ -201,7 +216,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
 
   return (
     <div
-      className={`welcome-modal welcome-stage-${stage}`}
+      className={`welcome-modal welcome-stage-${stage}${splashExiting ? " welcome-modal-exiting" : ""}`}
       role="dialog"
       aria-modal="true"
     >

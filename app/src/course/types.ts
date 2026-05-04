@@ -115,6 +115,11 @@ export interface Lesson {
   bannerImageUrl?: string;
   bannerPhotographer?: string;
   bannerPhotographerUrl?: string;
+  // II4: brand-color tint overlay on top of the banner image.
+  // Defaults to true (overlay applied) so the photo blends with the
+  // brand cascade. LDs can flip via the banner's hover toggle when
+  // they want a pure photo without tint.
+  bannerOverlayOff?: boolean;
 }
 
 export interface Module {

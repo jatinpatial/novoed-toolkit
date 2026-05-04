@@ -2517,11 +2517,17 @@ function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLess
         imageUrl={lesson.bannerImageUrl}
         photographer={lesson.bannerPhotographer}
         photographerUrl={lesson.bannerPhotographerUrl}
+        overlayOff={lesson.bannerOverlayOff}
         onChange={(url, photographer, photographerUrl) =>
           onUpdateLesson((l: Lesson) => {
             l.bannerImageUrl = url;
             l.bannerPhotographer = photographer;
             l.bannerPhotographerUrl = photographerUrl;
+          })
+        }
+        onToggleOverlay={() =>
+          onUpdateLesson((l: Lesson) => {
+            l.bannerOverlayOff = !l.bannerOverlayOff;
           })
         }
       />
@@ -3818,9 +3824,25 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
     // when the flipped class is present on the wrapper.
     const previewStyles = `
       body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #f6f7f8; color: ${b.tx}; }
-      .hdr { background: ${b.grad}; padding: 22px 40px; color: #fff; }
+      .hdr { background: ${b.grad}; padding: 22px 40px; color: #fff; position: relative; }
+      /* GG2: when the lesson has a bannerImageUrl set, the .hdr
+         renders as a tall hero with the photo as background + the
+         brand gradient as a soft overlay (same treatment the editor
+         canvas uses via LessonBanner). The .hdr-photo class adds the
+         photo layer; .hdr-credit renders the Pexels attribution
+         line on hover. */
+      .hdr.hdr-photo { padding: 56px 40px 28px; min-height: 200px; background-size: cover; background-position: center; }
+      .hdr.hdr-photo::before {
+        content: ""; position: absolute; inset: 0;
+        background: linear-gradient(135deg, ${b.priDk}cc, ${b.pri}99);
+        pointer-events: none;
+      }
+      .hdr .crs, .hdr .ttl, .hdr .hdr-credit { position: relative; z-index: 1; }
       .hdr .crs { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
       .hdr .ttl { font-size: 22px; font-weight: 700; line-height: 1.3; }
+      .hdr .hdr-credit { font-size: 10px; opacity: 0.62; margin-top: 14px; }
+      .hdr .hdr-credit a { color: inherit; text-decoration: none; }
+      .hdr .hdr-credit a:hover { text-decoration: underline; }
       .bd { max-width: 760px; margin: 0 auto; padding: 36px 24px; }
       /* polish-6d-preview: numbered-line markers */
       .text-numbered-line { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 10px; }
@@ -3889,7 +3911,25 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
         }
       });
     `;
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="hdr"><div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div></div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';
+    // GG2: thread the lesson banner image into the preview HTML so
+    // the iframe matches the editor canvas. When a banner is set,
+    // .hdr gains the .hdr-photo modifier + an inline backgroundImage
+    // and the photographer credit line (Pexels TOS).
+    const bannerUrl = lesson.bannerImageUrl;
+    const bannerPhotographer = lesson.bannerPhotographer;
+    const bannerPhotographerUrl = lesson.bannerPhotographerUrl;
+    const hdrClass = bannerUrl ? "hdr hdr-photo" : "hdr";
+    const hdrStyle = bannerUrl
+      ? ' style="background-image:url(\'' + esc(bannerUrl) + "');\""
+      : "";
+    const creditLine = bannerPhotographer
+      ? '<div class="hdr-credit">' +
+        (bannerPhotographerUrl
+          ? '<a href="' + esc(bannerPhotographerUrl) + '" target="_blank" rel="noopener noreferrer">Photo by ' + esc(bannerPhotographer) + " on Pexels</a>"
+          : "Photo by " + esc(bannerPhotographer) + " on Pexels") +
+        "</div>"
+      : "";
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="' + hdrClass + '"' + hdrStyle + '><div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div>' + creditLine + '</div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';
   }, [lesson, course]);
 
   useEffect(() => {

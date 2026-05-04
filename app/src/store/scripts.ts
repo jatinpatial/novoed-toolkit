@@ -34,6 +34,12 @@ export interface Script {
   /** The agent-written SPOKEN / VISUAL scene text. Empty when the
    *  Script is freshly created and the agent hasn't run yet. */
   content: string;
+  /** HH3 / JJ: themed cover image for the home Recent-scripts strip
+   *  + ProjectsLibrary tile. Resolved via useCoverImage on first
+   *  render and persisted so the cover stays stable across reloads. */
+  coverImageUrl?: string;
+  coverPhotographer?: string;
+  coverPhotographerUrl?: string;
   createdAt: number;
   updatedAt: number;
 }

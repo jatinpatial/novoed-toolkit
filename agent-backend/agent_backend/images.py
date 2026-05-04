@@ -1,4 +1,4 @@
-"""Pexels image search proxy (Track-F-prep, polish-19b).
+"""Pexels image search proxy (Track-F-prep, polish-19b, GG1).
 
 The frontend's banner / cover-image affordances need a steady source
 of professional stock photography. Pexels is free, instant-signup,
@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 import ssl
 import time
 from typing import Any
@@ -108,6 +109,7 @@ _CACHE_TTL_SECONDS = 30 * 60
 async def search_images(
     query: str = Query(..., min_length=1, max_length=200),
     type: str = Query("banner", pattern="^(banner|cover)$"),
+    bust: bool = Query(False),
 ) -> dict[str, Any]:
     """Search Pexels for landscape stock photography matching the
     query. Returns up to 5 results.
@@ -118,6 +120,11 @@ async def search_images(
       `type` param is reserved so a future iteration can route to
       different orientations / sizes per surface without breaking
       existing callers.
+    - bust=true (GG1): skip the in-process cache AND request a random
+      Pexels page (1-5) so the LD's "Regenerate" button returns
+      genuinely new photos. Without this, the cache returns the same
+      payload for 30 minutes and Pexels' deterministic page=1 returns
+      the same five photos every time.
     """
     if not PEXELS_API_KEY:
         # Track-F-prep: clear 503 so the FE knows to fall back to
@@ -135,9 +142,16 @@ async def search_images(
 
     cache_key = (query.strip().lower(), type)
     now = time.time()
-    cached = _cache.get(cache_key)
-    if cached and (now - cached[0]) < _CACHE_TTL_SECONDS:
-        return cached[1]
+    if not bust:
+        cached = _cache.get(cache_key)
+        if cached and (now - cached[0]) < _CACHE_TTL_SECONDS:
+            return cached[1]
+
+    # GG1: when bust=true, randomize the page so we don't keep getting
+    # the same five photos. Pexels' search returns 80 photos/page and
+    # ~30 results in total per query is typical — page 1-5 keeps the
+    # results topical without paginating off the relevance cliff.
+    page = random.randint(1, 5) if bust else 1
 
     try:
         async with httpx.AsyncClient(timeout=10.0, verify=_PEXELS_SSL_CONTEXT) as client:
@@ -146,6 +160,7 @@ async def search_images(
                 params={
                     "query": query,
                     "per_page": 5,
+                    "page": page,
                     "orientation": "landscape",
                 },
                 headers={"Authorization": PEXELS_API_KEY},
@@ -179,5 +194,9 @@ async def search_images(
         if (p.get("src") or {}).get("large")
     ]
     payload = {"query": query, "results": results}
+    # GG1: bust=true overwrites the cached entry with the fresh page
+    # so the next non-bust call benefits from the new photos until
+    # the TTL ages it out. The non-bust path also writes; same key
+    # either way.
     _cache[cache_key] = (now, payload)
     return payload

@@ -67,6 +67,12 @@ export interface Infographic {
    *  embedding (requires PEXELS_API_KEY configured). */
   useBrandColors?: boolean;
   includePeopleImages?: boolean;
+  /** GG4: cached Pexels photo URL per point. When includePeopleImages
+   *  is true, the renderer fetches a topical professional-people photo
+   *  per point and persists the URL here so reloads don't re-fetch.
+   *  Index aligns with `points[]`; null means "no photo found / fetch
+   *  in progress / fetch failed — fall back to the BCG icon". */
+  pointPhotoUrls?: (string | null)[];
   // Track-R4b: Pexels cover for the chip on the home ContinueBar.
   // Auto-fetched on first card render; persisted so the cover stays
   // stable across reloads.
