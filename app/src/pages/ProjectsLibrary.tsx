@@ -70,7 +70,7 @@ export default function ProjectsLibrary() {
       {filtered.length === 0 ? (
         projects.length === 0 ? (
           <EmptyState
-            icon={<FolderOpen size={24} />}
+            lottieSrc="empty-status"
             title="No projects yet"
             description="Create your first infographic or course. Everything you make here is saved automatically to your browser."
             action={

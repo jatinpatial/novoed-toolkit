@@ -1470,6 +1470,24 @@
     background: theme("colors.brand.50");
     border-bottom: 2px solid theme("colors.brand.200");
     padding: 16px 28px 18px;
+    /* QQ1: flex layout to host the Lottie brain on the left. */
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .build-progress-band-lottie {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    pointer-events: none;
+  }
+  .build-progress-band-lottie-fill {
+    width: 100%;
+    height: 100%;
+  }
+  .build-progress-band-content {
+    flex: 1;
+    min-width: 0;
     /* Light backdrop blur so any sticky overlap with content below
        reads as a layer rather than a hard edge. Cheap, browser-side. */
     backdrop-filter: blur(6px);

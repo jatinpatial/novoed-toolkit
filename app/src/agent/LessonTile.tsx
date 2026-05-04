@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { Check } from "lucide-react";
 import { useAgent } from "./AgentContext";
+import { LottiePlayer } from "../components/LottiePlayer";
 import type { BuildProgressKind, OrchestratorTargetStatus } from "./types";
 
 /**
@@ -270,23 +271,31 @@ export function BuildProgressBand() {
 
   return (
     <div className="build-progress-band" role="status" aria-live="polite">
-      <div className="build-progress-band-track">
-        <div
-          className="build-progress-band-fill"
-          style={{ width: `${pct}%` }}
-        />
+      {/* QQ1: Lottie brain animation as the "AI thinking" anchor. Sits
+          on the left of the band; falls back silently to nothing if
+          the JSON is missing (band still renders + works). */}
+      <div className="build-progress-band-lottie">
+        <LottiePlayer src="brain" className="build-progress-band-lottie-fill" />
       </div>
-      <div className="build-progress-band-text">
-        <span className="build-progress-band-phase">{phaseLabel}</span>
-        <span className="build-progress-band-count">
-          {completedSteps} of {totalSteps} step{totalSteps === 1 ? "" : "s"} ({pct}%)
-          {etaText && (
-            <span className="build-progress-band-eta">
-              {" · "}
-              {etaText}
-            </span>
-          )}
-        </span>
+      <div className="build-progress-band-content">
+        <div className="build-progress-band-track">
+          <div
+            className="build-progress-band-fill"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="build-progress-band-text">
+          <span className="build-progress-band-phase">{phaseLabel}</span>
+          <span className="build-progress-band-count">
+            {completedSteps} of {totalSteps} step{totalSteps === 1 ? "" : "s"} ({pct}%)
+            {etaText && (
+              <span className="build-progress-band-eta">
+                {" · "}
+                {etaText}
+              </span>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );
