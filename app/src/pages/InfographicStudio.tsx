@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, Download } from "lucide-react";
+import { ArrowLeft, BarChart3, Download, Pencil, Check } from "lucide-react";
 import html2canvas from "html2canvas";
 // Track-X3: dom-to-image-more handles gradient text-fill (used in
 // stat_spotlight headlines), inline SVG via dangerouslySetInnerHTML
@@ -56,6 +56,14 @@ export default function InfographicStudio() {
   const [triedLoad, setTriedLoad] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // BB1: edit-mode toggle. Off by default so the renderer is read-
+  // only on first view and PNG export sees no edit chrome. LDs flip
+  // it on to revise heading / body / title text in place.
+  const [editMode, setEditMode] = useState(false);
+  // BB2: which color-picker popover, if any, is open. Lifted up from
+  // EditableText so PNG export can clear it before capture and so
+  // only one picker is open at a time. null = all closed.
+  const [openPickerKey, setOpenPickerKey] = useState<string | null>(null);
   const renderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -144,6 +152,46 @@ export default function InfographicStudio() {
     setInfographic(next);
   }
 
+  // BB1: persist a single per-point text change. Mutates only the
+  // targeted field on the targeted point; everything else stays in
+  // place, so concurrent agent rewrites + manual edits don't trample
+  // each other.
+  function updatePointField(index: number, field: "heading" | "body", value: string) {
+    if (!infographic) return;
+    const nextPoints = infographic.points.map((p, i) =>
+      i === index ? { ...p, [field]: value } : p,
+    );
+    const next = { ...infographic, points: nextPoints, updatedAt: Date.now() };
+    saveInfographic(next);
+    setInfographic(next);
+  }
+  function updateSubtitle(value: string) {
+    if (!infographic) return;
+    const next = { ...infographic, subtitle: value, updatedAt: Date.now() };
+    saveInfographic(next);
+    setInfographic(next);
+  }
+
+  // BB2: per-element color override. Null clears the override and the
+  // element falls back to the brand cascade. Stored on the Infographic
+  // record so it persists across reloads + survives PNG export.
+  function updateStyleOverride(key: string, color: string | null) {
+    if (!infographic) return;
+    const overrides = { ...(infographic.styleOverrides ?? {}) };
+    if (color === null) {
+      delete overrides[key];
+    } else {
+      overrides[key] = color;
+    }
+    const next: Infographic = {
+      ...infographic,
+      styleOverrides: overrides,
+      updatedAt: Date.now(),
+    };
+    saveInfographic(next);
+    setInfographic(next);
+  }
+
   /**
    * Track-X3: PNG export via dom-to-image-more, with html2canvas as
    * fallback. dom-to-image-more handles three things html2canvas
@@ -169,6 +217,22 @@ export default function InfographicStudio() {
    */
   async function downloadPng() {
     if (!renderRef.current || !infographic) return;
+    // BB1 + BB2: clean the renderer DOM before capture so no edit
+    // chrome bakes into the PNG.
+    //   1. Turn off edit mode (hides hover affordances + edit-mode
+    //      tinting on EditableText elements).
+    //   2. Close any open color-picker popover (the popover sits
+    //      absolute-positioned above the canvas; if it's open at
+    //      capture time it shows up in the PNG).
+    // Then wait 50ms so React has time to commit the state updates
+    // and unmount the popover node before dom-to-image walks the
+    // tree. requestAnimationFrame alone occasionally races on slower
+    // machines — 50ms is a safer floor.
+    if (editMode || openPickerKey !== null) {
+      setEditMode(false);
+      setOpenPickerKey(null);
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    }
     setDownloadError(null);
     setDownloading(true);
     const node = renderRef.current;
@@ -292,14 +356,6 @@ export default function InfographicStudio() {
           <span>
             <strong className="text-ink-700">{infographic.pointCount} points</strong>
           </span>
-          {buildState?.status === "done" && buildState.costUsd !== null && (
-            <>
-              <span className="text-ink-300">·</span>
-              <span title={`${buildState.tokensIn ?? "?"} tokens in / ${buildState.tokensOut ?? "?"} tokens out`}>
-                <strong className="text-ink-700">Cost:</strong> ${buildState.costUsd.toFixed(3)}
-              </span>
-            </>
-          )}
         </div>
 
         {isBuilding && (
@@ -337,16 +393,43 @@ export default function InfographicStudio() {
 
         {!isBuilding && !isFailed && hasPoints && (
           <>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-h3 text-ink-900">Generated infographic</h3>
-              <button
-                onClick={downloadPng}
-                disabled={downloading}
-                className="btn-secondary btn-sm"
-              >
-                <Download size={14} /> {downloading ? "Rendering…" : "Download PNG"}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* BB1: edit-mode toggle. Off → text reads as final
+                    rendered output; on → click-to-edit affordance
+                    on every text element. Visual cue: when active,
+                    the button uses the brand-active styling so the
+                    LD knows the renderer is in edit mode. */}
+                <button
+                  onClick={() => setEditMode((v) => !v)}
+                  className={editMode ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+                  title={editMode ? "Exit edit mode" : "Edit text in place"}
+                >
+                  {editMode ? (
+                    <>
+                      <Check size={14} /> Done editing
+                    </>
+                  ) : (
+                    <>
+                      <Pencil size={14} /> Edit mode
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={downloadPng}
+                  disabled={downloading}
+                  className="btn-secondary btn-sm"
+                >
+                  <Download size={14} /> {downloading ? "Rendering…" : "Download PNG"}
+                </button>
+              </div>
             </div>
+            {editMode && (
+              <div className="mb-4 text-xs text-brand-700 italic">
+                Edit mode is on — click any text in the infographic to revise it. Click Done editing when finished.
+              </div>
+            )}
             {downloadError && (
               <div className="mb-4 text-xs text-red-600">
                 Download failed: {downloadError}
@@ -358,6 +441,14 @@ export default function InfographicStudio() {
                 subtitle={infographic.subtitle}
                 style={infographic.style}
                 points={infographic.points}
+                editable={editMode}
+                onPointChange={updatePointField}
+                onTitleChange={updateTitle}
+                onSubtitleChange={updateSubtitle}
+                styleOverrides={infographic.styleOverrides}
+                onStyleOverride={updateStyleOverride}
+                openPickerKey={openPickerKey}
+                setOpenPickerKey={setOpenPickerKey}
               />
             </div>
           </>

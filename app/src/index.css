@@ -1547,15 +1547,15 @@
     transition: background var(--duration-fast) var(--ease-sana);
   }
 
-  /* Track-P / P3 + Track-V: BCG U logo at the top of the hero,
-     immediately above the eyebrow pill. ~80px wide, centered. The
-     logo + eyebrow read as a unified brand-mark group; the headline
-     starts below them. */
+  /* Track-P / P3 + Track-V + Y5: BCG U logo at the top of the
+     hero, immediately above the eyebrow pill. Left-aligned (the
+     hero copy block itself is left-aligned in MeshHero). The logo
+     + eyebrow + headline read as a single left-edge mark group. */
   .hero-logo {
     display: block;
     width: auto;
-    height: 48px;
-    margin: 0 auto 14px;
+    height: 56px;
+    margin: 0 0 12px;
     opacity: 0.95;
   }
 
@@ -1576,13 +1576,22 @@
     align-items: center;
     gap: 22px;
     padding: 28px 30px;
-    background: linear-gradient(
-      135deg,
-      var(--brand-500, #29BA74) 0%,
-      var(--brand-700, #1B7A4F) 100%
-    );
-    background-size: 140% 140%;
-    background-position: 0% 50%;
+    /* Y4: photo background under brand-color overlay. Two-layer
+       background-image — gradient on top at ~50% alpha, photograph
+       underneath. Background-position animates only on the gradient
+       layer (parallax sweep on hover) while the photo stays
+       anchored. Photo URL is set inline via `--hero-photo` so the
+       JS can change it per session if we wire up Pexels later. */
+    background-image:
+      linear-gradient(
+        135deg,
+        rgba(41, 186, 116, 0.78) 0%,
+        rgba(27, 122, 79, 0.92) 100%
+      ),
+      var(--hero-photo, none);
+    background-size: 140% 140%, cover;
+    background-position: 0% 50%, center center;
+    background-repeat: no-repeat, no-repeat;
     color: white;
     border-radius: 18px;
     text-decoration: none;
@@ -1600,7 +1609,8 @@
   .suite-hero:hover,
   .suite-hero:focus-visible {
     transform: translateY(-3px);
-    background-position: 100% 50%;
+    /* Multi-layer position: gradient sweeps to 100%, photo stays put. */
+    background-position: 100% 50%, center center;
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.20) inset,
       0 14px 40px rgba(0, 166, 81, 0.32),
@@ -1731,14 +1741,33 @@
     gap: 9px;
   }
 
-  .suite-secondary-label {
+  /* Y2 — unified home-page eyebrow. Small caps, brand-700 ink,
+     letter-spaced, with subtle ink-200 divider lines on either side.
+     Used by SuiteTiles "or design a single piece" and the HeroComposer
+     "or describe what you have in mind" labels so both render
+     identically. */
+  .home-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 880px;
+    margin: 18px auto 10px;
+  }
+  .home-eyebrow::before,
+  .home-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: theme("colors.ink.200");
+  }
+  .home-eyebrow > span {
     font-size: 11px;
     font-weight: 700;
-    color: theme("colors.ink.500");
+    color: theme("colors.brand.700");
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin: 14px 0 4px;
-    text-align: center;
+    letter-spacing: 0.10em;
+    white-space: nowrap;
   }
 
   .suite-secondary {
@@ -1751,6 +1780,34 @@
   }
   .suite-tile-compact {
     padding: 14px 16px 16px;
+    /* Y4: subtle contextual photo background per tile. Each tile
+       sets `--tile-photo` inline; the gradient overlay holds the
+       white card surface (90% opacity at the top fading to 70% at
+       the bottom-right corner) so the photo reads as a soft tint
+       rather than a busy image. Saturation reduced by the photo
+       layer's filter via mix-blend / opacity. */
+    background-image:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.97) 0%,
+        rgba(255, 255, 255, 0.85) 60%,
+        rgba(255, 255, 255, 0.78) 100%
+      ),
+      var(--tile-photo, none);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+  .suite-tile-compact:hover,
+  .suite-tile-compact:focus-visible {
+    background-image:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.94) 0%,
+        rgba(255, 255, 255, 0.78) 60%,
+        rgba(255, 255, 255, 0.68) 100%
+      ),
+      var(--tile-photo, none);
   }
   .suite-tile-compact .suite-tile-icon {
     width: 32px;
@@ -1992,6 +2049,190 @@
   }
   .ig-icon { color: theme("colors.brand.700"); flex-shrink: 0; }
   .ig-icon-large { color: theme("colors.brand.700"); flex-shrink: 0; width: 22px; height: 22px; }
+
+  /* BB1: in-place text editing affordances. .ig-editable-blur is the
+     blurred state — looks identical to the rendered tag at rest, but
+     a hover tint + dotted underline + cursor-text hint that this
+     element is editable. .ig-editable-input is the focused state —
+     transparent <input>/<textarea> that keeps the parent typography
+     so the swap doesn't reflow the layout. */
+  .ig-editable-mode .ig-editable-blur {
+    cursor: text;
+    border-radius: 4px;
+    transition: background 140ms ease, box-shadow 140ms ease;
+  }
+  .ig-editable-mode .ig-editable-blur:hover {
+    background: rgba(0, 166, 81, 0.06);
+    box-shadow: inset 0 -1px 0 rgba(0, 166, 81, 0.35);
+  }
+  .ig-editable-mode .ig-editable-input {
+    width: 100%;
+    background: rgba(0, 166, 81, 0.04);
+    border: 1px solid rgba(0, 166, 81, 0.40);
+    border-radius: 4px;
+    outline: none;
+    /* Inherit the parent tag's typography — font, size, weight,
+       color, letter-spacing — so editing doesn't swap into a generic
+       input style. The padding compensates for the border so
+       characters don't shift left when the input mounts. */
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    padding: 2px 6px;
+    margin: 0;
+    box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.10);
+    resize: vertical;
+  }
+  .ig-editable-mode .ig-editable-input:focus {
+    border-color: theme("colors.brand.500");
+    box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.18);
+  }
+  .ig-editable-placeholder {
+    color: theme("colors.ink.300");
+    font-style: italic;
+  }
+
+  /* BB2: editable text wrapper. Inline-block so the EditableText sits
+     inline at its natural width; the absolute-positioned color
+     picker anchors to the wrapper's top-right. */
+  .ig-editable-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+  }
+  /* When the wrapper holds a block-level child (h2, h3, p), the
+     wrapper itself should fill the row so the picker anchors to the
+     row's right edge instead of the text's. The text-tag's display
+     is preserved via the child rule. */
+  .ig-editable-wrap:has(> h2),
+  .ig-editable-wrap:has(> h3),
+  .ig-editable-wrap:has(> p) {
+    display: block;
+  }
+  /* Color-picker trigger — small swatch button that hovers in the
+     top-right corner of an editable element. Visible only in edit
+     mode and only on hover/focus of its parent wrapper (or when the
+     popover is open). */
+  .ig-color-picker-wrap {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    opacity: 0;
+    transition: opacity 140ms ease;
+    z-index: 5;
+  }
+  .ig-editable-mode .ig-editable-wrap:hover .ig-color-picker-wrap,
+  .ig-editable-mode .ig-editable-wrap:focus-within .ig-color-picker-wrap,
+  .ig-editable-mode .ig-editable-wrap-open .ig-color-picker-wrap {
+    opacity: 1;
+  }
+  .ig-color-picker-trigger {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid theme("colors.ink.200");
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  }
+  .ig-color-picker-trigger:hover {
+    border-color: theme("colors.brand.400");
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 166, 81, 0.20);
+  }
+  .ig-color-picker-trigger-active {
+    border-color: theme("colors.brand.500");
+    box-shadow: 0 0 0 2px rgba(0, 166, 81, 0.18);
+  }
+  .ig-color-picker-swatch {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  /* Popover — anchored below the trigger, opens to the right by
+     default. Width clamps so it fits comfortably inside the
+     infographic frame. */
+  .ig-color-picker-popover {
+    position: absolute;
+    top: 26px;
+    right: 0;
+    z-index: 50;
+    background: white;
+    border: 1px solid theme("colors.ink.200");
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+    padding: 10px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: theme("colors.ink.900");
+  }
+  .ig-color-picker-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ig-color-picker-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: theme("colors.ink.500");
+  }
+  .ig-color-picker-reset {
+    font-size: 11px;
+    font-weight: 700;
+    color: theme("colors.brand.700");
+    background: theme("colors.brand.50");
+    border: 1px solid theme("colors.brand.200");
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+  .ig-color-picker-reset:hover {
+    background: theme("colors.brand.100");
+    border-color: theme("colors.brand.400");
+  }
+  .ig-color-picker-chips {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+  .ig-color-picker-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+  .ig-color-picker-chip:hover {
+    transform: scale(1.10);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.20);
+  }
+  .ig-color-picker-chip-active {
+    box-shadow: 0 0 0 2px theme("colors.brand.500");
+  }
+  .ig-color-picker-hex {
+    width: 100%;
+    height: 28px;
+    padding: 0;
+    border: 1px solid theme("colors.ink.200");
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+  }
   .ig-overflow-note {
     margin-top: 14px;
     font-size: 11px;
@@ -2509,6 +2750,15 @@
   .welcome-stage-tour .welcome-bg {
     opacity: 0.08;
   }
+  /* Track Z: splash background is black, not brand gradient. The
+     orbs are also hidden during splash so the morph reads cleanly
+     against pure black. */
+  .welcome-stage-splash .welcome-bg {
+    background: #000;
+  }
+  .welcome-stage-splash .welcome-orb {
+    display: none;
+  }
   .welcome-stage-name::before,
   .welcome-stage-tour::before {
     content: "";
@@ -2561,94 +2811,103 @@
     background: white;
   }
 
-  /* Splash stage — Track-U: layered animation with particles +
-     gradient sweep + staggered reveals. Each piece gets its own
-     entrance keyframe; the splash fades + scales out at the end
-     of its 2s window via the parent .welcome-modal exit transition.
+  /* Splash stage — Track Z: BCG → UNLOCK → U morph.
+     Pure-CSS sequenced animation, no JS animation loop, no GSAP.
 
-     Stack (top to bottom in z-order):
-       welcome-splash-particles  drifting white dots, full layer
-       welcome-splash-sweep      diagonal gradient sweep at 0.5s
-       welcome-splash-logo       fades + scales in
-       welcome-splash-wordmark   types-style staggered chars
-       welcome-splash-tagline    fades in last
-  */
+     Sequence (4s total):
+       0.0s   black background renders
+       0.3s   BCG fades in left of center
+       0.8s   UNLOCK letters type in (NLOCK after the U), each 100ms
+              after the previous
+       2.0s   NLOCK letters compress + fade simultaneously while U
+              scales 1 → 1.05 → 1 — the "morph" is a layered
+              crossfade of width + opacity that reads as a transform
+       2.8s   final "BCG U" wordmark held in place
+       3.0s   tagline fades in below
+       3.5s   hold
+       4.0s   parent advances stages (built-in fade transition)
+
+     The morph illusion: we render every letter of "BCG UNLOCK" at
+     once, then animate the NLOCK letters to width:0 + opacity:0
+     while the U pulses up slightly. The eye reads it as compression. */
   .welcome-splash {
     position: relative;
     z-index: 1;
-    text-align: center;
     color: white;
     padding: 24px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: welcome-splash-fade-out 600ms 3.4s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
-  .welcome-splash-particles {
-    position: absolute;
-    inset: -200px;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .welcome-splash-particle {
-    position: absolute;
-    background: white;
-    border-radius: 50%;
-    filter: blur(0.5px);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-    animation-name: welcome-particle-drift;
-    animation-iteration-count: infinite;
-    animation-timing-function: ease-in-out;
-  }
-  .welcome-splash-sweep {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      120deg,
-      transparent 0%,
-      transparent 30%,
-      rgba(255, 255, 255, 0.18) 45%,
-      rgba(255, 255, 255, 0.32) 50%,
-      rgba(255, 255, 255, 0.18) 55%,
-      transparent 70%,
-      transparent 100%
-    );
-    background-size: 200% 200%;
-    pointer-events: none;
-    z-index: 0;
-    animation: welcome-splash-sweep 2s 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-  .welcome-splash-logo {
+  .welcome-splash-stack {
     position: relative;
     z-index: 2;
-    display: block;
-    margin: 0 auto 22px;
-    height: 72px;
-    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.35));
-    animation: welcome-splash-logo-in 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    text-align: center;
   }
-  .welcome-splash-wordmark {
-    position: relative;
-    z-index: 2;
-    font-size: 48px;
+  .welcome-splash-wordmark-row {
+    display: inline-flex;
+    align-items: baseline;
+    font-size: 88px;
     font-weight: 800;
+    line-height: 1;
     letter-spacing: -0.02em;
     color: white;
-    margin-bottom: 10px;
-    animation: welcome-fade-in 800ms 600ms cubic-bezier(0.4, 0, 0.2, 1) both;
   }
-  .welcome-splash-wordmark-bcgu {
-    font-weight: 900;
+  .welcome-splash-letter {
+    display: inline-block;
+    overflow: hidden;
+    /* Letters fade-in via the staggered keyframes below. Default
+       opacity:0 so an un-classed span is invisible by default. */
+    opacity: 0;
+    transform-origin: center bottom;
+    will-change: opacity, transform, max-width;
   }
-  .welcome-splash-wordmark-studio {
-    font-weight: 200;
-    font-style: italic;
-    opacity: 0.92;
+  .welcome-splash-space {
+    display: inline-block;
+    width: 0.32em;
   }
-  .welcome-splash-tagline {
-    position: relative;
-    z-index: 2;
-    font-size: 16px;
-    color: rgba(255, 255, 255, 0.88);
+  /* BCG letters — fade in 0.3s / 0.45s / 0.60s */
+  .welcome-splash-letter-b { animation: welcome-splash-letter-in 600ms 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .welcome-splash-letter-c { animation: welcome-splash-letter-in 600ms 450ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .welcome-splash-letter-g { animation: welcome-splash-letter-in 600ms 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  /* U appears at 0.8s and stays — it's the anchor letter the morph
+     converges into. After 2.0s it pulses up briefly to draw the eye. */
+  .welcome-splash-letter-u {
+    animation:
+      welcome-splash-letter-in 600ms 800ms cubic-bezier(0.16, 1, 0.3, 1) both,
+      welcome-splash-letter-pulse 700ms 2000ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  /* NLOCK letters — type in 0.9s / 1.0s / 1.1s / 1.2s / 1.3s, then
+     compress + fade out together at 2.0s over 700ms. The combined
+     animation chain handles both phases. */
+  .welcome-splash-letter-collapse {
+    max-width: 1em;
+    animation-name: welcome-splash-letter-in, welcome-splash-letter-collapse;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1), cubic-bezier(0.7, 0, 0.3, 1);
+    animation-duration: 600ms, 700ms;
+    animation-fill-mode: both, forwards;
+  }
+  .welcome-splash-letter-n  { animation-delay: 900ms,  2000ms; }
+  .welcome-splash-letter-l  { animation-delay: 1000ms, 2050ms; }
+  .welcome-splash-letter-o  { animation-delay: 1100ms, 2100ms; }
+  .welcome-splash-letter-c2 { animation-delay: 1200ms, 2150ms; }
+  .welcome-splash-letter-k  { animation-delay: 1300ms, 2200ms; }
+
+  .welcome-splash-tagline-morph {
+    font-size: 18px;
+    font-weight: 400;
     letter-spacing: 0.04em;
     font-style: italic;
-    animation: welcome-fade-in 700ms 1100ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    color: rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    animation: welcome-splash-tagline-in 600ms 3000ms cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   /* Card shell — used by Name + Tour stages. */
@@ -2999,17 +3258,16 @@
     flex-shrink: 0;
   }
 
-  /* Divider between SuiteTiles and HeroComposer — soft "or" split. */
+  /* Y2 — legacy class. Kept as alias of .home-eyebrow for any
+     remaining markup that uses it. New eyebrows should use
+     .home-eyebrow directly. */
   .hero-composer-divider {
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 18px 0 14px;
-    color: theme("colors.ink.400");
-    font-size: 11px;
-    font-style: italic;
     width: 100%;
     max-width: 880px;
+    margin: 18px auto 14px;
   }
   .hero-composer-divider::before,
   .hero-composer-divider::after {
@@ -3017,6 +3275,15 @@
     flex: 1;
     height: 1px;
     background: theme("colors.ink.200");
+  }
+  .hero-composer-divider > span {
+    font-size: 11px;
+    font-weight: 700;
+    color: theme("colors.brand.700");
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    white-space: nowrap;
+    font-style: normal;
   }
   .outline-add-lesson:hover {
     color: theme("colors.brand.700");
@@ -3880,6 +4147,46 @@
   0%   { transform: translate(0, 0); }
   50%  { transform: translate(20px, -28px); }
   100% { transform: translate(0, 0); }
+}
+/* Track Z: morph splash keyframes. */
+@keyframes welcome-splash-letter-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.92); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    filter: blur(0); }
+}
+@keyframes welcome-splash-letter-collapse {
+  /* NLOCK letters: simultaneously shrink width to 0 and fade out so
+     the eye reads "the letters are being absorbed into the U next
+     to them". Slight downward translate adds a "swallowed" feel. */
+  from {
+    opacity: 1;
+    max-width: 1em;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    max-width: 0;
+    transform: translateY(2px) scale(0.6);
+    filter: blur(3px);
+  }
+}
+@keyframes welcome-splash-letter-pulse {
+  /* The U scales up briefly when the NLOCK letters collapse into
+     it, then settles back. Visual cue that "the energy converged". */
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(0) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes welcome-splash-tagline-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes welcome-splash-fade-out {
+  /* Smooth fade-out at the end of the 4s window. The parent stage
+     advance already triggers re-mount; this fade overlays so the
+     transition isn't abrupt. */
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 @keyframes welcome-card-in {
   from { opacity: 0; transform: translateY(20px) scale(0.96); }

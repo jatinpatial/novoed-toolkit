@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-react";
+import type { CSSProperties } from "react";
 
 /**
- * polish-18a (Track-E) + Track-P (P1): two-tier Studio suite.
+ * polish-18a (Track-E) + Track-P (P1) + Y4: two-tier Studio suite.
  *
  * Track-P rework: Course Studio is the hero — full-width brand-
  * gradient card, larger padding, primary CTA. Script + KC +
@@ -13,7 +14,27 @@ import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-r
  * Pre-Track-P all four were equal-weight; user feedback was that
  * Course Studio is the hero feature and should be visually
  * separated from the three single-piece tools.
+ *
+ * Y4: hero card + each secondary tile carry a contextual photograph
+ * behind the brand-gradient overlay (CSS reads the `--hero-photo` /
+ * `--tile-photo` vars set inline). Photos are curated Unsplash URLs
+ * — no runtime fetch, no API key dependency, deterministic visuals
+ * across sessions.
  */
+const HERO_PHOTO_URL =
+  "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1600&q=80";
+const SCRIPT_TILE_PHOTO =
+  "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=600&q=80";
+const KC_TILE_PHOTO =
+  "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80";
+const INFOGRAPHIC_TILE_PHOTO =
+  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80";
+
+// CSS var pass-through. React typing for custom properties needs an
+// explicit cast — using `Record<string, string>` fits both the
+// CSSProperties type and the inline-style object shape.
+const cssVar = (name: string, value: string): CSSProperties =>
+  ({ [name]: `url("${value}")` } as CSSProperties);
 
 export function SuiteTiles() {
   return (
@@ -22,8 +43,13 @@ export function SuiteTiles() {
           shimmer overlay, paper-grain texture, Flagship ribbon, +
           icon wiggle on hover. The premium-feel pieces are
           intentionally subtle so the LD reads "this is the main
-          one" without it feeling loud. */}
-      <Link to="/courses/new" className="suite-hero">
+          one" without it feeling loud. Y4 layers a diverse-team
+          collaboration photograph behind the gradient. */}
+      <Link
+        to="/courses/new"
+        className="suite-hero"
+        style={cssVar("--hero-photo", HERO_PHOTO_URL)}
+      >
         <span className="suite-hero-ribbon" aria-hidden="true">
           Flagship
         </span>
@@ -45,10 +71,14 @@ export function SuiteTiles() {
         </span>
       </Link>
 
-      <div className="suite-secondary-label">Or design a single piece</div>
+      <div className="home-eyebrow"><span>Or design a single piece</span></div>
 
       <div className="suite-secondary">
-        <Link to="/scripts/new" className="suite-tile suite-tile-compact">
+        <Link
+          to="/scripts/new"
+          className="suite-tile suite-tile-compact"
+          style={cssVar("--tile-photo", SCRIPT_TILE_PHOTO)}
+        >
           <div className="suite-tile-icon">
             <Video size={20} strokeWidth={2} />
           </div>
@@ -58,7 +88,11 @@ export function SuiteTiles() {
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>
         </Link>
-        <Link to="/kcs/new" className="suite-tile suite-tile-compact">
+        <Link
+          to="/kcs/new"
+          className="suite-tile suite-tile-compact"
+          style={cssVar("--tile-photo", KC_TILE_PHOTO)}
+        >
           <div className="suite-tile-icon">
             <ClipboardCheck size={20} strokeWidth={2} />
           </div>
@@ -68,7 +102,11 @@ export function SuiteTiles() {
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>
         </Link>
-        <Link to="/infographics/new" className="suite-tile suite-tile-compact">
+        <Link
+          to="/infographics/new"
+          className="suite-tile suite-tile-compact"
+          style={cssVar("--tile-photo", INFOGRAPHIC_TILE_PHOTO)}
+        >
           <div className="suite-tile-icon">
             <BarChart3 size={20} strokeWidth={2} />
           </div>

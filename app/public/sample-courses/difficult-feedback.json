@@ -1,0 +1,214 @@
+{
+  "id": "sample-difficult-feedback",
+  "title": "Giving difficult feedback",
+  "client": "BCG",
+  "brand": "bcgu",
+  "modules": [
+    {
+      "id": "mod-1",
+      "title": "Frame the conversation",
+      "weekNumber": 1,
+      "summary": "Most difficult feedback fails before it starts. The setup determines whether the recipient hears you or defends themselves.",
+      "objectives": [
+        "Distinguish a feedback conversation from a debrief, evaluation, or performance review",
+        "Choose a moment, setting, and opener that primes the recipient to listen",
+        "Pre-commit to your own outcome before opening your mouth"
+      ],
+      "lessons": [
+        {
+          "id": "less-1-1",
+          "title": "What this conversation is — and isn't",
+          "duration": 8,
+          "objectives": [
+            "Name the type of feedback you're delivering",
+            "Decide whether this should happen at all"
+          ],
+          "blocks": [
+            {
+              "id": "b-1-1-1",
+              "type": "banner",
+              "data": {
+                "title": "Feedback ≠ evaluation",
+                "body": "A 360 review tells someone what they did. Feedback tells them what to do differently next week. Different goal, different conversation."
+              }
+            },
+            {
+              "id": "b-1-1-2",
+              "type": "text",
+              "data": {
+                "content": "Before you book the room, ask yourself: **what specific behavior do I want to change?** If you can't name it in one sentence, you're not ready to give feedback yet.\n\nMost \"difficult feedback\" conversations fall apart because they bundle three things: an observation, a judgment, and a request. The recipient hears the judgment, defends against it, and never gets to the request."
+              }
+            },
+            {
+              "id": "b-1-1-3",
+              "type": "callout",
+              "data": {
+                "title": "Try this",
+                "body": "Write down one sentence that finishes: *\"After this conversation, I want them to ____.\"* That sentence is the conversation. Everything else is setup."
+              }
+            }
+          ]
+        },
+        {
+          "id": "less-1-2",
+          "title": "Setting the moment",
+          "duration": 6,
+          "blocks": [
+            {
+              "id": "b-1-2-1",
+              "type": "text",
+              "data": {
+                "content": "**Where** matters more than people think. A coffee chat invites defensiveness. A formal one-on-one invites performance. A brief private moment after a meeting invites attention.\n\nThree rules that tend to hold:\n\n1. **Same day.** The longer you wait, the more the moment becomes about *you* — your hesitance, your buildup — and less about the behavior.\n2. **Private but not formal.** Pull them aside; don't book a meeting room.\n3. **Lead with what's at stake for them.** \"I want to give you something that's going to make next week easier\" beats \"I have some feedback for you.\""
+              }
+            },
+            {
+              "id": "b-1-2-2",
+              "type": "quote",
+              "data": {
+                "content": "I used to schedule difficult conversations a week in advance. By the time we sat down, both of us had built so much story around it that the actual content felt anticlimactic.",
+                "attribution": "Mira Patel",
+                "attributionRole": "Senior Manager, Strategy"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod-2",
+      "title": "Deliver the message",
+      "weekNumber": 2,
+      "summary": "The five-second window where the recipient decides whether to listen.",
+      "objectives": [
+        "Open with observation, not interpretation",
+        "Use the SBI framing (Situation, Behavior, Impact) when stakes are high",
+        "Stay concrete — avoid trait-language"
+      ],
+      "lessons": [
+        {
+          "id": "less-2-1",
+          "title": "Open with observation",
+          "duration": 7,
+          "blocks": [
+            {
+              "id": "b-2-1-1",
+              "type": "sectionHeader",
+              "data": { "title": "The opening sentence", "iconName": "target" }
+            },
+            {
+              "id": "b-2-1-2",
+              "type": "text",
+              "data": {
+                "content": "The first sentence sets the frame. Two opening shapes work:\n\n- **Specific observation:** *\"In yesterday's review, when the client asked about timing, I noticed you went silent for about ten seconds before answering.\"*\n- **Concrete impact:** *\"After our last sync, the engineering lead pulled me aside and said she felt cut off.\"*\n\nWhat **doesn't** work: trait-language. *\"You're being defensive.\"* *\"You don't listen.\"* These are interpretations dressed as observations. The recipient hears them as character attacks and disengages."
+              }
+            },
+            {
+              "id": "b-2-1-3",
+              "type": "flipcard",
+              "data": {
+                "items": [
+                  {
+                    "title": "Observation",
+                    "desc": "What you saw or heard. Time-stamped. Quotable. Anyone who was there would describe it the same way."
+                  },
+                  {
+                    "title": "Interpretation",
+                    "desc": "What you decided it means. Coloured by your assumptions. Not a fact — your read."
+                  },
+                  {
+                    "title": "Why mix them up?",
+                    "desc": "Because the interpretation is what bothered you. But the observation is what they can act on. Lead with the observation; reserve the interpretation for the back half."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "less-2-2",
+          "title": "Situation, Behavior, Impact",
+          "duration": 9,
+          "blocks": [
+            {
+              "id": "b-2-2-1",
+              "type": "text",
+              "data": {
+                "content": "When the stakes are high — performance, partnership, conflict — fall back on **SBI**.\n\n**Situation:** when and where it happened.\n**Behavior:** what they did, not who they are.\n**Impact:** what changed downstream — for you, the team, the client.\n\nSBI is rigid by design. It removes the temptation to wander into trait-language."
+              }
+            },
+            {
+              "id": "b-2-2-2",
+              "type": "callout",
+              "data": {
+                "title": "SBI in practice",
+                "body": "*\"In the 4pm review (S), when the client asked about the Q3 numbers, you said 'we're fine' and moved on (B). Afterwards, the client emailed me asking for a follow-up — they didn't feel heard (I).\"*"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod-3",
+      "title": "Hold the response",
+      "weekNumber": 3,
+      "summary": "How the conversation continues after the message lands. Defensive, dismissive, surprised — they all need different moves.",
+      "objectives": [
+        "Distinguish a defensive response from a genuine question",
+        "Keep the conversation in 'observation' mode for at least one round",
+        "Decide when to circle back vs. close the loop"
+      ],
+      "lessons": [
+        {
+          "id": "less-3-1",
+          "title": "When they push back",
+          "duration": 8,
+          "blocks": [
+            {
+              "id": "b-3-1-1",
+              "type": "text",
+              "data": {
+                "content": "Pushback usually takes one of three shapes:\n\n1. **\"That's not what happened.\"** They remember it differently. Stay in observation: *\"Walk me through what you remember.\"* You don't have to win this round; you just need to keep the conversation grounded.\n2. **\"I had a reason for that.\"** They're explaining. Listen — sometimes you'll learn something that changes your read. If their reason holds, acknowledge it and move on. If it doesn't, return to impact: *\"I hear you. The impact still landed this way.\"*\n3. **Silence.** The hardest one. Don't fill it. Wait. Most people will continue if you give them five seconds."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod-4",
+      "title": "Close and document",
+      "weekNumber": 4,
+      "summary": "The conversation ends with a specific commitment and a written follow-up. Without those, the feedback evaporates.",
+      "objectives": [
+        "Get a specific, time-bound commitment before ending",
+        "Send a 3-line written summary within 24h",
+        "Schedule the follow-up moment now, not later"
+      ],
+      "lessons": [
+        {
+          "id": "less-4-1",
+          "title": "The 3-line follow-up",
+          "duration": 5,
+          "blocks": [
+            {
+              "id": "b-4-1-1",
+              "type": "text",
+              "data": {
+                "content": "Within 24 hours of the conversation, send a 3-line written summary:\n\n1. What we agreed.\n2. When we'll check in (date / event).\n3. What I'll do differently to support it.\n\nThe written summary does three things: it removes ambiguity about what was agreed, it gives them something to refer back to, and it signals that you take the conversation seriously enough to follow through."
+              }
+            },
+            {
+              "id": "b-4-1-2",
+              "type": "banner",
+              "data": {
+                "title": "Schedule the follow-up before you leave the room",
+                "body": "If you don't book it now, it won't happen. Two weeks is the right horizon for behavior change to be observable."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

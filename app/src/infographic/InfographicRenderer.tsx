@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import type { BcgIconName } from "../icons/BcgIcon";
 import * as BcgIcons from "../icons/bcg";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentType, SVGProps } from "react";
 import type { InfographicPoint, InfographicStyle } from "../store/infographics";
 
@@ -43,46 +44,401 @@ import type { InfographicPoint, InfographicStyle } from "../store/infographics";
  * re-render.
  */
 
+/** BB1: per-point text edit dispatcher. Receives the point index and
+ *  which field changed; the parent (InfographicStudio) updates the
+ *  underlying infographic in the store and re-renders. */
+type PointField = "heading" | "body";
+export type PointChangeHandler = (index: number, field: PointField, value: string) => void;
+
+/** BB2: element key → CSS color string. Element keys mirror the JSX
+ *  hierarchy: "title", "subtitle", "point-{i}-heading", "point-{i}-body".
+ *  An empty/missing entry means "use brand cascade default". */
+export type StyleOverrides = Record<string, string>;
+export type StyleOverrideSetter = (key: string, color: string | null) => void;
+
 interface RendererProps {
   title: string;
   subtitle: string;
   style: InfographicStyle;
   points: InfographicPoint[];
+  /** BB1: when true, every text element on the renderer becomes a
+   *  focus-toggle editor. Off by default so the renderer is safe to
+   *  use for PNG export (no hover affordances or edit chrome). */
+  editable?: boolean;
+  /** BB1: called when a per-point text field changes. */
+  onPointChange?: PointChangeHandler;
+  /** BB1: called when the title changes. */
+  onTitleChange?: (next: string) => void;
+  /** BB1: called when the subtitle changes. */
+  onSubtitleChange?: (next: string) => void;
+  /** BB2: per-element color overrides keyed by element id. */
+  styleOverrides?: StyleOverrides;
+  /** BB2: called when the LD picks / resets a color for one element.
+   *  null clears the override and falls back to the brand cascade. */
+  onStyleOverride?: StyleOverrideSetter;
+  /** BB2: which element key, if any, currently has its color-picker
+   *  popover open. Lifted to the parent so PNG export can clear it
+   *  before capture, and so only one picker is open at a time. */
+  openPickerKey?: string | null;
+  /** BB2: open / close the color-picker popover for an element key.
+   *  Pass null to close. */
+  setOpenPickerKey?: (key: string | null) => void;
 }
 
-export function InfographicRenderer({ title, subtitle, style, points }: RendererProps) {
+export function InfographicRenderer({
+  title,
+  subtitle,
+  style,
+  points,
+  editable = false,
+  onPointChange,
+  onTitleChange,
+  onSubtitleChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: RendererProps) {
   // Track-X2: Five Forces shifts the title into the center of the frame
   // (it's the central concept the forces surround), so the standard
   // header is suppressed for that style. All other styles use the
   // standard top-aligned header.
   const showHeader = style !== "five_forces";
+  const ed = {
+    editable,
+    onPointChange,
+    styleOverrides,
+    onStyleOverride,
+    openPickerKey,
+    setOpenPickerKey,
+  };
 
   return (
-    <div className={`ig-frame ig-frame-${style}`}>
+    <div className={`ig-frame ig-frame-${style}${editable ? " ig-editable-mode" : ""}`}>
       {showHeader && (
         <div className="ig-header">
-          <h2 className="ig-title">{title}</h2>
-          {subtitle && <p className="ig-subtitle">{subtitle}</p>}
+          <EditableText
+            as="h2"
+            className="ig-title"
+            elementKey="title"
+            value={title}
+            editable={editable}
+            onChange={onTitleChange}
+            placeholder="Untitled infographic"
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
+          {(subtitle || editable) && (
+            <EditableText
+              as="p"
+              className="ig-subtitle"
+              elementKey="subtitle"
+              value={subtitle}
+              editable={editable}
+              onChange={onSubtitleChange}
+              placeholder="Optional one-line framing"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
+          )}
         </div>
       )}
       <div className="ig-body">
-        {style === "process"        && <ProcessLayout       points={points} />}
-        {style === "quadrant"       && <QuadrantLayout      points={points} />}
-        {style === "comparison"     && <ComparisonLayout    points={points} />}
-        {style === "numbered_list"  && <NumberedListLayout  points={points} />}
-        {style === "timeline"       && <TimelineLayout      points={points} />}
-        {style === "stat_spotlight" && <StatSpotlightLayout points={points} />}
-        {style === "pyramid"        && <PyramidLayout       points={points} />}
-        {style === "cycle"          && <CycleLayout         points={points} />}
-        {style === "five_forces"    && <FiveForcesLayout    points={points} title={title} subtitle={subtitle} />}
+        {style === "process"        && <ProcessLayout       points={points} {...ed} />}
+        {style === "quadrant"       && <QuadrantLayout      points={points} {...ed} />}
+        {style === "comparison"     && <ComparisonLayout    points={points} {...ed} />}
+        {style === "numbered_list"  && <NumberedListLayout  points={points} {...ed} />}
+        {style === "timeline"       && <TimelineLayout      points={points} {...ed} />}
+        {style === "stat_spotlight" && <StatSpotlightLayout points={points} {...ed} />}
+        {style === "pyramid"        && <PyramidLayout       points={points} {...ed} />}
+        {style === "cycle"          && <CycleLayout         points={points} {...ed} />}
+        {style === "five_forces"    && (
+          <FiveForcesLayout
+            points={points}
+            title={title}
+            subtitle={subtitle}
+            editable={editable}
+            onPointChange={onPointChange}
+            onTitleChange={onTitleChange}
+            onSubtitleChange={onSubtitleChange}
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
+        )}
       </div>
     </div>
   );
 }
 
+// ─── EditableText ────────────────────────────────────────────────────────────
+//
+// BB1: focus-toggle editor inspired by CourseStudio's TextBlockEditor.
+// Blurred state shows the rendered tag (h2 / h3 / p / div / span);
+// focused state swaps to a plain <input> for single-line and
+// <textarea> for multi-line. On blur, fires onChange and returns to
+// the rendered shape. When `editable` is false, returns the rendered
+// tag with no interactivity — safe for PNG export and read-only views.
+
+type LayoutEditableProps = {
+  editable?: boolean;
+  onPointChange?: PointChangeHandler;
+  styleOverrides?: StyleOverrides;
+  onStyleOverride?: StyleOverrideSetter;
+  openPickerKey?: string | null;
+  setOpenPickerKey?: (key: string | null) => void;
+};
+
+interface EditableTextProps {
+  as?: "h2" | "h3" | "p" | "div" | "span";
+  className?: string;
+  value: string;
+  editable: boolean;
+  onChange?: (next: string) => void;
+  multiline?: boolean;
+  placeholder?: string;
+  /** BB2: stable element id used to look up + write color overrides. */
+  elementKey?: string;
+  styleOverrides?: StyleOverrides;
+  onStyleOverride?: StyleOverrideSetter;
+  openPickerKey?: string | null;
+  setOpenPickerKey?: (key: string | null) => void;
+}
+
+function EditableText({
+  as: Tag = "p",
+  className,
+  value,
+  editable,
+  onChange,
+  multiline = false,
+  placeholder = "",
+  elementKey,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: EditableTextProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  // BB2: picker-open state lifted to the parent (InfographicStudio).
+  // This element's picker is open iff openPickerKey matches its
+  // elementKey. Lets the parent close every picker at once before
+  // PNG capture (and keeps "only one picker open at a time" UX).
+  const pickerOpen = !!elementKey && openPickerKey === elementKey;
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  // BB2: live override (or undefined → falls back to brand cascade).
+  const override = elementKey ? styleOverrides?.[elementKey] : undefined;
+  const colorStyle = override ? { color: override } : undefined;
+
+  if (!editable) {
+    return (
+      <Tag className={className} style={colorStyle}>
+        {value}
+      </Tag>
+    );
+  }
+
+  if (editing) {
+    const commonProps = {
+      autoFocus: true,
+      ref: inputRef as never,
+      value: draft,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setDraft(e.target.value),
+      onBlur: () => {
+        if (draft !== value) onChange?.(draft);
+        setEditing(false);
+      },
+      placeholder,
+      className: `${className ?? ""} ig-editable-input`,
+      style: colorStyle,
+    };
+    if (multiline) {
+      return (
+        <textarea
+          {...(commonProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+          rows={Math.max(2, draft.split("\n").length)}
+        />
+      );
+    }
+    return (
+      <input
+        {...(commonProps as React.InputHTMLAttributes<HTMLInputElement>)}
+        type="text"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          }
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+      />
+    );
+  }
+
+  // Blurred state. Wrap in a relative-positioned span so the BB2
+  // palette button can absolute-anchor to the top-right edge of the
+  // text without affecting layout. The wrapper is inline-block so it
+  // sizes to content; the inner Tag keeps its block / inline behavior.
+  return (
+    <span className={`ig-editable-wrap${pickerOpen ? " ig-editable-wrap-open" : ""}`}>
+      <Tag
+        className={`${className ?? ""} ig-editable-blur`}
+        style={colorStyle}
+        onClick={() => setEditing(true)}
+        title="Click to edit"
+      >
+        {value || <span className="ig-editable-placeholder">{placeholder}</span>}
+      </Tag>
+      {elementKey && onStyleOverride && setOpenPickerKey && (
+        <ColorPicker
+          open={pickerOpen}
+          onToggle={() => setOpenPickerKey(pickerOpen ? null : elementKey)}
+          onClose={() => setOpenPickerKey(null)}
+          currentColor={override}
+          onPick={(c) => {
+            onStyleOverride(elementKey, c);
+            setOpenPickerKey(null);
+          }}
+          onReset={() => {
+            onStyleOverride(elementKey, null);
+            setOpenPickerKey(null);
+          }}
+        />
+      )}
+    </span>
+  );
+}
+
+// ─── ColorPicker ─────────────────────────────────────────────────────────────
+//
+// BB2: small popover with three options:
+//   1. Reset to brand     (clears the override → falls back to cascade)
+//   2. Brand-palette chips (curated 5-color BCG palette)
+//   3. Custom hex picker  (HTML5 color input)
+// The popover anchors to the top-right of its parent .ig-editable-wrap.
+// Closes on outside click via a window-mousedown listener while open.
+
+const BB2_BRAND_PALETTE: { name: string; hex: string }[] = [
+  { name: "BCG Green",   hex: "#00723D" },
+  { name: "BCG U Green", hex: "#00A651" },
+  { name: "Teal",        hex: "#00857C" },
+  { name: "Lime",        hex: "#A4D65E" },
+  { name: "Deep Green",  hex: "#003B22" },
+  { name: "Charcoal",    hex: "#1A1A1A" },
+];
+
+function ColorPicker({
+  open,
+  onToggle,
+  onClose,
+  currentColor,
+  onPick,
+  onReset,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  currentColor?: string;
+  onPick: (color: string) => void;
+  onReset: () => void;
+}) {
+  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target as Node)) onClose();
+    }
+    window.addEventListener("mousedown", handle);
+    return () => window.removeEventListener("mousedown", handle);
+  }, [open, onClose]);
+
+  return (
+    <span ref={wrapperRef} className="ig-color-picker-wrap">
+      <button
+        type="button"
+        className={`ig-color-picker-trigger${open ? " ig-color-picker-trigger-active" : ""}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        title="Set element color"
+        aria-label="Set element color"
+      >
+        <span
+          className="ig-color-picker-swatch"
+          style={{ background: currentColor ?? "var(--brand-700, #00723D)" }}
+        />
+      </button>
+      {open && (
+        <div className="ig-color-picker-popover" onClick={(e) => e.stopPropagation()}>
+          <div className="ig-color-picker-section">
+            <button
+              type="button"
+              className="ig-color-picker-reset"
+              onClick={onReset}
+            >
+              Reset to brand
+            </button>
+          </div>
+          <div className="ig-color-picker-section">
+            <div className="ig-color-picker-label">Brand palette</div>
+            <div className="ig-color-picker-chips">
+              {BB2_BRAND_PALETTE.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  className={`ig-color-picker-chip${currentColor === c.hex ? " ig-color-picker-chip-active" : ""}`}
+                  style={{ background: c.hex }}
+                  title={c.name}
+                  onClick={() => onPick(c.hex)}
+                  aria-label={c.name}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="ig-color-picker-section">
+            <label className="ig-color-picker-label">Custom</label>
+            <input
+              type="color"
+              value={currentColor ?? "#00723D"}
+              onChange={(e) => onPick(e.target.value)}
+              className="ig-color-picker-hex"
+            />
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ─── Style: Process ───────────────────────────────────────────────────────────
 
-function ProcessLayout({ points }: { points: InfographicPoint[] }) {
+function ProcessLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-process">
       {points.map((p, i) => (
@@ -91,9 +447,34 @@ function ProcessLayout({ points }: { points: InfographicPoint[] }) {
           <div className="ig-process-content">
             <div className="ig-process-heading-row">
               <Icon hint={p.iconHint} fallback="BusinessProcess" size={32} />
-              <h3 className="ig-point-heading">{p.heading}</h3>
+              <EditableText
+                as="h3"
+                className="ig-point-heading"
+                elementKey={`point-${i}-heading`}
+                value={p.heading}
+                editable={editable}
+                onChange={(v) => onPointChange?.(i, "heading", v)}
+                placeholder="Step heading"
+                styleOverrides={styleOverrides}
+                onStyleOverride={onStyleOverride}
+                openPickerKey={openPickerKey}
+                setOpenPickerKey={setOpenPickerKey}
+              />
             </div>
-            <p className="ig-point-body">{p.body}</p>
+            <EditableText
+              as="p"
+              className="ig-point-body"
+              elementKey={`point-${i}-body`}
+              value={p.body}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "body", v)}
+              multiline
+              placeholder="Step description"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
           {i < points.length - 1 && (
             <ArrowRight className="ig-process-arrow" size={20} aria-hidden="true" />
@@ -106,7 +487,15 @@ function ProcessLayout({ points }: { points: InfographicPoint[] }) {
 
 // ─── Style: Quadrant (2x2) ───────────────────────────────────────────────────
 
-function QuadrantLayout({ points }: { points: InfographicPoint[] }) {
+function QuadrantLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Pad / clip to exactly 4 quadrants. If the agent emitted fewer, fill
   // remaining slots with empty placeholders so the 2x2 grid stays
   // structurally complete. If more, take the first 4 and surface the
@@ -124,9 +513,34 @@ function QuadrantLayout({ points }: { points: InfographicPoint[] }) {
           <div key={i} className="ig-quadrant-cell">
             <div className="ig-quadrant-heading-row">
               <Icon hint={p.iconHint} fallback={QUAD_DEFAULTS[i]} size={36} />
-              <h3 className="ig-point-heading">{p.heading || `Cell ${i + 1}`}</h3>
+              <EditableText
+                as="h3"
+                className="ig-point-heading"
+                elementKey={`point-${i}-heading`}
+                value={p.heading || (editable ? "" : `Cell ${i + 1}`)}
+                editable={editable}
+                onChange={(v) => onPointChange?.(i, "heading", v)}
+                placeholder={`Cell ${i + 1}`}
+                styleOverrides={styleOverrides}
+                onStyleOverride={onStyleOverride}
+                openPickerKey={openPickerKey}
+                setOpenPickerKey={setOpenPickerKey}
+              />
             </div>
-            <p className="ig-point-body">{p.body}</p>
+            <EditableText
+              as="p"
+              className="ig-point-body"
+              elementKey={`point-${i}-body`}
+              value={p.body}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "body", v)}
+              multiline
+              placeholder="Quadrant description"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
         ))}
       </div>
@@ -146,7 +560,15 @@ const QUAD_DEFAULTS: BcgIconName[] = ["Strategy", "Innovation", "Coach", "LightB
 
 // ─── Style: Comparison ───────────────────────────────────────────────────────
 
-function ComparisonLayout({ points }: { points: InfographicPoint[] }) {
+function ComparisonLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Comparison styles read best with 2-3 columns; clip if more.
   const cols = points.slice(0, 3);
   return (
@@ -155,9 +577,34 @@ function ComparisonLayout({ points }: { points: InfographicPoint[] }) {
         <div key={i} className="ig-comparison-col">
           <div className="ig-comparison-header">
             <Icon hint={p.iconHint} fallback="CustomerInsight" size={44} />
-            <h3 className="ig-point-heading-large">{p.heading}</h3>
+            <EditableText
+              as="h3"
+              className="ig-point-heading-large"
+              elementKey={`point-${i}-heading`}
+              value={p.heading}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "heading", v)}
+              placeholder="Column heading"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
-          <p className="ig-point-body">{p.body}</p>
+          <EditableText
+            as="p"
+            className="ig-point-body"
+            elementKey={`point-${i}-body`}
+            value={p.body}
+            editable={editable}
+            onChange={(v) => onPointChange?.(i, "body", v)}
+            multiline
+            placeholder="Column description"
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
         </div>
       ))}
       {points.length > 3 && (
@@ -171,7 +618,15 @@ function ComparisonLayout({ points }: { points: InfographicPoint[] }) {
 
 // ─── Style: Numbered list ────────────────────────────────────────────────────
 
-function NumberedListLayout({ points }: { points: InfographicPoint[] }) {
+function NumberedListLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-numbered-list">
       {points.map((p, i) => (
@@ -180,9 +635,34 @@ function NumberedListLayout({ points }: { points: InfographicPoint[] }) {
           <div className="ig-numbered-content">
             <div className="ig-numbered-heading-row">
               <Icon hint={p.iconHint} fallback="FiveSteps" size={32} />
-              <h3 className="ig-point-heading">{p.heading}</h3>
+              <EditableText
+                as="h3"
+                className="ig-point-heading"
+                elementKey={`point-${i}-heading`}
+                value={p.heading}
+                editable={editable}
+                onChange={(v) => onPointChange?.(i, "heading", v)}
+                placeholder="Item heading"
+                styleOverrides={styleOverrides}
+                onStyleOverride={onStyleOverride}
+                openPickerKey={openPickerKey}
+                setOpenPickerKey={setOpenPickerKey}
+              />
             </div>
-            <p className="ig-point-body">{p.body}</p>
+            <EditableText
+              as="p"
+              className="ig-point-body"
+              elementKey={`point-${i}-body`}
+              value={p.body}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "body", v)}
+              multiline
+              placeholder="Item description"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
         </div>
       ))}
@@ -192,7 +672,15 @@ function NumberedListLayout({ points }: { points: InfographicPoint[] }) {
 
 // ─── Style: Timeline ─────────────────────────────────────────────────────────
 
-function TimelineLayout({ points }: { points: InfographicPoint[] }) {
+function TimelineLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-timeline">
       <div className="ig-timeline-line" aria-hidden="true" />
@@ -202,8 +690,33 @@ function TimelineLayout({ points }: { points: InfographicPoint[] }) {
             <Icon hint={p.iconHint} fallback="Clock" size={28} />
           </div>
           <div className="ig-timeline-content">
-            <h3 className="ig-point-heading">{p.heading}</h3>
-            <p className="ig-point-body">{p.body}</p>
+            <EditableText
+              as="h3"
+              className="ig-point-heading"
+              elementKey={`point-${i}-heading`}
+              value={p.heading}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "heading", v)}
+              placeholder="Phase heading"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
+            <EditableText
+              as="p"
+              className="ig-point-body"
+              elementKey={`point-${i}-body`}
+              value={p.body}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "body", v)}
+              multiline
+              placeholder="Phase description"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
         </div>
       ))}
@@ -219,7 +732,15 @@ function TimelineLayout({ points }: { points: InfographicPoint[] }) {
 // number first, then drifts to the caption. The small accent rule on
 // top of each cell ties into the brand cascade.
 
-function StatSpotlightLayout({ points }: { points: InfographicPoint[] }) {
+function StatSpotlightLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   return (
     <div className="ig-stat-spotlight">
       {points.map((p, i) => (
@@ -228,8 +749,33 @@ function StatSpotlightLayout({ points }: { points: InfographicPoint[] }) {
           <div className="ig-stat-icon">
             <Icon hint={p.iconHint} fallback={STAT_DEFAULTS[i % STAT_DEFAULTS.length]} size={28} />
           </div>
-          <div className="ig-stat-headline">{p.heading}</div>
-          <p className="ig-stat-body">{p.body}</p>
+          <EditableText
+            as="div"
+            className="ig-stat-headline"
+            elementKey={`point-${i}-heading`}
+            value={p.heading}
+            editable={editable}
+            onChange={(v) => onPointChange?.(i, "heading", v)}
+            placeholder="73%"
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
+          <EditableText
+            as="p"
+            className="ig-stat-body"
+            elementKey={`point-${i}-body`}
+            value={p.body}
+            editable={editable}
+            onChange={(v) => onPointChange?.(i, "body", v)}
+            multiline
+            placeholder="Stat caption"
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
         </div>
       ))}
     </div>
@@ -245,7 +791,15 @@ const STAT_DEFAULTS: BcgIconName[] = ["BarChart", "DataAnalysis", "Trophy", "Tar
 // heading inside and the body floating to the right. The visual move
 // is "vision narrows down to action": a classic LD framing.
 
-function PyramidLayout({ points }: { points: InfographicPoint[] }) {
+function PyramidLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   // Pyramid reads cleanest with 3-5 levels. We accept the agent's count
   // as-is and let CSS scale the trapezoid widths via --pyramid-level
   // (computed inline below).
@@ -276,10 +830,35 @@ function PyramidLayout({ points }: { points: InfographicPoint[] }) {
                 </div>
                 <div className="ig-pyramid-level-text">
                   <div className="ig-pyramid-level-eyebrow">Level {totalLevels - i}</div>
-                  <h3 className="ig-pyramid-level-heading">{p.heading}</h3>
+                  <EditableText
+                    as="h3"
+                    className="ig-pyramid-level-heading"
+                    elementKey={`point-${i}-heading`}
+                    value={p.heading}
+                    editable={editable}
+                    onChange={(v) => onPointChange?.(i, "heading", v)}
+                    placeholder="Level heading"
+                    styleOverrides={styleOverrides}
+                    onStyleOverride={onStyleOverride}
+                    openPickerKey={openPickerKey}
+                    setOpenPickerKey={setOpenPickerKey}
+                  />
                 </div>
               </div>
-              <p className="ig-pyramid-level-body">{p.body}</p>
+              <EditableText
+                as="p"
+                className="ig-pyramid-level-body"
+                elementKey={`point-${i}-body`}
+                value={p.body}
+                editable={editable}
+                onChange={(v) => onPointChange?.(i, "body", v)}
+                multiline
+                placeholder="Level description"
+                styleOverrides={styleOverrides}
+                onStyleOverride={onStyleOverride}
+                openPickerKey={openPickerKey}
+                setOpenPickerKey={setOpenPickerKey}
+              />
             </div>
           );
         })}
@@ -303,7 +882,15 @@ const PYRAMID_DEFAULTS: BcgIconName[] = ["Target", "Strategy", "BusinessProcess"
 // connector arrows showing flow direction. Center hub displays a
 // summary glyph.
 
-function CycleLayout({ points }: { points: InfographicPoint[] }) {
+function CycleLayout({
+  points,
+  editable = false,
+  onPointChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
+}: { points: InfographicPoint[] } & LayoutEditableProps) {
   const phases = points.slice(0, 6);
   const overflow = points.length - 6;
   const n = phases.length;
@@ -332,8 +919,33 @@ function CycleLayout({ points }: { points: InfographicPoint[] }) {
                 <div className="ig-cycle-node-icon">
                   <Icon hint={p.iconHint} fallback={CYCLE_DEFAULTS[i % CYCLE_DEFAULTS.length]} size={22} />
                 </div>
-                <h3 className="ig-cycle-node-heading">{p.heading}</h3>
-                <p className="ig-cycle-node-body">{p.body}</p>
+                <EditableText
+                  as="h3"
+                  className="ig-cycle-node-heading"
+                  elementKey={`point-${i}-heading`}
+                  value={p.heading}
+                  editable={editable}
+                  onChange={(v) => onPointChange?.(i, "heading", v)}
+                  placeholder="Phase heading"
+                  styleOverrides={styleOverrides}
+                  onStyleOverride={onStyleOverride}
+                  openPickerKey={openPickerKey}
+                  setOpenPickerKey={setOpenPickerKey}
+                />
+                <EditableText
+                  as="p"
+                  className="ig-cycle-node-body"
+                  elementKey={`point-${i}-body`}
+                  value={p.body}
+                  editable={editable}
+                  onChange={(v) => onPointChange?.(i, "body", v)}
+                  multiline
+                  placeholder="Phase description"
+                  styleOverrides={styleOverrides}
+                  onStyleOverride={onStyleOverride}
+                  openPickerKey={openPickerKey}
+                  setOpenPickerKey={setOpenPickerKey}
+                />
               </div>
             </div>
           );
@@ -361,10 +973,26 @@ function FiveForcesLayout({
   points,
   title,
   subtitle,
+  editable = false,
+  onPointChange,
+  onTitleChange,
+  onSubtitleChange,
+  styleOverrides,
+  onStyleOverride,
+  openPickerKey,
+  setOpenPickerKey,
 }: {
   points: InfographicPoint[];
   title: string;
   subtitle: string;
+  editable?: boolean;
+  onPointChange?: PointChangeHandler;
+  onTitleChange?: (v: string) => void;
+  onSubtitleChange?: (v: string) => void;
+  styleOverrides?: StyleOverrides;
+  onStyleOverride?: StyleOverrideSetter;
+  openPickerKey?: string | null;
+  setOpenPickerKey?: (key: string | null) => void;
 }) {
   const forces = points.slice(0, 5);
   const overflow = points.length - 5;
@@ -378,8 +1006,34 @@ function FiveForcesLayout({
       <div className="ig-five-forces-grid">
         <div className="ig-five-forces-center">
           <div className="ig-five-forces-center-eyebrow">Central question</div>
-          <h2 className="ig-five-forces-center-title">{title}</h2>
-          {subtitle && <p className="ig-five-forces-center-subtitle">{subtitle}</p>}
+          <EditableText
+            as="h2"
+            className="ig-five-forces-center-title"
+            elementKey="title"
+            value={title}
+            editable={editable}
+            onChange={onTitleChange}
+            placeholder="Central question"
+            styleOverrides={styleOverrides}
+            onStyleOverride={onStyleOverride}
+            openPickerKey={openPickerKey}
+            setOpenPickerKey={setOpenPickerKey}
+          />
+          {(subtitle || editable) && (
+            <EditableText
+              as="p"
+              className="ig-five-forces-center-subtitle"
+              elementKey="subtitle"
+              value={subtitle}
+              editable={editable}
+              onChange={onSubtitleChange}
+              placeholder="Optional context"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
+          )}
         </div>
         {forces.map((p, i) => (
           <div
@@ -389,8 +1043,33 @@ function FiveForcesLayout({
             <div className="ig-five-forces-node-icon">
               <Icon hint={p.iconHint} fallback={FORCES_DEFAULTS[i % FORCES_DEFAULTS.length]} size={26} />
             </div>
-            <h3 className="ig-five-forces-node-heading">{p.heading}</h3>
-            <p className="ig-five-forces-node-body">{p.body}</p>
+            <EditableText
+              as="h3"
+              className="ig-five-forces-node-heading"
+              elementKey={`point-${i}-heading`}
+              value={p.heading}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "heading", v)}
+              placeholder="Force name"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
+            <EditableText
+              as="p"
+              className="ig-five-forces-node-body"
+              elementKey={`point-${i}-body`}
+              value={p.body}
+              editable={editable}
+              onChange={(v) => onPointChange?.(i, "body", v)}
+              multiline
+              placeholder="Force description"
+              styleOverrides={styleOverrides}
+              onStyleOverride={onStyleOverride}
+              openPickerKey={openPickerKey}
+              setOpenPickerKey={setOpenPickerKey}
+            />
           </div>
         ))}
       </div>

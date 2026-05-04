@@ -1,0 +1,86 @@
+{
+  "id": "sample-stakeholder-management",
+  "title": "Mapping and managing stakeholders",
+  "client": "BCG",
+  "brand": "bcgu",
+  "modules": [
+    {
+      "id": "mod-1",
+      "title": "Map the room",
+      "weekNumber": 1,
+      "summary": "Before you write a single email, map who has skin in the game and what shape it takes.",
+      "objectives": [
+        "Identify three categories of stakeholder: decision, influence, blocker",
+        "Distinguish power from interest on a 2x2",
+        "Spot the stakeholders nobody mentioned but who can still derail you"
+      ],
+      "lessons": [
+        {
+          "id": "less-1-1",
+          "title": "Decision, influence, blocker",
+          "duration": 6,
+          "blocks": [
+            {
+              "id": "b-1-1-1",
+              "type": "text",
+              "data": {
+                "content": "Every stakeholder fits one of three roles in any given decision:\n\n- **Decision-makers:** they pick. Their yes is the actual yes.\n- **Influencers:** they don't pick, but the decision-maker checks with them. Their objection slows everything down.\n- **Blockers:** they can't say yes, but they can stop the work. Procurement, legal, IT security."
+              }
+            },
+            {
+              "id": "b-1-1-2",
+              "type": "callout",
+              "data": {
+                "title": "The category trap",
+                "body": "The same person is a decision-maker on one question and an influencer on another. Map by decision, not by name."
+              }
+            }
+          ]
+        },
+        {
+          "id": "less-1-2",
+          "title": "The power/interest 2x2",
+          "duration": 5,
+          "blocks": [
+            {
+              "id": "b-1-2-1",
+              "type": "banner",
+              "data": {
+                "title": "Power vs. Interest",
+                "body": "The classic mapping. High power + high interest: manage closely. High power + low interest: keep satisfied. Low power + high interest: keep informed. Low power + low interest: monitor."
+              }
+            }
+          ]
+        },
+        {
+          "id": "less-1-3",
+          "title": "The hidden stakeholders",
+          "duration": 7,
+          "blocks": [
+            {
+              "id": "b-1-3-1",
+              "type": "text",
+              "data": {
+                "content": "The stakeholders who derail projects are usually the ones nobody put on the map. Three patterns to watch for:\n\n- **The shadow approver.** Someone whose name doesn't appear in the org chart but whose blessing the decision-maker quietly seeks.\n- **The historical defender.** They built the thing you're replacing. Their objection isn't the work — it's the legacy.\n- **The cross-functional veto.** A team that doesn't own the decision but whose cooperation you need (Security, Compliance, Brand)."
+              }
+            }
+          ]
+        },
+        {
+          "id": "less-1-4",
+          "title": "Pull the map together",
+          "duration": 5,
+          "blocks": [
+            {
+              "id": "b-1-4-1",
+              "type": "text",
+              "data": {
+                "content": "End-of-week deliverable: a one-pager naming every stakeholder, their role for *this* decision, their power/interest position, and the one thing they need from you to move forward.\n\nThe one-pager is the artifact you bring to your sponsor — it makes the work concrete and reveals who you've forgotten."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

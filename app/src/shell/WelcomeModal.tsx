@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight, BarChart3, BookOpen, ClipboardCheck,
@@ -131,9 +131,10 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
   const [name, setName] = useState(() => getUser()?.name ?? "");
   const [tourStep, setTourStep] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // Track-U: splash auto-advance — 2000ms gives the layered
-  // animations time to complete plus a beat to read the wordmark.
-  // Routes to the right next stage based on user state:
+  // Track Z: splash auto-advance — 4000ms accommodates the new
+  // BCG → UNLOCK → U morph sequence (BCG fade-in 0.3s, UNLOCK type
+  // 0.8s, morph 2.0s, hold + tagline 3.0s, fade-out 4.0s). Routes
+  // to the right next stage based on user state:
   //   no user      → NAME (collect name)
   //   no tour       → TOUR (run the 4-step walkthrough)
   //   tour done     → close (purely decorative splash on revisit)
@@ -151,7 +152,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         // Close, don't advance.
         onClose();
       }
-    }, 2000);
+    }, 4000);
     return () => clearTimeout(t);
   }, [open, stage, onClose]);
 
@@ -255,55 +256,43 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
 }
 
 function SplashStage() {
-  // Track-U: 24-particle background field. Random delays + drift
-  // distances + sizes per particle so the field feels organic.
-  // Particles rendered as simple white dots with blur; CSS keyframes
-  // handle the animation (no JS animation loop, no perf concern).
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 24 }, (_, i) => ({
-        id: i,
-        leftPct: Math.random() * 100,
-        topPct: Math.random() * 100,
-        size: 2 + Math.random() * 4,
-        delay: Math.random() * 4,
-        duration: 6 + Math.random() * 6,
-        opacity: 0.3 + Math.random() * 0.4,
-      })),
-    [],
-  );
-
+  // Track Z: BCG → UNLOCK → U morph splash. Pure CSS keyframes drive
+  // the timing — no JS animation loop, no GSAP dependency.
+  //
+  // Sequence (4s total):
+  //   0.0s  black background renders
+  //   0.3s  "BCG" fades in (medium weight, large, left of center)
+  //   0.8s  "UNLOCK" letters type in left-to-right (NLOCK after the U)
+  //   2.0s  the NLOCK letters compress + fade out simultaneously while
+  //         the U scales up slightly — visually reads as UNLOCK
+  //         compressing into the U from the BCG U logo
+  //   2.8s  final "BCG U" wordmark held in position
+  //   3.0s  tagline "Learning, designed by you" fades in below
+  //   3.5s  hold
+  //   4.0s  parent triggers fade-out + stage advance
+  //
+  // The morph is a layered crossfade: NLOCK letters animate width
+  // and opacity to 0 over 700ms while U scales 1 → 1.05; the eye
+  // reads this as "UNLOCK compressed into the U". Cleaner than path-
+  // morphing SVG and works without any new dependencies.
   return (
-    <div className="welcome-splash">
-      <div className="welcome-splash-particles" aria-hidden="true">
-        {particles.map((p) => (
-          <span
-            key={p.id}
-            className="welcome-splash-particle"
-            style={{
-              left: `${p.leftPct}%`,
-              top: `${p.topPct}%`,
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              opacity: p.opacity,
-              animationDelay: `${p.delay}s`,
-              animationDuration: `${p.duration}s`,
-            }}
-          />
-        ))}
-      </div>
-      <div className="welcome-splash-sweep" aria-hidden="true" />
-      <img
-        src={`${import.meta.env.BASE_URL}bcg-u-logo-light.png`}
-        alt="BCG U"
-        className="welcome-splash-logo"
-      />
-      <div className="welcome-splash-wordmark">
-        <span className="welcome-splash-wordmark-bcgu">BCG U</span>{" "}
-        <span className="welcome-splash-wordmark-studio">Studio</span>
-      </div>
-      <div className="welcome-splash-tagline">
-        Learning, designed by you.
+    <div className="welcome-splash welcome-splash-morph">
+      <div className="welcome-splash-stack">
+        <div className="welcome-splash-wordmark-row">
+          <span className="welcome-splash-letter welcome-splash-letter-b">B</span>
+          <span className="welcome-splash-letter welcome-splash-letter-c">C</span>
+          <span className="welcome-splash-letter welcome-splash-letter-g">G</span>
+          <span className="welcome-splash-space" aria-hidden="true">&nbsp;</span>
+          <span className="welcome-splash-letter welcome-splash-letter-u welcome-splash-letter-u-final">U</span>
+          <span className="welcome-splash-letter welcome-splash-letter-collapse welcome-splash-letter-n">N</span>
+          <span className="welcome-splash-letter welcome-splash-letter-collapse welcome-splash-letter-l">L</span>
+          <span className="welcome-splash-letter welcome-splash-letter-collapse welcome-splash-letter-o">O</span>
+          <span className="welcome-splash-letter welcome-splash-letter-collapse welcome-splash-letter-c2">C</span>
+          <span className="welcome-splash-letter welcome-splash-letter-collapse welcome-splash-letter-k">K</span>
+        </div>
+        <div className="welcome-splash-tagline welcome-splash-tagline-morph">
+          Learning, designed by you.
+        </div>
       </div>
     </div>
   );

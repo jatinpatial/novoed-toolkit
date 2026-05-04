@@ -32,6 +32,7 @@ function markSplashPlayed(): void {
   }
 }
 import { listProjects, subscribeProjects, type Project } from "../store/projects";
+import { seedSampleCoursesIfNeeded } from "../store/sampleCourses";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
   component: "Infographic",
@@ -178,6 +179,15 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Track-CC / CC3: drop 2 sample courses into the projects library
+  // on first launch so new LDs see "what good looks like" before
+  // building. Idempotent — guarded by a localStorage flag inside
+  // seedSampleCoursesIfNeeded. Async fetch so a slow disk doesn't
+  // block the dashboard render.
+  useEffect(() => {
+    seedSampleCoursesIfNeeded().catch(() => { /* swallow — non-critical */ });
+  }, []);
+
   function focusComposer() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     composerRef.current?.focus();
@@ -206,10 +216,11 @@ export default function Dashboard() {
       <WelcomeModal open={welcomeOpen} onClose={dismissWelcome} />
 
       <MeshHero>
-        {/* Track-V: BCG U logo sits IMMEDIATELY ABOVE the
-            eyebrow pill, centered. Stack order: logo → eyebrow →
-            headline → subtitle. User feedback was that the logo +
-            eyebrow should read as a single brand-mark group. */}
+        {/* Track-V + Y5: BCG U logo sits IMMEDIATELY ABOVE the
+            eyebrow pill, LEFT-aligned. Stack order: logo → eyebrow
+            → headline → subtitle. User feedback was that the logo
+            + eyebrow should read as a single left-edge brand-mark
+            group, not a centered crest. */}
         <img
           src={`${import.meta.env.BASE_URL}bcg-u-logo-dark.png`}
           alt="BCG U"
@@ -234,8 +245,8 @@ export default function Dashboard() {
             tiles, separated by a soft divider. */}
         <SuiteTiles />
 
-        <div className="hero-composer-divider">
-          <span>or describe what you have in mind</span>
+        <div className="home-eyebrow">
+          <span>Or describe what you have in mind</span>
         </div>
 
         <HeroComposer ref={composerRef} brief={brief} setBrief={setBrief} />
