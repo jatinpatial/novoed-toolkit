@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { LottiePlayer } from "../components/LottiePlayer";
 
 /**
- * polish-18a (Track-E) + Track-P (P1) + Y4: two-tier Studio suite.
+ * polish-18a (Track-E) + Track-P (P1) + Y4 + OO4: two-tier Studio suite.
  *
  * Track-P rework: Course Studio is the hero — full-width brand-
  * gradient card, larger padding, primary CTA. Script + KC +
@@ -12,31 +12,19 @@ import { LottiePlayer } from "../components/LottiePlayer";
  * descriptions, just title + Start link). Reads as: "the flagship
  * is the full-course flow; here are three single-piece options too."
  *
- * Pre-Track-P all four were equal-weight; user feedback was that
- * Course Studio is the hero feature and should be visually
- * separated from the three single-piece tools.
- *
- * Y4: hero card + each secondary tile carry a contextual photograph
- * behind the brand-gradient overlay (CSS reads the `--hero-photo` /
- * `--tile-photo` vars set inline). Photos are curated Unsplash URLs
- * — no runtime fetch, no API key dependency, deterministic visuals
- * across sessions.
+ * OO4: secondary tile photo backgrounds REMOVED. Y4 layered Unsplash
+ * photos behind a white overlay; Y4 + GG5 iterated on the opacity
+ * twice and never landed cleanly — photos either looked busy or
+ * absent. Final call (per user): drop the photos entirely. Tiles are
+ * now clean white cards with a brand accent + icon + title + desc +
+ * Start CTA. The Course Studio HERO card keeps its photo (working as
+ * intended).
  */
 const HERO_PHOTO_URL =
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1600&q=80";
-// GG5: Script Studio gets a podcast / mic photo (cleaner "video
-// scripting" read than the previous movie-set photo). KC + Infographic
-// photos held over from Y4.
-const SCRIPT_TILE_PHOTO =
-  "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600&q=80";
-const KC_TILE_PHOTO =
-  "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80";
-const INFOGRAPHIC_TILE_PHOTO =
-  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80";
 
-// CSS var pass-through. React typing for custom properties needs an
-// explicit cast — using `Record<string, string>` fits both the
-// CSSProperties type and the inline-style object shape.
+// CSS var pass-through for the hero photo. React typing for custom
+// properties needs an explicit cast.
 const cssVar = (name: string, value: string): CSSProperties =>
   ({ [name]: `url("${value}")` } as CSSProperties);
 
@@ -84,11 +72,7 @@ export function SuiteTiles() {
       <div className="home-eyebrow"><span>Or design a single piece</span></div>
 
       <div className="suite-secondary">
-        <Link
-          to="/scripts/new"
-          className="suite-tile suite-tile-compact"
-          style={cssVar("--tile-photo", SCRIPT_TILE_PHOTO)}
-        >
+        <Link to="/scripts/new" className="suite-tile suite-tile-compact">
           <div className="suite-tile-icon">
             <Video size={20} strokeWidth={2} />
           </div>
@@ -98,11 +82,7 @@ export function SuiteTiles() {
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>
         </Link>
-        <Link
-          to="/kcs/new"
-          className="suite-tile suite-tile-compact"
-          style={cssVar("--tile-photo", KC_TILE_PHOTO)}
-        >
+        <Link to="/kcs/new" className="suite-tile suite-tile-compact">
           <div className="suite-tile-icon">
             <ClipboardCheck size={20} strokeWidth={2} />
           </div>
@@ -112,11 +92,7 @@ export function SuiteTiles() {
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>
         </Link>
-        <Link
-          to="/infographics/new"
-          className="suite-tile suite-tile-compact"
-          style={cssVar("--tile-photo", INFOGRAPHIC_TILE_PHOTO)}
-        >
+        <Link to="/infographics/new" className="suite-tile suite-tile-compact">
           <div className="suite-tile-icon">
             <BarChart3 size={20} strokeWidth={2} />
           </div>

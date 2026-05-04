@@ -37,7 +37,32 @@ export async function dispatchToolCall(
       // even when the agent slips, the LD never sees raw "## Title"
       // rendered as text body.
       const blocks = sanitizeWriterBlocks(parseWriterBlocks(args.blocks));
-      const result = actions.writeLesson(lessonId, blocks);
+
+      // QQ2: stream the blocks into the lesson one at a time with a
+      // small delay so the LD watches the content form rather than a
+      // big atomic dump. Same wall-clock time, different felt
+      // experience — same psychology that makes ChatGPT compelling.
+      // We do progressively-larger writes (replace lesson with first
+      // N blocks, then first N+1, etc.) so the lesson always reflects
+      // a coherent intermediate state. The last write returns the
+      // canonical result we hand back to the agent.
+      const STREAM_DELAY_MS = 80;
+      let lastResult = { ok: true, replaced: 0, added: 0 };
+      if (blocks.length === 0) {
+        lastResult = actions.writeLesson(lessonId, []);
+      } else {
+        for (let i = 1; i <= blocks.length; i++) {
+          lastResult = actions.writeLesson(lessonId, blocks.slice(0, i));
+          // Bail early if the lesson_id is wrong — no point staggering
+          // writes that aren't landing.
+          if (!lastResult.ok) break;
+          if (i < blocks.length) {
+            await new Promise<void>((resolve) =>
+              setTimeout(resolve, STREAM_DELAY_MS),
+            );
+          }
+        }
+      }
       // polish-16b: surface ok/error truthfully so the agent + the
       // orchestrator's retry path can react when a lesson_id mismatch
       // produces zero writes. Pre-fix this always returned ok: true,
@@ -45,11 +70,11 @@ export async function dispatchToolCall(
       // zero blocks — exactly the lesson-1.1 zero-blocks regression
       // from the BCG playbook test.
       return {
-        ok: result.ok,
-        replaced: result.replaced,
-        added: result.added,
-        message: result.ok
-          ? `Lesson updated — ${result.replaced} prior writer block(s) replaced, ${result.added} new block(s) written.`
+        ok: lastResult.ok,
+        replaced: lastResult.replaced,
+        added: lastResult.added,
+        message: lastResult.ok
+          ? `Lesson updated — ${lastResult.replaced} prior writer block(s) replaced, ${lastResult.added} new block(s) written.`
           : `No lesson found with id ${lessonId}. Call list_structure to get the current lesson ids; do not retry with the same id.`,
       };
     }

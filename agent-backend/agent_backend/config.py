@@ -727,6 +727,27 @@ OTHER MOVES
 - Pyramid specifics: apex (position 1) should be the SHORTEST and most ABSTRACT word ("Vision", "Purpose", "True North"). Base (last position) is the most CONCRETE / TACTICAL ("Daily standup", "Weekly review"). The narrowing visual maps to narrowing scope.
 - Five Forces specifics: each force heading is a NOUN PHRASE (3 words max) — "Supplier power", "Buyer leverage", "Threat of new entrants". Body describes the dynamic in 15-20 words.
 
+──────── DESIGN SOPHISTICATION (OO5d — BCG-grade visual quality) ────────
+
+The renderer ships with deeper shadows, gradient number badges, brand-color-combination card surfaces, and connection lines on sequential layouts. Generate content the renderer can present at BCG-grade visual quality — not generic AI-graphic fill.
+
+CONTENT THAT CARRIES THE DESIGN
+- Headings 3-6 words, punchy, verb-led when the content is action ("Plan the next move", not "Planning"). Noun-led when the content is a concept ("Five Forces", not "The five forces"). Pick one register and hold it.
+- Body 15-30 words. Each sentence ends on a CONSEQUENCE — what changes for the team / customer / outcome — not a description.
+- PARALLEL STRUCTURE across points in the same infographic. All headings as verb-first imperatives, OR all as noun phrases, OR all as numeric stats. Don't mix shapes inside one infographic — the layout's rhythm depends on it.
+- Don't be decorative. Every word and every icon should carry meaning. If a body sentence doesn't change the reader's mental model, cut it and tighten the heading.
+
+LAYOUT GEOMETRY ENCODES MEANING
+- Pyramid / Cycle / Five Forces have STRUCTURAL meaning, not just visual variety. Don't pour points into them — use the geometry to encode hierarchy or relationship:
+  - Pyramid apex carries the most STRATEGIC / ABSTRACT idea; base carries the most TACTICAL / CONCRETE. Narrowing maps to narrowing scope.
+  - Cycle implies a closed loop where the last phase feeds the first. If the content doesn't loop, pick Process instead.
+  - Five Forces' center is THE QUESTION; the surrounding nodes are the FORCES acting on it. If the points don't act on a central concept, pick Quadrant or Comparison instead.
+- For Process / Numbered List / Timeline, position 1 is the HEADLINE — the framing the eye reads first. Sequence to anchor the strongest claim there.
+
+THE INFOGRAPHIC SHOULD READ LIKE A REAL BCG SLIDE
+- A leader scanning a deck spends ~3 seconds per slide. Your title + the first heading should land the gist in those 3 seconds.
+- The body fields are the read-on-demand layer. They must reward the second look — not repeat what the heading already said.
+
 ──────── PEOPLE-IMAGE HINTS (when includePeopleImages is set on the brief) ────────
 
 When the LD's brief mentions "include people images" or asks for real-life photography per point, emit iconHint values prefixed with `photo:` followed by a 1-3 word search query the renderer can pass to Pexels. Examples:

@@ -922,6 +922,9 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         lesson={lesson}
         onTitleChange={(v: string) => mutate((c) => { c.title = v; })}
         onBrandChange={(b: BrandKey) => mutate((c) => { c.brand = b; })}
+        onThemeChange={(t: import("../course/types").CourseTheme) =>
+          mutate((c) => { c.themeKey = t; })
+        }
         onPreview={() => setPreviewOpen(true)}
         onExportScorm={() => { if (lesson) { exportLessonSCORM(course, lesson); toast("SCORM package downloaded"); } }}
         onExportJson={() => { exportCourseJSON(course); toast("JSON downloaded"); }}
@@ -987,12 +990,10 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
         )}
 
         {/* Canvas — B3c adds .lesson-canvas-pane for the 3px brand-
-            cascade top accent strip. The strip color flips when
-            the user toggles the brand (B3d wires <body data-brand>),
-            giving an instant visible signal of the active theme.
-            polish-9e: ref attached so the lesson-change effect can
-            scroll this pane (not the window) back to top. */}
-        <div ref={canvasPaneRef} className="flex-1 min-w-0 overflow-y-auto lesson-canvas-pane">
+            cascade top accent strip. QQ4: also gains a theme- class
+            based on course.themeKey so typography + color emphasis
+            cascade per-course without leaving the app. */}
+        <div ref={canvasPaneRef} className={`flex-1 min-w-0 overflow-y-auto lesson-canvas-pane theme-${course.themeKey ?? "modern"}`}>
           {/* sprint-2-2: aggregate build-progress band. Sticky at the
               top of THIS pane so it scrolls with the lesson body but
               stays visible. Returns null at rest — only renders when
@@ -1085,9 +1086,85 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   QQ4: COURSE THEME PICKER
+   Small dropdown next to the brand toggle. Reads / writes
+   course.themeKey; the canvas root keys the theme- class off the
+   value. CSS rules in index.css handle per-theme typography +
+   color-emphasis overrides.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const COURSE_THEMES: { key: import("../course/types").CourseTheme; label: string; sub: string }[] = [
+  { key: "modern",    label: "Modern",    sub: "Brand green primary, white cards." },
+  { key: "editorial", label: "Editorial", sub: "Magazine-style serif headings." },
+  { key: "classic",   label: "Classic",   sub: "Georgia + muted brand, BCG-report feel." },
+  { key: "minimal",   label: "Minimal",   sub: "Inter throughout, very light wash." },
+];
+
+function CourseThemePicker({
+  value,
+  onChange,
+}: {
+  value: import("../course/types").CourseTheme;
+  onChange: (next: import("../course/types").CourseTheme) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) {
+      window.addEventListener("mousedown", onClick);
+      return () => window.removeEventListener("mousedown", onClick);
+    }
+  }, [open]);
+  const current = COURSE_THEMES.find((t) => t.key === value) ?? COURSE_THEMES[0];
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-2.5 h-8 rounded-md bg-ink-100 text-[11px] font-semibold text-ink-700 hover:text-ink-900 transition"
+        title="Course theme — cascades to typography + color emphasis"
+      >
+        <Sparkles size={12} className="text-brand-600" />
+        Theme: {current.label}
+        <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-10 z-40 bg-white rounded-lg border border-ink-200 shadow-elevated w-72 py-1.5">
+          {COURSE_THEMES.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => { onChange(t.key); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 hover:bg-ink-50 flex items-start gap-2 ${value === t.key ? "bg-brand-50" : ""}`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className={`text-xs font-semibold ${value === t.key ? "text-brand-800" : "text-ink-900"}`}>
+                  {t.label}
+                </div>
+                <div className="text-[10px] text-ink-500 mt-0.5 leading-snug">
+                  {t.sub}
+                </div>
+              </div>
+              {value === t.key && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-brand-700 bg-white px-1.5 py-0.5 rounded">
+                  Active
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    TOP BAR
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview, onExportScorm, onExportJson, onExportOutline, onExportCourseDocx, onClose, projectId }: any) {
+function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onThemeChange, onPreview, onExportScorm, onExportJson, onExportOutline, onExportCourseDocx, onClose, projectId }: any) {
   const [saved, setSaved] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -1162,6 +1239,14 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onPreview,
             </button>
           ))}
         </div>
+
+        {/* QQ4: course-level theme picker. Cascades a theme- class on
+            the lesson canvas root which overrides typography + color
+            emphasis without changing the brand cascade. */}
+        <CourseThemePicker
+          value={course.themeKey ?? "modern"}
+          onChange={onThemeChange}
+        />
 
         <button onClick={onPreview} className="btn-secondary btn-sm" disabled={!lesson}><Eye size={14} /> Preview</button>
 
@@ -2799,7 +2884,7 @@ function BlockCard({ block, brand, first, last, onInlineEdit, onOpenEditor, onMo
   const previewHtml = useMemo(() => previewBlock(block, brand), [block, brand]);
 
   return (
-    <div className="group relative">
+    <div className="group relative block-card-enter">
       {/* Side actions */}
       <div className="absolute -left-12 top-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={() => onMove(-1)} disabled={first} className="w-8 h-7 rounded text-ink-400 hover:text-ink-800 hover:bg-white disabled:opacity-30 flex items-center justify-center"><ArrowUp size={12} /></button>
@@ -3803,15 +3888,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LESSON PREVIEW (full-screen modal)
+   LESSON PREVIEW (full-screen modal) — QQ1: Articulate-Rise-style preview
+   - QQ1a: scroll-triggered block reveals + parallax banner
+   - QQ1b: interactive elements (flipcard, accordion, poll, quiz) work
+   - QQ1c: lesson navigation (Prev/Next + progress) with slide transition
+   - QQ1d: device preview toggle (Desktop / Tablet / Mobile)
    ═══════════════════════════════════════════════════════════════════════════ */
-function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; course: Course; onClose: () => void }) {
-  const src = useMemo(() => {
-    // Stitch lesson preview HTML (reuse course preview)
-    const b = B[course.brand];
-    const inner = lesson.blocks.map((blk) => {
-      return '<div style="margin-bottom:28px;">' + previewBlock(blk, course.brand) + "</div>";
-    }).join("");
+
+type PreviewDevice = "desktop" | "tablet" | "mobile";
+
+function buildLessonPreviewSrc(lesson: Lesson, course: Course): string {
+  // Stitch lesson preview HTML (reuse course preview block renderer).
+  const b = B[course.brand];
+  const inner = lesson.blocks.map((blk) => {
+    // QQ1a: every block gets the .pv-block class with a stream-index
+    // CSS var; the iframe-level IntersectionObserver then fades it
+    // up when it enters the viewport.
+    return '<div class="pv-block" style="margin-bottom:28px;">' + previewBlock(blk, course.brand) + "</div>";
+  }).join("");
     // polish-6d-preview: inject numbered-line + text-line CSS so
     // takeaway lists from renderTextBlockBody render with green
     // markers and proper gap inside the iframe (the iframe doesn't
@@ -3893,12 +3987,50 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
         padding: 12px 16px;
         opacity: 1;
       }
+      /* QQ1a: scroll-triggered block reveals. Each .pv-block starts
+         hidden (opacity 0, translateY 12px) and animates in when an
+         IntersectionObserver flags it visible. The .is-visible class
+         is added by the script below. */
+      .pv-block {
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 460ms cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 460ms cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: opacity, transform;
+      }
+      .pv-block.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      /* QQ1a: parallax effect for the banner photo. Position fixed
+         within a transformed container so the image moves slower
+         than the body during scroll. We approximate via background-
+         attachment: scroll + a JS-set background-position-y. */
+      .hdr.hdr-photo .hdr-parallax {
+        position: absolute;
+        inset: -10% 0 -20% 0;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        z-index: 0;
+        will-change: transform;
+      }
+      .hdr.hdr-photo > .crs,
+      .hdr.hdr-photo > .ttl,
+      .hdr.hdr-photo > .hdr-credit { position: relative; z-index: 1; }
+      /* QQ1b: poll click handlers — clickable answers + reveal
+         "correct" highlighting on the result chip. */
+      .quiz-opt { cursor: pointer; transition: background 140ms ease, border-color 140ms ease; }
+      .quiz-opt:hover { background: rgba(0, 166, 81, 0.06); }
     `;
     const previewScript = `
       // polish-9b-preview + polish-9b-preview-accordion: delegated
       // click handlers for both interactive block types. One listener
       // at the document level; class-match dispatch keeps the script
       // small and re-render safe.
+      // QQ1b: also handles poll option clicks — toggles the .voted
+      // class on the option, which CSS uses to render the bar fill +
+      // percentage.
       document.addEventListener('click', function(e) {
         if (!e.target || !e.target.closest) return;
         var card = e.target.closest('.flipcard-prev');
@@ -3909,18 +4041,60 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
           if (item) item.classList.toggle('accordion-prev-item-open');
           return;
         }
+        var pollOpt = e.target.closest('.poll-opt');
+        if (pollOpt) {
+          var poll = pollOpt.closest('.cb-poll');
+          if (poll && !poll.dataset.voted) {
+            poll.dataset.voted = '1';
+            var opts = poll.querySelectorAll('.poll-opt');
+            opts.forEach(function(opt) {
+              var bar = opt.querySelector('.poll-bar-fill');
+              var pct = opt.querySelector('.poll-pct');
+              if (bar && bar.dataset.pct) bar.style.width = bar.dataset.pct + '%';
+              if (pct) pct.style.opacity = '1';
+              if (opt === pollOpt) opt.classList.add('voted');
+            });
+          }
+          return;
+        }
       });
+
+      // QQ1a: scroll-triggered block reveals via IntersectionObserver.
+      // Threshold 0.15 = block becomes visible when 15% is on screen.
+      // Once visible, we stop observing it so the animation doesn't
+      // re-fire when the LD scrolls back up.
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+      document.querySelectorAll('.pv-block').forEach(function(el) { obs.observe(el); });
+
+      // QQ1a: parallax banner. The .hdr-parallax layer moves slower
+      // than the body during scroll, giving a subtle depth read.
+      var parallax = document.querySelector('.hdr-parallax');
+      if (parallax) {
+        function onScroll() {
+          var y = window.scrollY || 0;
+          parallax.style.transform = 'translateY(' + (y * 0.32) + 'px)';
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
     `;
     // GG2: thread the lesson banner image into the preview HTML so
-    // the iframe matches the editor canvas. When a banner is set,
-    // .hdr gains the .hdr-photo modifier + an inline backgroundImage
-    // and the photographer credit line (Pexels TOS).
+    // the iframe matches the editor canvas. QQ1a: banner sits in a
+    // .hdr-parallax sub-layer so the inline scroll handler can
+    // translate it independently of the rest of the header chrome.
     const bannerUrl = lesson.bannerImageUrl;
     const bannerPhotographer = lesson.bannerPhotographer;
     const bannerPhotographerUrl = lesson.bannerPhotographerUrl;
     const hdrClass = bannerUrl ? "hdr hdr-photo" : "hdr";
-    const hdrStyle = bannerUrl
-      ? ' style="background-image:url(\'' + esc(bannerUrl) + "');\""
+    const parallaxLayer = bannerUrl
+      ? '<div class="hdr-parallax" style="background-image:url(\'' + esc(bannerUrl) + "');\"></div>"
       : "";
     const creditLine = bannerPhotographer
       ? '<div class="hdr-credit">' +
@@ -3929,27 +4103,158 @@ function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; cours
           : "Photo by " + esc(bannerPhotographer) + " on Pexels") +
         "</div>"
       : "";
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="' + hdrClass + '"' + hdrStyle + '><div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div>' + creditLine + '</div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';
-  }, [lesson, course]);
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + previewStyles + '</style></head><body><div class="' + hdrClass + '">' + parallaxLayer + '<div class="crs">' + esc(course.title) + '</div><div class="ttl">' + esc(lesson.title) + '</div>' + creditLine + '</div><div class="bd">' + inner + '</div><script>' + previewScript + '</script></body></html>';
+}
 
+/**
+ * QQ1: full preview modal. Owns the device toggle + lesson navigation
+ * across the course; renders one lesson per iframe, swapping `srcDoc`
+ * on prev/next. We wrap the iframe in a viewport-sized container so
+ * the device toggle just changes that container's max-width — the
+ * iframe content is the same single preview HTML.
+ */
+function LessonPreviewModal({ lesson, course, onClose }: { lesson: Lesson; course: Course; onClose: () => void }) {
+  // QQ1c: flatten the course into a list of all lessons across all
+  // modules so prev/next walks linearly through the course.
+  const flat = useMemo(() => {
+    const out: Array<{ lesson: Lesson; modIndex: number; lessonIndex: number; weekNum: number }> = [];
+    course.modules.forEach((m, mi) => {
+      const week = m.weekNumber ?? mi + 1;
+      m.lessons.forEach((l, li) => {
+        out.push({ lesson: l, modIndex: mi, lessonIndex: li, weekNum: week });
+      });
+    });
+    return out;
+  }, [course]);
+  const startIdx = Math.max(
+    0,
+    flat.findIndex((x) => x.lesson.id === lesson.id),
+  );
+  const [idx, setIdx] = useState<number>(startIdx);
+  const [device, setDevice] = useState<PreviewDevice>("desktop");
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  // Reset to the requested lesson if the parent re-opens with a
+  // different `lesson` (e.g. LD picks Preview from a different lesson).
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    setIdx(Math.max(0, flat.findIndex((x) => x.lesson.id === lesson.id)));
+  }, [lesson.id, flat]);
+
+  const current = flat[idx]?.lesson ?? lesson;
+  const src = useMemo(() => buildLessonPreviewSrc(current, course), [current, course]);
+  const total = flat.length;
+  const progressPct = total > 0 ? Math.round(((idx + 1) / total) * 100) : 0;
+
+  function navTo(next: number) {
+    if (next < 0 || next >= total || next === idx) return;
+    setDirection(next > idx ? "forward" : "back");
+    setIdx(next);
+  }
+
+  // Esc closes; arrow keys navigate when no input is focused.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { onClose(); return; }
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
+      if (e.key === "ArrowRight") navTo(idx + 1);
+      if (e.key === "ArrowLeft")  navTo(idx - 1);
+    }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, idx, total]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deviceWidth =
+    device === "mobile" ? 400 :
+    device === "tablet" ? 768 :
+    /* desktop */ undefined;
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-950/80 flex flex-col p-6">
-      <div className="flex items-center justify-between text-white mb-4">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70">Preview</div>
-          <div className="text-base font-semibold">{lesson.title}</div>
+    <div className="fixed inset-0 z-50 bg-ink-950/85 flex flex-col p-6">
+      {/* Top toolbar — three columns: lesson context (left), device
+          toggle (center), close (right). */}
+      <div className="flex items-center justify-between text-white mb-4 gap-4">
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+            Preview · Lesson {idx + 1} of {total}
+          </div>
+          <div className="text-base font-semibold truncate">{current.title}</div>
         </div>
+
+        {/* QQ1d: device toggle. Three buttons; active state highlighted. */}
+        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-white/10">
+          {([
+            { key: "desktop", label: "Desktop", glyph: "🖥" },
+            { key: "tablet",  label: "Tablet",  glyph: "📱" },
+            { key: "mobile",  label: "Mobile",  glyph: "📲" },
+          ] as const).map((d) => (
+            <button
+              key={d.key}
+              onClick={() => setDevice(d.key)}
+              className={`flex items-center gap-1.5 px-2.5 h-7 rounded text-[11px] font-semibold transition ${
+                device === d.key
+                  ? "bg-white text-ink-900"
+                  : "text-white/70 hover:text-white"
+              }`}
+              aria-pressed={device === d.key}
+            >
+              <span aria-hidden="true">{d.glyph}</span>
+              <span>{d.label}</span>
+            </button>
+          ))}
+        </div>
+
         <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-ink-300 hover:text-white">
           <X size={16} /> Close (Esc)
         </button>
       </div>
-      <iframe srcDoc={src} title="Lesson preview" className="flex-1 w-full bg-white rounded-xl border-0" />
+
+      {/* QQ1c: progress bar + lesson nav. Sticks above the iframe. */}
+      <div className="flex items-center gap-3 mb-3 text-white">
+        <button
+          onClick={() => navTo(idx - 1)}
+          disabled={idx === 0}
+          className="flex items-center gap-1 px-3 h-8 rounded-md bg-white/10 hover:bg-white/20 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <ChevronLeft size={14} /> Previous
+        </button>
+        <div className="flex-1">
+          <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
+            <div
+              className="h-full bg-brand-500 transition-all duration-500 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <div className="text-[10px] mt-1 opacity-65">
+            {progressPct}% through course · Module {flat[idx]?.modIndex + 1} · Lesson {flat[idx]?.lessonIndex + 1}
+          </div>
+        </div>
+        <button
+          onClick={() => navTo(idx + 1)}
+          disabled={idx >= total - 1}
+          className="flex items-center gap-1 px-3 h-8 rounded-md bg-brand-500 hover:bg-brand-600 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          {idx >= total - 1 ? "End of course" : "Continue"} <ChevronRight size={14} />
+        </button>
+      </div>
+
+      {/* Iframe wrapper — device toggle controls the max-width.
+          QQ1c slide animation: each iframe re-mount keys off the
+          lesson id + direction so the slide-in plays from the right
+          (forward) or left (back). */}
+      <div className="flex-1 flex items-stretch justify-center min-h-0">
+        <div
+          className={`pv-frame pv-frame-${device}`}
+          style={deviceWidth ? { maxWidth: deviceWidth } : undefined}
+        >
+          <iframe
+            key={`${current.id}-${direction}`}
+            srcDoc={src}
+            title="Lesson preview"
+            className={`w-full h-full bg-white rounded-xl border-0 pv-iframe-enter-${direction}`}
+          />
+        </div>
+      </div>
     </div>
   );
 }

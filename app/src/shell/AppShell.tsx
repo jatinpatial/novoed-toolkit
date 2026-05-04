@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { HelpDrawer } from "./HelpDrawer";
+import { CommandPalette } from "./CommandPalette";
 
 interface Props {
   children: ReactNode;
@@ -34,6 +35,13 @@ export function AppShell({ children, fullBleed = false, onShowWelcome }: Props) 
         </main>
       </div>
       <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {/* QQ5: Cmd+K command palette mounts at the shell level so it
+          opens from any route. Owns its own visibility via
+          window.keydown listener. */}
+      <CommandPalette
+        onShowWelcome={onShowWelcome}
+        onShowHelp={() => setHelpOpen(true)}
+      />
     </div>
   );
 }
