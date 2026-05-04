@@ -909,6 +909,126 @@
     color: theme("colors.ink.900");
   }
 
+  /* ── Lesson banner (Track-R4a) ───────────────────────────────────────
+     Pexels-fetched hero image above the lesson chrome. Renders a
+     gradient placeholder behind the photo so the layout stays stable
+     while the network fetch resolves; the photo fades in on top.
+     Hover reveals Replace / Regenerate / Upload affordances and the
+     photographer attribution chip (Pexels TOS). */
+  .lesson-banner {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+    isolation: isolate;
+  }
+  .lesson-banner-fallback {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 166, 81, 0.85),
+      rgba(0, 59, 34, 0.92)
+    );
+  }
+  .lesson-banner-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 600ms var(--ease-sana);
+  }
+  .lesson-banner-img.is-loaded {
+    opacity: 1;
+  }
+  .lesson-banner-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--duration-base) var(--ease-sana),
+                transform var(--duration-base) var(--ease-sana);
+    pointer-events: none;
+  }
+  .lesson-banner:hover .lesson-banner-actions,
+  .lesson-banner:focus-within .lesson-banner-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .lesson-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: theme("colors.ink.800");
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    transition: background var(--duration-fast) var(--ease-sana);
+  }
+  .lesson-banner-btn:hover {
+    background: white;
+    color: theme("colors.brand.700");
+  }
+  .lesson-banner-credit {
+    position: absolute;
+    bottom: 10px;
+    left: 14px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-sana);
+  }
+  .lesson-banner:hover .lesson-banner-credit,
+  .lesson-banner:focus-within .lesson-banner-credit {
+    opacity: 1;
+  }
+  .lesson-banner-credit a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .lesson-banner-credit a:hover {
+    text-decoration: underline;
+  }
+  .lesson-banner-dropzone {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0, 166, 81, 0.85);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+  .lesson-banner-dragover {
+    box-shadow: 0 0 0 3px theme("colors.brand.500"),
+                0 6px 24px rgba(0, 0, 0, 0.06);
+  }
+
   /* ── Lesson hero band (AI-1d) ────────────────────────────────────────
      Green-tinted band wrapping the lesson chrome (eyebrow + title +
      meta). Matches the BCG U / Rise per-lesson hero treatment —
@@ -2981,6 +3101,48 @@
   .continue-chip-icon {
     color: theme("colors.brand.700");
     flex-shrink: 0;
+  }
+  /* Track-R4c: Pexels TOS attribution footer. Tiny, neutral; sits
+     beneath any surface showing Pexels imagery. */
+  .pexels-attribution {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 11px;
+    color: theme("colors.ink.400");
+    letter-spacing: 0.005em;
+  }
+  .pexels-attribution a {
+    color: theme("colors.ink.500");
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px dotted theme("colors.ink.300");
+  }
+  .pexels-attribution a:hover {
+    color: theme("colors.brand.700");
+    border-color: theme("colors.brand.500");
+  }
+
+  /* Track-R4b: project-library card cover band — the Pexels photo
+     sits behind a 135deg green tint so the title chrome stays
+     readable across any photo. Falls back to a flat brand gradient
+     when no cover has resolved. */
+  .project-card-cover {
+    height: 96px;
+    background-size: cover;
+    background-position: center;
+    border-bottom: 1px solid theme("colors.ink.100");
+  }
+
+  /* Track-R4b: Pexels cover thumbnail in place of the lucide icon
+     when the chip's project record carries a coverImageUrl. */
+  .continue-chip-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
   }
   .continue-chip-title {
     font-weight: 600;
