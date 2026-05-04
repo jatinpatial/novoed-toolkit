@@ -2908,6 +2908,23 @@
     overflow: hidden;
     isolation: isolate;
   }
+  /* QQ1: Lottie particle overlay layer — sits on top of the welcome-bg
+     orbs to add floating motion. Pointer-events disabled so it never
+     intercepts clicks on the modal content. */
+  .welcome-lottie-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: screen;
+  }
+  .welcome-lottie-fill {
+    width: 100%;
+    height: 100%;
+  }
+  .welcome-stage-name .welcome-lottie-particles { opacity: 0.25; }
+  .welcome-stage-tour .welcome-lottie-particles { opacity: 0.12; }
+
   .welcome-bg {
     position: absolute;
     inset: 0;

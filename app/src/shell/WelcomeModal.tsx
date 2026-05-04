@@ -5,6 +5,7 @@ import {
   FileUp, Sparkles, Video, X,
 } from "lucide-react";
 import { getUser, markTourCompleted, saveUser } from "../store/user";
+import { LottiePlayer } from "../components/LottiePlayer";
 
 /**
  * First-load welcome modal (Track-Q full redesign).
@@ -227,6 +228,12 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         <div className="welcome-orb welcome-orb-1" />
         <div className="welcome-orb welcome-orb-2" />
         <div className="welcome-orb welcome-orb-3" />
+        {/* QQ1: Lottie particle overlay — adds floating motion on top
+            of the existing CSS orbs. Falls back silently if the JSON
+            isn't available. */}
+        <div className="welcome-lottie-particles">
+          <LottiePlayer src="splash-particles" className="welcome-lottie-fill" />
+        </div>
       </div>
 
       {/* Top-right close. Hidden during splash. */}
