@@ -26,6 +26,7 @@ import { deleteProject, getProject, listProjects, saveProject, subscribeProjects
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
 import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
+import { LessonBanner } from "../components/LessonBanner";
 import { BuildCompletionConfetti, BuildProgressBand, CaseStudyTile, LessonTile, ModuleKcTile } from "../agent/LessonTile";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
@@ -2507,6 +2508,24 @@ function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLess
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-10">
+      {/* Track-R4a: lesson hero banner. Auto-fetches a Pexels stock
+          photo for the lesson title; LD can hover to replace,
+          regenerate, or upload their own. Renders a placeholder
+          gradient when no image has resolved yet. */}
+      <LessonBanner
+        query={lesson.title}
+        imageUrl={lesson.bannerImageUrl}
+        photographer={lesson.bannerPhotographer}
+        photographerUrl={lesson.bannerPhotographerUrl}
+        onChange={(url, photographer, photographerUrl) =>
+          onUpdateLesson((l: Lesson) => {
+            l.bannerImageUrl = url;
+            l.bannerPhotographer = photographer;
+            l.bannerPhotographerUrl = photographerUrl;
+          })
+        }
+      />
+
       {/* AI-1d: green-tinted hero band wrapping eyebrow + title + meta.
           Visually separates the lesson chrome from the body blocks
           below. Eyebrow flipped from "Module N · Lesson N.M" (B3-tune-c)

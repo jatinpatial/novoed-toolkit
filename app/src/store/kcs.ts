@@ -41,6 +41,12 @@ export interface Kc {
   /** SDK-reported cost for the build. Surfaced on the result page
    *  for cost-economics transparency. */
   costUsd: number | null;
+  // Track-R4b: Pexels cover for the chip on the home ContinueBar.
+  // Auto-fetched on first card render; persisted so the cover stays
+  // stable across reloads.
+  coverImageUrl?: string;
+  coverPhotographer?: string;
+  coverPhotographerUrl?: string;
   createdAt: number;
   updatedAt: number;
 }

@@ -108,6 +108,13 @@ export interface Lesson {
   objectives?: string[];
   // Optional post-lesson knowledge check, written by the Quiz Builder.
   knowledgeCheck?: Quiz;
+  // Track-R4a: Pexels-fetched lesson hero image. The lesson canvas
+  // auto-fetches on open when this is unset; the LD can hover the
+  // banner to Replace (cycle cached alternates), Regenerate (fresh
+  // API call), or drop a file (data URL replace).
+  bannerImageUrl?: string;
+  bannerPhotographer?: string;
+  bannerPhotographerUrl?: string;
 }
 
 export interface Module {

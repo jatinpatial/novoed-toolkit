@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-react";
-import { listProjects, subscribeProjects, type Project } from "../store/projects";
+import { listProjects, saveProject, subscribeProjects, type Project } from "../store/projects";
 import { listScripts, subscribeScripts, type Script } from "../store/scripts";
-import { listKcs, subscribeKcs, type Kc } from "../store/kcs";
+import { listKcs, saveKc, subscribeKcs, type Kc } from "../store/kcs";
 import {
   listInfographics,
+  saveInfographic,
   subscribeInfographics,
   type Infographic,
 } from "../store/infographics";
+import { useCoverImage } from "../lib/useCoverImage";
 
 /**
  * Track-P (P6): "Continue where you left off" bar.
@@ -35,6 +37,18 @@ interface ContinueItem {
   href: string;
   icon: typeof BookOpen;
   updatedAt: number;
+  /** Track-R4b: search query for the cover thumb (lesson title /
+   *  topic). Empty string suppresses the fetch; chip falls back to
+   *  the existing icon-only chrome. */
+  coverQuery: string;
+  coverImageUrl?: string;
+  /** Persist callback — stores the resolved cover onto the underlying
+   *  store record so the chip stays stable across reloads. */
+  persistCover: (
+    url: string,
+    photographer: string,
+    photographerUrl: string,
+  ) => void;
 }
 
 function relTime(ts: number): string {
@@ -60,6 +74,15 @@ function collect(): ContinueItem[] {
         href: `/courses?project=${p.id}`,
         icon: BookOpen,
         updatedAt: p.updatedAt,
+        coverQuery: p.name,
+        coverImageUrl: p.coverImageUrl,
+        persistCover: (url, photographer, photographerUrl) =>
+          saveProject({
+            ...p,
+            coverImageUrl: url,
+            coverPhotographer: photographer,
+            coverPhotographerUrl: photographerUrl,
+          }),
       });
     } else if (p.kind === "component") {
       // Legacy component-kind projects route to the legacy
@@ -71,6 +94,15 @@ function collect(): ContinueItem[] {
         href: `/infographics?project=${p.id}`,
         icon: BarChart3,
         updatedAt: p.updatedAt,
+        coverQuery: p.name,
+        coverImageUrl: p.coverImageUrl,
+        persistCover: (url, photographer, photographerUrl) =>
+          saveProject({
+            ...p,
+            coverImageUrl: url,
+            coverPhotographer: photographer,
+            coverPhotographerUrl: photographerUrl,
+          }),
       });
     }
     void (p as Project);
@@ -82,6 +114,9 @@ function collect(): ContinueItem[] {
       href: `/scripts/${s.id}`,
       icon: Video,
       updatedAt: s.updatedAt,
+      // Scripts don't carry covers — chip falls back to icon-only.
+      coverQuery: "",
+      persistCover: () => {},
     });
     void (s as Script);
   }
@@ -92,6 +127,15 @@ function collect(): ContinueItem[] {
       href: `/kcs/${k.id}`,
       icon: ClipboardCheck,
       updatedAt: k.updatedAt,
+      coverQuery: k.topic || k.title,
+      coverImageUrl: k.coverImageUrl,
+      persistCover: (url, photographer, photographerUrl) =>
+        saveKc({
+          ...k,
+          coverImageUrl: url,
+          coverPhotographer: photographer,
+          coverPhotographerUrl: photographerUrl,
+        }),
     });
     void (k as Kc);
   }
@@ -102,6 +146,15 @@ function collect(): ContinueItem[] {
       href: `/infographics/${ig.id}`,
       icon: BarChart3,
       updatedAt: ig.updatedAt,
+      coverQuery: ig.title || ig.topic,
+      coverImageUrl: ig.coverImageUrl,
+      persistCover: (url, photographer, photographerUrl) =>
+        saveInfographic({
+          ...ig,
+          coverImageUrl: url,
+          coverPhotographer: photographer,
+          coverPhotographerUrl: photographerUrl,
+        }),
     });
     void (ig as Infographic);
   }
@@ -130,18 +183,31 @@ export function ContinueBar() {
         <span className="continue-bar-title">Continue where you left off</span>
       </div>
       <div className="continue-bar-row">
-        {items.map((it) => {
-          const Icon = it.icon;
-          return (
-            <Link key={it.key} to={it.href} className="continue-chip" title={it.title}>
-              <Icon size={14} strokeWidth={2} className="continue-chip-icon" />
-              <span className="continue-chip-title">{it.title}</span>
-              <span className="continue-chip-meta">{relTime(it.updatedAt)}</span>
-              <ArrowRight size={12} strokeWidth={2.5} className="continue-chip-arrow" />
-            </Link>
-          );
-        })}
+        {items.map((it) => (
+          <ContinueChip key={it.key} item={it} />
+        ))}
       </div>
     </section>
+  );
+}
+
+function ContinueChip({ item }: { item: ContinueItem }) {
+  useCoverImage(item.coverQuery, item.coverImageUrl, item.persistCover);
+  const Icon = item.icon;
+  return (
+    <Link to={item.href} className="continue-chip" title={item.title}>
+      {item.coverImageUrl ? (
+        <span
+          className="continue-chip-thumb"
+          style={{ backgroundImage: `url(${item.coverImageUrl})` }}
+          aria-hidden="true"
+        />
+      ) : (
+        <Icon size={14} strokeWidth={2} className="continue-chip-icon" />
+      )}
+      <span className="continue-chip-title">{item.title}</span>
+      <span className="continue-chip-meta">{relTime(item.updatedAt)}</span>
+      <ArrowRight size={12} strokeWidth={2.5} className="continue-chip-arrow" />
+    </Link>
   );
 }

@@ -31,6 +31,12 @@ export interface Project {
   createdAt: number;
   updatedAt: number;
   data: ProjectData;
+  // Track-R4b: Pexels-fetched cover image. Populated lazily on first
+  // card render (Dashboard, ContinueBar, ProjectsLibrary). Surface
+  // attribution via tooltip when shown.
+  coverImageUrl?: string;
+  coverPhotographer?: string;
+  coverPhotographerUrl?: string;
 }
 
 const KEY = "bcgu_studio_projects_v1";

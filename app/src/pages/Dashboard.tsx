@@ -9,6 +9,8 @@ import { ContinueBar } from "../shell/ContinueBar";
 import { TryAPromptPills } from "../shell/TryAPromptPills";
 import { EntryCards } from "../shell/EntryCards";
 import { CourseCardPhoto } from "../components/CourseCardPhoto";
+import { PexelsAttribution } from "../components/PexelsAttribution";
+import { useCoverImage } from "../lib/useCoverImage";
 import {
   WelcomeModal, markWelcomeSeen, clearWelcomeSeen,
 } from "../shell/WelcomeModal";
@@ -31,7 +33,7 @@ function markSplashPlayed(): void {
     /* ignore */
   }
 }
-import { listProjects, subscribeProjects, type Project } from "../store/projects";
+import { listProjects, saveProject, subscribeProjects, type Project } from "../store/projects";
 
 const KIND_LABEL: Record<Project["kind"], string> = {
   component: "Infographic",
@@ -40,42 +42,15 @@ const KIND_LABEL: Record<Project["kind"], string> = {
 };
 
 /**
- * Recent-courses cover preset list (B2d). The first two cards in the
- * recent-work strip get Unsplash photographs with branded gradient
- * overlays so the dashboard reads "real product" instead of "tile
- * placeholders". Index 2+ falls through with no entry; <CourseCardPhoto>
- * renders its built-in green-700 -> ink-900 fallback gradient.
+ * Track-R4b: Pexels covers replace the legacy two-Unsplash-presets
+ * array. Each Recent-work card auto-fetches a topic-relevant stock
+ * photo by project name on first render; the result persists onto
+ * the Project record so subsequent mounts read the cached value.
  *
- * The Unsplash photos are referenced from the legacy mockup (PHARMA
- * pharma/clinical setting + DIVERSE collaboration). Topic-aware photo
- * picking would belong in the agent backend (Course Architect picks
- * a relevant photo when drafting the course) — captured for the post-
- * pivot AI sprint as "image/media sourcing per course cover."
- *
- * Tints overlay the photo via linear-gradient at 135deg from tintFrom
- * (top-left) to tintTo (bottom-right). The first card uses the
- * CourseCardPhoto defaults (green-700 alpha -> green-900 alpha) — same
- * values, so we omit the props.
+ * Cards without a fetched cover (no key configured, network failure,
+ * empty title) fall through to <CourseCardPhoto>'s built-in green-700
+ * -> ink-900 fallback gradient.
  */
-const COVERS: Array<{ imageUrl: string; tintFrom?: string; tintTo?: string }> = [
-  {
-    // Pharma / clinical setting — the recurring brief in BCG U pilots
-    // (change management, leadership, transformation in pharma).
-    imageUrl:
-      "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&q=80",
-    // Defaults: rgba(0,107,63,0.85) -> rgba(0,59,34,0.92) (green-700
-    // alpha -> green-900 alpha). Matches the user spec exactly, so we
-    // omit tintFrom / tintTo and let CourseCardPhoto's defaults apply.
-  },
-  {
-    // Diverse-collaboration photo — neutral training/learning energy
-    // for cross-functional courses.
-    imageUrl:
-      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
-    tintFrom: "rgba(0, 133, 124, 0.85)", // teal-500 #00857C @0.85
-    tintTo:   "rgba(0, 107, 63, 0.92)",  // green-700 #006B3F @0.92
-  },
-];
 
 function relTime(ts: number): string {
   const d = Date.now() - ts;
@@ -260,29 +235,43 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="courses stagger-children">
-              {recent.map((project, i) => {
-                const cover = COVERS[i];
-                const href =
-                  project.kind === "course"
-                    ? `/courses?project=${project.id}`
-                    : `/infographics?project=${project.id}`;
-                return (
-                  <CourseCardPhoto
-                    key={project.id}
-                    title={project.name}
-                    meta={metaFor(project)}
-                    tag={KIND_LABEL[project.kind]}
-                    imageUrl={cover?.imageUrl}
-                    tintFrom={cover?.tintFrom}
-                    tintTo={cover?.tintTo}
-                    to={href}
-                  />
-                );
-              })}
+              {recent.map((project) => (
+                <RecentProjectCard key={project.id} project={project} />
+              ))}
             </div>
+            <PexelsAttribution />
           </section>
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * Track-R4b: per-project Recent-work tile. Pulls cover image from
+ * Pexels by project name on first render; persists the result onto
+ * the Project record so the cover stays stable across reloads.
+ */
+function RecentProjectCard({ project }: { project: Project }) {
+  useCoverImage(project.name, project.coverImageUrl, (url, photographer, photographerUrl) => {
+    saveProject({
+      ...project,
+      coverImageUrl: url,
+      coverPhotographer: photographer,
+      coverPhotographerUrl: photographerUrl,
+    });
+  });
+  const href =
+    project.kind === "course"
+      ? `/courses?project=${project.id}`
+      : `/infographics?project=${project.id}`;
+  return (
+    <CourseCardPhoto
+      title={project.name}
+      meta={metaFor(project)}
+      tag={KIND_LABEL[project.kind]}
+      imageUrl={project.coverImageUrl}
+      to={href}
+    />
   );
 }

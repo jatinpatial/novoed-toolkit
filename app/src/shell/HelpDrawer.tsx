@@ -368,6 +368,21 @@ function TipsFaq() {
         (Opus-architect + Sonnet-worker) cuts per-course cost ~65% if you
         configure it via .env.
       </p>
+      <h3>Where do the cover photos come from?</h3>
+      <p>
+        Lesson banners and project-card covers are sourced from{" "}
+        <a
+          href="https://www.pexels.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Pexels
+        </a>
+        , a free stock photo library. Hover any banner to see the
+        photographer credit and a link to their profile. You can replace
+        any image (cycle alternates), regenerate (fresh search), or
+        upload your own.
+      </p>
     </>
   );
 }

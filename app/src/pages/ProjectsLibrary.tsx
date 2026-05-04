@@ -4,7 +4,9 @@ import { Copy, Trash2, FolderOpen, Shapes, Sparkles, BookOpen, Plus } from "luci
 import { AppShell } from "../shell/AppShell";
 import { PageHeader } from "../ui/PageHeader";
 import { EmptyState } from "../ui/EmptyState";
-import { deleteProject, duplicateProject, listProjects, subscribeProjects, type Project, type ProjectKind } from "../store/projects";
+import { deleteProject, duplicateProject, listProjects, saveProject, subscribeProjects, type Project, type ProjectKind } from "../store/projects";
+import { useCoverImage } from "../lib/useCoverImage";
+import { PexelsAttribution } from "../components/PexelsAttribution";
 
 const FILTERS: { id: "all" | ProjectKind; label: string }[] = [
   { id: "all", label: "All" },
@@ -85,15 +87,30 @@ export default function ProjectsLibrary() {
           />
         )
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((p) => <ProjectCard key={p.id} project={p} />)}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.map((p) => <ProjectCard key={p.id} project={p} />)}
+          </div>
+          <PexelsAttribution />
+        </>
       )}
     </AppShell>
   );
 }
 
 function ProjectCard({ project }: { project: Project }) {
+  // Track-R4b: lazy Pexels cover. First mount kicks off a fetch by
+  // project name; the resolved url + photographer attribution land
+  // back on the Project record so the cover stays stable on reload.
+  useCoverImage(project.name, project.coverImageUrl, (url, photographer, photographerUrl) => {
+    saveProject({
+      ...project,
+      coverImageUrl: url,
+      coverPhotographer: photographer,
+      coverPhotographerUrl: photographerUrl,
+    });
+  });
+
   const href = project.kind === "course" ? `/courses?project=${project.id}` : `/infographics?project=${project.id}`;
   const Icon = project.kind === "course" ? BookOpen : project.kind === "scorm" ? Sparkles : Shapes;
   const accent = project.kind === "course" ? "bg-indigo-50 text-indigo-700 border-indigo-100"
@@ -103,17 +120,40 @@ function ProjectCard({ project }: { project: Project }) {
   const updated = new Date(project.updatedAt).toLocaleString();
 
   return (
-    <div className="card card-hover group">
-      <Link to={href} className="block p-4 pb-3">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold border ${accent}`}>
-            <Icon size={11} />
-            {kindLabel}
-          </span>
-          <span className="text-[10px] text-ink-400 ml-auto uppercase tracking-wide font-semibold">{project.brand}</span>
+    <div className="card card-hover group overflow-hidden">
+      <Link to={href} className="block">
+        {/* Track-R4b: Pexels cover band. Falls back to a brand
+            gradient when the fetch hasn't resolved (or returned
+            empty). Tooltip surfaces photographer attribution. */}
+        <div
+          className="project-card-cover"
+          style={
+            project.coverImageUrl
+              ? {
+                  backgroundImage: `linear-gradient(135deg, rgba(0,107,63,0.65), rgba(0,59,34,0.78)), url(${project.coverImageUrl})`,
+                }
+              : {
+                  backgroundImage:
+                    "linear-gradient(135deg, var(--green-700), #121318)",
+                }
+          }
+          title={
+            project.coverPhotographer
+              ? `Photo by ${project.coverPhotographer} on Pexels`
+              : undefined
+          }
+        />
+        <div className="p-4 pb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold border ${accent}`}>
+              <Icon size={11} />
+              {kindLabel}
+            </span>
+            <span className="text-[10px] text-ink-400 ml-auto uppercase tracking-wide font-semibold">{project.brand}</span>
+          </div>
+          <h3 className="text-sm font-semibold text-ink-900 mb-1 truncate">{project.name}</h3>
+          <p className="text-xs text-ink-400">Updated {updated}</p>
         </div>
-        <h3 className="text-sm font-semibold text-ink-900 mb-1 truncate">{project.name}</h3>
-        <p className="text-xs text-ink-400">Updated {updated}</p>
       </Link>
       <div className="flex items-center border-t border-ink-100 opacity-0 group-hover:opacity-100 transition-opacity">
         <button

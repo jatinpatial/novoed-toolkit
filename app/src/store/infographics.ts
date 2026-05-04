@@ -67,6 +67,12 @@ export interface Infographic {
    *  embedding (requires PEXELS_API_KEY configured). */
   useBrandColors?: boolean;
   includePeopleImages?: boolean;
+  // Track-R4b: Pexels cover for the chip on the home ContinueBar.
+  // Auto-fetched on first card render; persisted so the cover stays
+  // stable across reloads.
+  coverImageUrl?: string;
+  coverPhotographer?: string;
+  coverPhotographerUrl?: string;
   createdAt: number;
   updatedAt: number;
 }
