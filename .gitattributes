@@ -1,0 +1,5 @@
+# Force LF line endings on shell scripts so Mac/Linux LDs don't get
+# CRLF-mangled shebangs after a Windows commit. Without this, the
+# autocrlf=true default on Windows checkouts converts LF→CRLF and the
+# Mac shell rejects "#!/usr/bin/env bash\r" with bad-interpreter.
+*.sh    text eol=lf

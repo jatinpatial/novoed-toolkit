@@ -12,6 +12,21 @@ title BCG U Studio Launcher
 echo Starting BCG U Studio...
 echo.
 
+REM Always pull latest before launching — strategy chat's architectural
+REM commitment: LDs see the latest version on every launch. Quiet on
+REM success; non-fatal if the LD has a non-fast-forward situation
+REM (we don't want to block their launch).
+pushd "%~dp0"
+echo Pulling latest...
+git pull --ff-only 2>nul
+if errorlevel 1 (
+    echo   (skipped - not a fast-forward, no remote, or no git checkout^)
+) else (
+    echo   done.
+)
+popd
+echo.
+
 start "BCG U Studio - Backend" cmd /k "cd /d %~dp0agent-backend && python run.py"
 
 REM Brief gap before launching the frontend so the two windows don't fight
