@@ -141,6 +141,113 @@ const EXAMPLE_PROMPTS = [
   "4 trends reshaping the consumer goods industry in 2026",
 ];
 
+/**
+ * Track-BFL (BCG Framework Library): curated set of consulting
+ * frameworks that LDs commonly reach for. Each framework provides:
+ *
+ *   - A prompt template that the LD fills with their topic. The
+ *     template is structured so the agent's MODE 6 generates the
+ *     framework's expected POINTS shape (e.g. five_forces template
+ *     produces 5 points, one per force; SCQA template produces 4
+ *     points keyed by the framework's verbs).
+ *   - A locked layout style — the framework only renders correctly
+ *     in one style, so we override the auto-detect.
+ *   - A 1-line "what's this" description so LDs who don't know the
+ *     framework still get value.
+ *
+ * These ARE the BCG-distinctive moat. Every L&D tool can produce a
+ * 5-point list; only ours opens with "Apply Porter's Five Forces"
+ * as a one-click action.
+ */
+interface BcgFramework {
+  id: string;
+  name: string;
+  description: string;
+  /** Layout the framework requires. */
+  style: InfographicStyle;
+  /** Point count the framework requires. */
+  pointCount: number;
+  /** Prompt template — replace {TOPIC} when the LD picks a framework. */
+  promptTemplate: string;
+  /** What to put in the prompt textarea by default. {TOPIC} placeholder. */
+  placeholder: string;
+}
+
+const BCG_FRAMEWORKS: BcgFramework[] = [
+  {
+    id: "porter5",
+    name: "Porter's Five Forces",
+    description: "Industry attractiveness — central concept + 5 surrounding forces",
+    style: "five_forces",
+    pointCount: 5,
+    promptTemplate: "Apply Porter's Five Forces to {TOPIC}. Generate one point per force: rivalry among existing competitors, threat of new entrants, threat of substitutes, bargaining power of suppliers, bargaining power of buyers. Each point names the force, then explains how it applies to {TOPIC} in 15-30 words.",
+    placeholder: "the wearable health-tech industry in 2026",
+  },
+  {
+    id: "scqa",
+    name: "SCQA",
+    description: "Situation → Complication → Question → Answer (Pyramid Principle)",
+    style: "pyramid",
+    pointCount: 4,
+    promptTemplate: "Apply Barbara Minto's SCQA structure to {TOPIC}. Generate exactly 4 points labeled Situation, Complication, Question, Answer. The Situation establishes shared context the audience already knows. The Complication introduces what changed or what's now at stake. The Question articulates the central decision. The Answer states the recommendation.",
+    placeholder: "why our pricing strategy needs to change",
+  },
+  {
+    id: "growth-share",
+    name: "BCG Growth-Share Matrix",
+    description: "Star / Cash Cow / Question Mark / Dog — portfolio quadrant",
+    style: "quadrant",
+    pointCount: 4,
+    promptTemplate: "Apply the BCG Growth-Share Matrix to {TOPIC}. Generate exactly 4 points: Stars (high growth, high share), Cash Cows (low growth, high share), Question Marks (high growth, low share), Dogs (low growth, low share). For each, describe the strategic posture the topic suggests for that quadrant.",
+    placeholder: "our product portfolio across emerging markets",
+  },
+  {
+    id: "horizons",
+    name: "Three Horizons",
+    description: "McKinsey's Horizon 1 / 2 / 3 framework for innovation portfolios",
+    style: "process",
+    pointCount: 3,
+    promptTemplate: "Apply the Three Horizons framework to {TOPIC}. Generate exactly 3 points: Horizon 1 (defend and extend the core, 0-2 year payoff), Horizon 2 (build emerging businesses, 2-5 year payoff), Horizon 3 (create viable options for the future, 5+ year payoff). Each point describes the implications for {TOPIC} at that horizon.",
+    placeholder: "our AI investment portfolio",
+  },
+  {
+    id: "scurve",
+    name: "S-Curve",
+    description: "Adoption / maturity curve — emerging → growth → mature → declining",
+    style: "timeline",
+    pointCount: 4,
+    promptTemplate: "Apply the S-curve adoption framework to {TOPIC}. Generate 4 points along the curve: Emerging (slow early adoption, validation phase), Take-off (steepening curve, network effects kick in), Maturity (growth flattens, optimization phase), Decline or Reinvention (the next S-curve begins). Frame each in the context of {TOPIC}.",
+    placeholder: "generative AI in enterprise workflows",
+  },
+  {
+    id: "mece",
+    name: "MECE Breakdown",
+    description: "Mutually Exclusive, Collectively Exhaustive — clean decomposition",
+    style: "numbered_list",
+    pointCount: 5,
+    promptTemplate: "Decompose {TOPIC} into 5 MECE (Mutually Exclusive, Collectively Exhaustive) categories. The categories should NOT overlap, and together should cover the entire topic with no gaps. Order from highest to lowest impact. State the category in the heading; explain its boundary in the body so the reader sees why it's distinct from the others.",
+    placeholder: "the drivers of customer churn in B2B SaaS",
+  },
+  {
+    id: "7s",
+    name: "McKinsey 7S",
+    description: "Strategy / Structure / Systems / Shared values / Style / Staff / Skills",
+    style: "five_forces",
+    pointCount: 5,
+    promptTemplate: "Apply McKinsey's 7S framework to {TOPIC}, but consolidate to the 5 most relevant Ss for this topic. Pick from: Strategy, Structure, Systems, Shared Values, Style, Staff, Skills. For each chosen S, name it in the heading, then describe how it shapes {TOPIC} in 15-30 words.",
+    placeholder: "our merger integration strategy",
+  },
+  {
+    id: "compass",
+    name: "Strategy Compass",
+    description: "2x2 — Differentiation vs cost, focus vs broad market",
+    style: "quadrant",
+    pointCount: 4,
+    promptTemplate: "Apply Porter's Generic Strategies (a 2x2 of Differentiation vs Cost Leadership crossed with Broad Market vs Focused Niche) to {TOPIC}. Generate 4 points: broad differentiation, broad cost leadership, focused differentiation, focused cost leadership. For each, describe the strategic posture and one example move {TOPIC} could make there.",
+    placeholder: "competing in the EV charging infrastructure market",
+  },
+];
+
 export default function CreateInfographicPromptPage() {
   const navigate = useNavigate();
   const { sendBuildInfographic } = useAgent();
@@ -158,8 +265,37 @@ export default function CreateInfographicPromptPage() {
   // Allow the user to override the auto-pick. If they manually pick a
   // style, we respect it; if they go back to "Auto", we re-derive.
   const [overrideStyle, setOverrideStyle] = useState<InfographicStyle | null>(null);
-  const effectiveStyle = overrideStyle ?? inference?.style ?? "numbered_list";
-  const effectivePointCount = overrideStyle ? defaultCountFor(overrideStyle) : inference?.pointCount ?? 5;
+
+  // Track-BFL: when a BCG framework is selected, the prompt becomes
+  // a fill-in-the-topic exercise — the framework's promptTemplate
+  // does the heavy lifting on the agent side. Layout + point count
+  // are locked to whatever the framework requires (you can't render
+  // a 2x2 with 5 points). Setting framework also seeds overrideStyle
+  // so the auto-detect doesn't fight the framework's choice.
+  const [framework, setFramework] = useState<BcgFramework | null>(null);
+
+  function applyFramework(fw: BcgFramework) {
+    setFramework(fw);
+    setOverrideStyle(fw.style);
+    // If the textarea is empty, seed it with the framework's
+    // placeholder topic so the LD sees what shape to type in. If
+    // they've already typed something, leave their text alone —
+    // frameworks layer on top of an in-progress prompt.
+    setPrompt((current) => current.trim() ? current : fw.placeholder);
+  }
+  function clearFramework() {
+    setFramework(null);
+    setOverrideStyle(null);
+  }
+
+  const effectiveStyle = framework
+    ? framework.style
+    : overrideStyle ?? inference?.style ?? "numbered_list";
+  const effectivePointCount = framework
+    ? framework.pointCount
+    : overrideStyle
+    ? defaultCountFor(overrideStyle)
+    : inference?.pointCount ?? 5;
 
   function defaultCountFor(s: InfographicStyle): number {
     if (s === "quadrant") return 4;
@@ -196,18 +332,40 @@ export default function CreateInfographicPromptPage() {
       updatedAt: Date.now(),
     });
 
+    // Track-BFL: when a framework is active, the prompt textarea
+    // contains the LD's TOPIC; the framework's promptTemplate
+    // articulates the structure the agent should produce. We pass
+    // the rendered template (TOPIC injected) as `notes` so the
+    // agent reads framework guidance + topic together.
+    const notesArr: string[] = [];
+    if (framework) {
+      notesArr.push(`[BCG Framework: ${framework.name}]`);
+      notesArr.push(framework.promptTemplate.replace(/\{TOPIC\}/g, prompt.trim()));
+      notesArr.push(
+        `Layout is locked to ${framework.style} with exactly ${framework.pointCount} points — that's what the framework requires.`,
+      );
+    } else {
+      notesArr.push(
+        `[Quick Prompt mode] The user described the infographic in plain words rather than filling out the structured form.`,
+      );
+      notesArr.push(`User prompt: "${prompt.trim()}"`);
+      notesArr.push(
+        `Auto-detected layout: ${effectiveStyle} with ${effectivePointCount} points.`,
+      );
+      notesArr.push(
+        `If you think a different layout would communicate the idea more clearly, override gracefully and adjust the point count to match — the user trusts your judgment here.`,
+      );
+    }
+    notesArr.push(
+      `Use brand colors and brand-professional typography choices in the output.`,
+    );
+
     sendBuildInfographic({
       infographicId: id,
       topic: prompt.trim(),
       style: effectiveStyle,
       pointCount: effectivePointCount,
-      notes: [
-        `[Quick Prompt mode] The user described the infographic in plain words rather than filling out the structured form.`,
-        `User prompt: "${prompt.trim()}"`,
-        `Auto-detected layout: ${effectiveStyle} with ${effectivePointCount} points.`,
-        `If you think a different layout would communicate the idea more clearly, override gracefully and adjust the point count to match — the user trusts your judgment here.`,
-        `Use brand colors and brand-professional typography choices in the output.`,
-      ].join("\n\n"),
+      notes: notesArr.join("\n\n"),
     });
 
     navigate(`/infographics/${id}`);
@@ -306,10 +464,64 @@ export default function CreateInfographicPromptPage() {
               </label>
             </div>
 
-            {/* Examples — clickable chips that fill the prompt */}
+            {/* Track-BFL: BCG Framework Library — one-click templates
+                for the consulting frameworks LDs reach for most.
+                Picking a framework: locks the layout, fills the
+                placeholder topic, routes the agent's prompt through
+                the framework's structured guidance. The active
+                framework shows as a chip with X to clear. */}
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-500">
+                  BCG Framework Library
+                </span>
+                {framework && (
+                  <button
+                    type="button"
+                    onClick={clearFramework}
+                    className="text-[10px] font-bold uppercase tracking-wider text-brand-700 hover:underline"
+                  >
+                    Clear framework ×
+                  </button>
+                )}
+              </div>
+              {framework ? (
+                <div className="px-4 py-3 bg-brand-700 text-white rounded-lg">
+                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">
+                    Active framework
+                  </div>
+                  <div className="text-sm font-bold mb-0.5">{framework.name}</div>
+                  <div className="text-xs opacity-90 leading-relaxed">
+                    {framework.description}
+                  </div>
+                  <div className="text-[10px] opacity-70 mt-2 italic">
+                    Layout locked to {STYLE_LABELS[framework.style]} with {framework.pointCount} points. Type your topic above — the framework does the rest.
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {BCG_FRAMEWORKS.map((fw) => (
+                    <button
+                      type="button"
+                      key={fw.id}
+                      onClick={() => applyFramework(fw)}
+                      className="form-chip text-left flex flex-col items-start py-2.5 px-3"
+                      title={fw.description}
+                    >
+                      <span className="text-xs font-bold text-ink-900">{fw.name}</span>
+                      <span className="text-[10px] text-ink-500 leading-tight mt-0.5">
+                        {fw.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Free-text examples — clickable chips that fill the prompt */}
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-ink-500 mb-2">
-                Try one of these
+                Or try a free-text example
               </div>
               <div className="flex flex-wrap gap-2">
                 {EXAMPLE_PROMPTS.map((ex) => (
@@ -319,6 +531,7 @@ export default function CreateInfographicPromptPage() {
                     onClick={() => {
                       setPrompt(ex);
                       setOverrideStyle(null);
+                      setFramework(null);
                     }}
                     className="form-chip text-left"
                     title="Click to use this prompt"
