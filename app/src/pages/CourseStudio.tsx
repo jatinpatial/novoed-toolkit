@@ -2667,6 +2667,19 @@ function LessonCanvas({ lesson, module: mod, course, brand, am, al, onUpdateLess
               <Sparkles size={12} /> Regenerate
             </button>
           )}
+          {/* V3 hero-product integration: one-click jump from a lesson
+              to the Deckster Infographic prompt with this lesson's
+              title pre-populated. The LD lands on the prompt page,
+              auto-detection picks the layout, and they're 1 click
+              from a downloadable infographic that reinforces this
+              lesson's content. */}
+          <Link
+            to={`/infographics/prompt?topic=${encodeURIComponent(lesson.title || "")}`}
+            className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-brand-200 bg-brand-50 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 hover:border-brand-500 transition"
+            title="Build a downloadable infographic that reinforces this lesson"
+          >
+            <BarChart3 size={12} /> Build infographic
+          </Link>
         </div>
         <input
           value={lesson.title}

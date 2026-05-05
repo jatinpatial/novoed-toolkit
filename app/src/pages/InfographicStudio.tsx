@@ -23,6 +23,7 @@ import {
 } from "../store/infographics";
 import { InfographicRenderer } from "../infographic/InfographicRenderer";
 import { searchImagesCached } from "../lib/images";
+import { Skeleton } from "../components/Skeleton";
 // Track-SS (Deckster v2 → v3 fix): exports honor the NovoEd toolkit
 // split — HTML must be STATIC (Froala embed only; NovoEd's native
 // HTML embed doesn't support interactive HTML), SCORM is the
@@ -504,20 +505,31 @@ export default function InfographicStudio() {
         </div>
 
         {isBuilding && (
-          <StudioBuildLoader
-            heading="Studio Copilot is composing your infographic…"
-            subhead="Reading the source, sketching the layout, picking icons, tightening the wording."
-            phrases={[
-              "Reading the source",
-              "Sketching the layout",
-              "Mapping the structure",
-              "Picking the right icons",
-              "Tightening the wording",
-              "Balancing the visual hierarchy",
-              "Adding the final polish",
-            ]}
-            estimateMs={90_000}
-          />
+          <>
+            {/* V3 UI elevation: status messages live above; the
+                infographic skeleton lives below. The user sees the
+                shape of what's coming form in place rather than
+                a spinner telling them to wait. */}
+            <StudioBuildLoader
+              heading="Studio Copilot is composing your infographic…"
+              subhead="Reading the source, sketching the layout, picking icons, tightening the wording."
+              phrases={[
+                "Reading the source",
+                "Sketching the layout",
+                "Mapping the structure",
+                "Picking the right icons",
+                "Tightening the wording",
+                "Balancing the visual hierarchy",
+                "Adding the final polish",
+              ]}
+              estimateMs={90_000}
+            />
+            <div className="mt-6">
+              <Skeleton.Wrap>
+                <Skeleton.InfographicShell count={infographic.pointCount || 5} />
+              </Skeleton.Wrap>
+            </div>
+          </>
         )}
 
         {isFailed && (

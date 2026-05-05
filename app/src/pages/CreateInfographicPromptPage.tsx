@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Sparkles, Wand2 } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { useAgent } from "../agent/AgentContext";
@@ -250,10 +250,16 @@ const BCG_FRAMEWORKS: BcgFramework[] = [
 
 export default function CreateInfographicPromptPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { sendBuildInfographic } = useAgent();
   const [brand, setBrand] = useActiveBrand();
 
-  const [prompt, setPrompt] = useState("");
+  // V3 hero-product integration: when CourseStudio's "Build infographic"
+  // button hands us a ?topic= query param (the lesson's title), pre-
+  // populate the textarea so the LD doesn't have to retype it. Empty
+  // when navigating from the suite tile or Cmd+K.
+  const initialTopic = searchParams.get("topic")?.trim() ?? "";
+  const [prompt, setPrompt] = useState(initialTopic);
 
   // Recompute the inference on every keystroke. Cheap regex match,
   // useMemo just to avoid retriggering downstream renders unnecessarily.

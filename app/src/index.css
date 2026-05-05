@@ -2164,6 +2164,56 @@
      by html2canvas for the PNG download — so all visuals are real
      CSS / DOM, no external assets except lucide icons (which render
      as SVG and capture cleanly). Uses brand cascade vars throughout. */
+  /* ─── Skeleton loading primitives (UI elevation, V3) ──────────────────── */
+  /* Replace generic spinners with previews of the destination layout.
+     Inspired by Vercel / Linear / Arc — async content forms in place
+     instead of a wait-circle telling the user to be patient. */
+  @keyframes skeleton-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    --skeleton-bg: rgba(0, 0, 0, 0.06);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.55);
+    display: block;
+    background: linear-gradient(
+      90deg,
+      var(--skeleton-bg) 0%,
+      var(--skeleton-bg) 35%,
+      var(--skeleton-shimmer) 50%,
+      var(--skeleton-bg) 65%,
+      var(--skeleton-bg) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s linear infinite;
+    border-radius: 4px;
+  }
+  .skeleton-line {
+    display: inline-block;
+    height: 14px;
+  }
+  .skeleton-block {
+    border-radius: 8px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+  }
+  .skeleton-card-frame {
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .skeleton-infographic-shell {
+    padding: 32px 36px;
+    background: white;
+    border-radius: 14px;
+    border: 1px solid theme("colors.ink.200");
+  }
+  .skeleton-wrap {
+    opacity: 0.85;
+  }
+
   .infographic-render-host {
     background: white;
     border-radius: 14px;
