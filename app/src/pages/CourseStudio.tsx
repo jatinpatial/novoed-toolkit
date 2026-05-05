@@ -2170,8 +2170,26 @@ function ModuleSummary({
     <div className="max-w-3xl mx-auto px-8 py-10">
       {/* Module header */}
       <div className="mb-8">
-        <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider mb-1">
-          Week {week} · Module
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="text-xs font-semibold text-brand-700 uppercase tracking-wider">
+            Week {week} · Module
+          </div>
+          {/* V3 hero-product integration: module-level "Build
+              infographic" — pre-fills the prompt page with the
+              module's title + summary so the LD lands on a
+              ready-to-build module overview infographic. Uses
+              the same pattern as the lesson-canvas affordance. */}
+          <Link
+            to={`/infographics/prompt?topic=${encodeURIComponent(
+              mod.summary
+                ? `${mod.title}: ${mod.summary}`
+                : mod.title || "",
+            )}`}
+            className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border border-brand-200 bg-brand-50 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 hover:border-brand-500 transition flex-shrink-0"
+            title="Build a module overview infographic"
+          >
+            <BarChart3 size={12} /> Module infographic
+          </Link>
         </div>
         <input
           value={mod.title}

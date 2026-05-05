@@ -42,23 +42,52 @@ export interface InfographicTransform {
   htmlComponentId: string;
   /** Component id used by genSCORMhtml for interactive output. */
   scormComponentId: string;
+  /** V3: alternate static components the LD can swap to without
+   *  re-running the agent. UI surfaces these in a "Switch template"
+   *  dropdown on the InfographicStudio result page. */
+  htmlAlternates: string[];
+  /** V3: alternate interactive components. */
+  scormAlternates: string[];
   /** Shared data payload — same for both static and interactive. */
   data: ComponentData;
 }
 
-const STYLE_TO_HTML: Record<InfographicStyle, string> = {
+/**
+ * V3: each style now exposes a PRIMARY component plus alternates so
+ * the LD can switch on the result page without re-running the agent.
+ * Brings in much more of the NovoEd toolkit (20 HTML + 12 SCORM)
+ * than the original v2 mapping (which used only 9 of each).
+ *
+ * The PRIMARY is the default render. ALTERNATES are valid swaps the
+ * LD can pick from a "Switch template" dropdown — e.g. a numbered_list
+ * infographic can render as `numbered` (default), `keypoints`
+ * (highlighted summary box), `checklist`, or `faq` if Q&A-shaped.
+ */
+const STYLE_TO_HTML_PRIMARY: Record<InfographicStyle, string> = {
   process:        "process",
   numbered_list:  "numbered",
   timeline:       "timeline",
-  cycle:          "iconrow",       // no exact static match
-  pyramid:        "numbered",      // no exact static match
+  cycle:          "iconrow",
+  pyramid:        "numbered",
   comparison:     "compare",
-  quadrant:       "cards",         // no exact static match
+  quadrant:       "cards",
   five_forces:    "iconrow",
   stat_spotlight: "stats",
 };
 
-const STYLE_TO_SCORM: Record<InfographicStyle, string> = {
+const STYLE_TO_HTML_ALTERNATES: Record<InfographicStyle, string[]> = {
+  process:        ["process", "numbered", "checklist", "timeline"],
+  numbered_list:  ["numbered", "keypoints", "checklist", "faq", "iconrow"],
+  timeline:       ["timeline", "process", "numbered"],
+  cycle:          ["iconrow", "process", "numbered", "cards"],
+  pyramid:        ["numbered", "keypoints", "stats"],
+  comparison:     ["compare", "table", "cards", "columns"],
+  quadrant:       ["cards", "compare", "iconrow"],
+  five_forces:    ["iconrow", "cards", "numbered"],
+  stat_spotlight: ["stats", "twostat", "keypoints"],
+};
+
+const STYLE_TO_SCORM_PRIMARY: Record<InfographicStyle, string> = {
   process:        "s_stepper",
   numbered_list:  "s_accordion",
   timeline:       "s_timeline_i",
@@ -67,8 +96,24 @@ const STYLE_TO_SCORM: Record<InfographicStyle, string> = {
   comparison:     "s_tabs",
   quadrant:       "s_flipcard",
   five_forces:    "s_reveal",
-  stat_spotlight: "s_flipcard",   // no exact match — flipcard reads each stat
+  stat_spotlight: "s_flipcard",
 };
+
+const STYLE_TO_SCORM_ALTERNATES: Record<InfographicStyle, string[]> = {
+  process:        ["s_stepper", "s_timeline_i", "s_accordion"],
+  numbered_list:  ["s_accordion", "s_reveal", "s_flipcard", "s_stacked"],
+  timeline:       ["s_timeline_i", "s_stepper", "s_cycle"],
+  cycle:          ["s_cycle", "s_stepper", "s_reveal"],
+  pyramid:        ["s_stacked", "s_accordion", "s_reveal"],
+  comparison:     ["s_tabs", "s_flipcard", "s_match"],
+  quadrant:       ["s_flipcard", "s_tabs", "s_reveal"],
+  five_forces:    ["s_reveal", "s_flipcard", "s_cycle"],
+  stat_spotlight: ["s_flipcard", "s_reveal", "s_stepper"],
+};
+
+// Backwards-compat exports (old code paths read STYLE_TO_HTML directly).
+export const STYLE_TO_HTML = STYLE_TO_HTML_PRIMARY;
+export const STYLE_TO_SCORM = STYLE_TO_SCORM_PRIMARY;
 
 /**
  * Transform an Infographic record into the component library's data
@@ -114,8 +159,10 @@ export function infographicToComponent(args: {
   // Pick the right id per format. Default fallbacks if style is
   // somehow unknown (shouldn't happen — InfographicStyle is a sealed
   // union).
-  const htmlComponentId = STYLE_TO_HTML[style] || "numbered";
-  const scormComponentId = STYLE_TO_SCORM[style] || "s_accordion";
+  const htmlComponentId = STYLE_TO_HTML_PRIMARY[style] || "numbered";
+  const scormComponentId = STYLE_TO_SCORM_PRIMARY[style] || "s_accordion";
+  const htmlAlternates = STYLE_TO_HTML_ALTERNATES[style] || [htmlComponentId];
+  const scormAlternates = STYLE_TO_SCORM_ALTERNATES[style] || [scormComponentId];
 
   // Special-case stat_spotlight for static — the `stats` component
   // expects items with `desc` containing the big number. If the
@@ -129,5 +176,5 @@ export function infographicToComponent(args: {
     items,
   };
 
-  return { htmlComponentId, scormComponentId, data };
+  return { htmlComponentId, scormComponentId, htmlAlternates, scormAlternates, data };
 }

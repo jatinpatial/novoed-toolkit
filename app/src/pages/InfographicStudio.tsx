@@ -24,6 +24,7 @@ import {
 import { InfographicRenderer } from "../infographic/InfographicRenderer";
 import { searchImagesCached } from "../lib/images";
 import { Skeleton } from "../components/Skeleton";
+import { InfographicTranslateButton } from "../components/InfographicTranslateButton";
 // Track-SS (Deckster v2 → v3 fix): exports honor the NovoEd toolkit
 // split — HTML must be STATIC (Froala embed only; NovoEd's native
 // HTML embed doesn't support interactive HTML), SCORM is the
@@ -572,6 +573,11 @@ export default function InfographicStudio() {
                 >
                   {hideTitle ? "Show title" : "Hide title"}
                 </button>
+                {/* V3 multilingual: translate this infographic into any
+                    of 7 languages incl. Arabic (RTL). Clones to a new
+                    infographic id, navigates, agent translates via
+                    write_infographic. Original stays untouched. */}
+                <InfographicTranslateButton infographic={infographic} />
                 {/* BB1: edit-mode toggle. Off → text reads as final
                     rendered output; on → click-to-edit affordance
                     on every text element. Visual cue: when active,
@@ -649,7 +655,9 @@ export default function InfographicStudio() {
             )}
             <div
               ref={renderRef}
-              className={`infographic-render-host${darkMode ? " ig-dark" : ""}${hideTitle ? " ig-hide-title" : ""}`}
+              className={`infographic-render-host${darkMode ? " ig-dark" : ""}${hideTitle ? " ig-hide-title" : ""}${infographic.rtl ? " ig-rtl" : ""}`}
+              dir={infographic.rtl ? "rtl" : "ltr"}
+              lang={infographic.languageCode}
             >
               <InfographicRenderer
                 title={infographic.title}

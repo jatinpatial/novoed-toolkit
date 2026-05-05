@@ -85,6 +85,17 @@ export interface Infographic {
    *  color string. Empty / missing entries fall back to the brand
    *  cascade defaults. */
   styleOverrides?: Record<string, string>;
+  /** Track-V3 (multilingual extends to infographics): ISO language
+   *  code of the infographic's content. Set when an LD translates
+   *  via the Translate button. Undefined for original (English)
+   *  infographics. Used by the renderer for dir="rtl" + locale
+   *  hints; can drive lang attribute on the rendered DOM later. */
+  languageCode?: string;
+  /** Track-V3: right-to-left flag. True for Arabic / Hebrew / etc.
+   *  Renderer applies dir="rtl" to the .ig-frame and the CSS handles
+   *  the layout flips (margins, list bullets, accent positions).
+   *  Defaults to false / undefined (LTR). */
+  rtl?: boolean;
   createdAt: number;
   updatedAt: number;
 }

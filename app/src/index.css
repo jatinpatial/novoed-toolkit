@@ -2286,6 +2286,37 @@
   .infographic-render-host.ig-hide-title .ig-frame {
     padding-top: 24px;
   }
+
+  /* v3: RTL variant — Arabic / Hebrew / Persian. The renderer DOM
+     gets dir="rtl" attribute (browser handles bulk text flow), but
+     specific layout asymmetries need explicit overrides:
+       - process / timeline arrows reverse direction
+       - list bullets sit on the right
+       - accent strips on headers move to the right edge
+       - icon margins flip from margin-right to margin-left */
+  .infographic-render-host.ig-rtl {
+    text-align: right;
+  }
+  .infographic-render-host.ig-rtl .ig-header {
+    border-bottom: 2px solid theme("colors.brand.500");
+  }
+  .infographic-render-host.ig-rtl .ig-icon {
+    margin-right: 0;
+    margin-left: 12px;
+  }
+  .infographic-render-host.ig-rtl .ig-process-arrow {
+    transform: scaleX(-1);
+  }
+  .infographic-render-host.ig-rtl .ig-numbered-list-num {
+    margin-right: 0;
+    margin-left: 18px;
+  }
+  /* Accent strips that pseudo-elements anchor to one edge — flip to
+     the other edge when RTL. */
+  .infographic-render-host.ig-rtl .ig-header::after {
+    left: auto;
+    right: 0;
+  }
   /* OO5a: BCG-grade sophistication pass — deeper shadows, tighter
      typography, gradient brand-color combinations, generous breathing
      room. Each layout reads as a real BCG slide rather than a generic
