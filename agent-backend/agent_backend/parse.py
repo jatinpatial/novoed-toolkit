@@ -38,6 +38,14 @@ def _parse_pdf(data: bytes) -> str:
 
 
 def _parse_pptx(data: bytes) -> str:
+    """Backwards-compatible flat-text PPTX parse.
+
+    Kept for callers that just want the joined text (e.g. simple
+    grounding into a generic Anthropic prompt). For richer structured
+    parses, use _parse_pptx_structured() below — it returns slide-level
+    metadata so the agent can map module / lesson boundaries to slide
+    ranges and cite slides in source attribution.
+    """
     try:
         from pptx import Presentation
     except ImportError as exc:
@@ -61,6 +69,98 @@ def _parse_pptx(data: bytes) -> str:
         return "\n\n".join(slides_out).strip()
     except Exception as exc:
         raise ParseError(f"could not read PPTX: {exc}") from exc
+
+
+# ─── Track-SD (Source-Deck deepen): structured PPTX parse ─────────────────
+#
+# The flat-text parse above gives the agent one big concatenated string —
+# fine for short decks, but for 30+ slide decks the agent loses track of:
+#   1. WHICH slide a piece of content came from (no citation possible)
+#   2. WHERE natural module breaks fall (section dividers get blended in)
+#   3. WHICH slides became which lesson (no slide-range attribution)
+#
+# Structured parse returns:
+#   {
+#     slides: [{ n, title, body, notes, isSection }, ...],
+#     totalSlides: int,
+#     sectionCount: int,
+#   }
+#
+# The agent's MODE 1 (Course Architect) receives this alongside the flat
+# text and uses it to detect natural module boundaries (section slides),
+# cite slide ranges per lesson, and propose a clean slide → module map
+# the LD can verify before generation.
+
+def _parse_pptx_structured(data: bytes) -> dict:
+    """Return structured slide-level metadata for a PPTX.
+
+    Each slide entry has:
+      n         1-indexed slide number
+      title     first non-empty text frame (heuristic: top of slide,
+                largest font usually). Empty if no text frames.
+      body      remaining text frames concatenated, newline-separated
+      notes     speaker notes text (empty if none)
+      isSection True if this slide looks like a section divider —
+                heuristic: short title (<= 8 words), no body, not
+                slide 1 (which is the deck title not a section).
+    """
+    try:
+        from pptx import Presentation
+    except ImportError as exc:
+        raise ParseError("python-pptx not installed") from exc
+    try:
+        prs = Presentation(io.BytesIO(data))
+        slides: list[dict] = []
+        for i, slide in enumerate(prs.slides, start=1):
+            text_frames: list[str] = []
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                # Concat all paragraphs in this text frame, preserving
+                # newlines so bullets stay readable.
+                lines: list[str] = []
+                for para in shape.text_frame.paragraphs:
+                    text = "".join(run.text for run in para.runs).strip()
+                    if text:
+                        lines.append(text)
+                if lines:
+                    text_frames.append("\n".join(lines))
+
+            title = text_frames[0] if text_frames else ""
+            body = "\n\n".join(text_frames[1:]) if len(text_frames) > 1 else ""
+
+            notes = ""
+            if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+
+            # Section heuristic: short title + no body + not slide 1.
+            # Title-only slides with brief headers are almost always
+            # section dividers in BCG-style decks.
+            title_word_count = len(title.split())
+            is_section = (
+                i > 1
+                and title != ""
+                and not body
+                and title_word_count > 0
+                and title_word_count <= 8
+            )
+
+            slides.append({
+                "n": i,
+                "title": title,
+                "body": body,
+                "notes": notes,
+                "isSection": is_section,
+            })
+
+        section_count = sum(1 for s in slides if s["isSection"])
+        return {
+            "slides": slides,
+            "totalSlides": len(slides),
+            "sectionCount": section_count,
+        }
+    except Exception as exc:
+        raise ParseError(f"could not parse PPTX structure: {exc}") from exc
 
 
 def _parse_docx(data: bytes) -> str:

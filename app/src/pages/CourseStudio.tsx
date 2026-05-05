@@ -27,6 +27,7 @@ import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } f
 import { AgentChat, AgentInflightIndicator } from "../agent/AgentChat";
 import { CourseOutlineProposalCard } from "../agent/CourseOutlineProposal";
 import { LessonBanner } from "../components/LessonBanner";
+import { TranslateButton } from "../components/TranslateButton";
 import { BuildCompletionConfetti, BuildProgressBand, CaseStudyTile, LessonTile, ModuleKcTile } from "../agent/LessonTile";
 import { MaterialsShelf } from "../agent/MaterialsShelf";
 import type { CourseOutlineProposal } from "../agent/types";
@@ -1249,6 +1250,14 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onThemeCha
         />
 
         <button onClick={onPreview} className="btn-secondary btn-sm" disabled={!lesson}><Eye size={14} /> Preview</button>
+
+        {/* Track-ML (Multilingual): one-click translation to any of 6
+            languages. Clones the project, opens the chat with a
+            structured translation prompt, and the agent iterates
+            through every block. The original course stays untouched. */}
+        {projectId && (
+          <TranslateButton projectId={projectId} courseTitle={course.title || "Untitled course"} />
+        )}
 
         <div className="relative" ref={menuRef}>
           <button onClick={() => setMenuOpen((v) => !v)} className="btn-primary btn-sm"><Download size={14} /> Export</button>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, Download, Pencil, Check } from "lucide-react";
+import { ArrowLeft, BarChart3, Code, Copy, Download, Pencil, Check, Sparkles } from "lucide-react";
 import html2canvas from "html2canvas";
 // Track-X3: dom-to-image-more handles gradient text-fill (used in
 // stat_spotlight headlines), inline SVG via dangerouslySetInnerHTML
@@ -23,6 +23,15 @@ import {
 } from "../store/infographics";
 import { InfographicRenderer } from "../infographic/InfographicRenderer";
 import { searchImagesCached } from "../lib/images";
+// Track-SS (Deckster v2): interactive output exports. The infographic's
+// style + points map to one of the existing NovoEd toolkit components
+// (20 static HTML + 12 interactive SCORM). genHTML produces a Froala-
+// embeddable HTML string; genSCORMhtml produces a standalone runnable
+// HTML page with embedded animations + click handlers.
+import { genHTML } from "../generators/html/genHTML";
+import { genSCORMhtml } from "../generators/scorm/genSCORM";
+import { infographicToComponent } from "../lib/infographicToComponent";
+import { useActiveBrand } from "../shell/TopBar";
 
 /**
  * Track-G / G3: Infographic Studio result view.
@@ -57,6 +66,14 @@ export default function InfographicStudio() {
   const [triedLoad, setTriedLoad] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // Track-SS (Deckster v2): copy-to-clipboard feedback for the HTML
+  // embed export. Flips back after 2s. Don't conflate with the PNG
+  // download spinner — these are separate flows.
+  const [htmlCopied, setHtmlCopied] = useState(false);
+  // Active brand reads from the same global as the rest of the app
+  // (TopBar pill + cover band cascade). genHTML / genSCORMhtml
+  // expect a BrandKey to apply the right gradient + colors.
+  const [brand] = useActiveBrand();
   // BB1: edit-mode toggle. Off by default so the renderer is read-
   // only on first view and PNG export sees no edit chrome. LDs flip
   // it on to revise heading / body / title text in place.
@@ -346,6 +363,87 @@ export default function InfographicStudio() {
     }
   }
 
+  /**
+   * Track-SS (Deckster v2): export the infographic as a static HTML
+   * embed string suitable for paste-into-NovoEd's Froala editor. Maps
+   * the current style + points to one of the 20 components from the
+   * existing component library (e.g. five_forces → iconrow,
+   * comparison → compare).
+   *
+   * Result is copied to the clipboard, NOT downloaded — the LD's
+   * intended workflow is "click button → switch to NovoEd → paste".
+   *
+   * Falls back gracefully if clipboard API is unavailable (Firefox
+   * private mode, old browsers) by selecting the text in a hidden
+   * textarea — same pattern the rest of the app uses for share-link.
+   */
+  async function copyHtmlEmbed() {
+    if (!infographic || infographic.points.length === 0) return;
+    try {
+      const transform = infographicToComponent({
+        title: infographic.title || infographic.topic,
+        subtitle: infographic.subtitle || "",
+        style: infographic.style,
+        points: infographic.points,
+      });
+      const html = genHTML(transform.htmlComponentId, brand, transform.data);
+      await navigator.clipboard.writeText(html);
+      setHtmlCopied(true);
+      window.setTimeout(() => setHtmlCopied(false), 2000);
+    } catch (err) {
+      setDownloadError(
+        `Couldn't copy HTML: ${(err as Error).message || "Clipboard unavailable"}`,
+      );
+    }
+  }
+
+  /**
+   * Track-SS (Deckster v2): export the infographic as a standalone
+   * interactive HTML file. Maps the current style + points to one of
+   * the 12 SCORM components (five_forces → s_reveal, comparison →
+   * s_tabs, quadrant → s_flipcard, etc.) and downloads the resulting
+   * fully-self-contained HTML.
+   *
+   * The output IS the SCORM-compatible activity HTML. Wrapping it in
+   * a SCORM zip with imsmanifest.xml is a separate step (Track-SS3,
+   * not in this MVP). For now the LD can:
+   *   - Open the .html locally to preview the interaction
+   *   - Embed via iframe in NovoEd
+   *   - Hand to a SCORM packager downstream
+   */
+  function downloadInteractiveHtml() {
+    if (!infographic || infographic.points.length === 0) return;
+    try {
+      const transform = infographicToComponent({
+        title: infographic.title || infographic.topic,
+        subtitle: infographic.subtitle || "",
+        style: infographic.style,
+        points: infographic.points,
+      });
+      const html = genSCORMhtml(transform.scormComponentId, transform.data, brand);
+      const stem = (infographic.title || infographic.topic || "infographic")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "infographic";
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${stem}-interactive.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Defer revoke a tick so the download actually starts (some
+      // browsers race the revoke and abort the download).
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (err) {
+      setDownloadError(
+        `Couldn't generate interactive HTML: ${(err as Error).message || "Unknown error"}`,
+      );
+    }
+  }
+
   if (!infographic && triedLoad) {
     return (
       <AppShell>
@@ -476,6 +574,37 @@ export default function InfographicStudio() {
                   className="btn-secondary btn-sm"
                 >
                   <Download size={14} /> {downloading ? "Rendering…" : "Download PNG"}
+                </button>
+                {/* Track-SS (Deckster v2): static HTML embed for NovoEd
+                    Froala paste. Copies to clipboard rather than
+                    downloading — the LD's flow is button → switch tab →
+                    paste. */}
+                <button
+                  onClick={copyHtmlEmbed}
+                  disabled={!infographic.points.length}
+                  className="btn-secondary btn-sm"
+                  title="Copy a NovoEd-paste-ready HTML embed"
+                >
+                  {htmlCopied ? (
+                    <>
+                      <Check size={14} /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Code size={14} /> Copy HTML
+                    </>
+                  )}
+                </button>
+                {/* Track-SS (Deckster v2): standalone interactive HTML
+                    using the SCORM component library. Click-to-flip /
+                    expand / reveal mapped from the layout style. */}
+                <button
+                  onClick={downloadInteractiveHtml}
+                  disabled={!infographic.points.length}
+                  className="btn-cta-primary btn-sm"
+                  title="Download a standalone interactive HTML page"
+                >
+                  <Sparkles size={14} /> Interactive HTML
                 </button>
               </div>
             </div>

@@ -47,11 +47,14 @@ export function SuiteTiles() {
         </span>
         <div className="suite-hero-grain" aria-hidden="true" />
         <div className="suite-hero-shimmer" aria-hidden="true" />
-        {/* QQ1: glowing-loader Lottie sits behind the icon as ambient
-            visual energy on the hero card. Pointer-events disabled so
-            the entire tile click target stays intact. */}
+        {/* QQ1 v4: hand-crafted neural-pulse replaces the off-brand teal
+            glow-loading. Constellation of BCG-green nodes + teal connections
+            breathing at 60fps — "AI ready to think" energy on the Course
+            hero. The 600x600 aspect fits the 280x280 wrapper cleanly.
+            Pointer-events disabled so the entire tile click target stays
+            intact. */}
         <div className="suite-hero-lottie" aria-hidden="true">
-          <LottiePlayer src="glow-loading" className="suite-hero-lottie-fill" />
+          <LottiePlayer src="neural-pulse" className="suite-hero-lottie-fill" />
         </div>
         <div className="suite-hero-icon">
           <BookOpen size={28} strokeWidth={2} />
@@ -92,12 +95,18 @@ export function SuiteTiles() {
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>
         </Link>
-        <Link to="/infographics/new" className="suite-tile suite-tile-compact">
+        {/* Track-SS (Deckster-style): Infographic tile points to the
+            new Quick Prompt page (was /infographics/new — the detailed
+            brief). Detailed brief still reachable via "Use the detailed
+            brief →" link on the prompt page for LDs who want surgical
+            control. The new prompt-first surface is the demo-friendly
+            hero — "type a sentence, get an infographic." */}
+        <Link to="/infographics/prompt" className="suite-tile suite-tile-compact">
           <div className="suite-tile-icon">
             <BarChart3 size={20} strokeWidth={2} />
           </div>
           <div className="suite-tile-title">Infographic Studio</div>
-          <p className="suite-tile-desc">Visual summary from source</p>
+          <p className="suite-tile-desc">Type a sentence, get a visual</p>
           <span className="suite-tile-cta">
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>

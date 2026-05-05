@@ -139,8 +139,16 @@ export function CommandPalette({ onShowWelcome, onShowHelp }: CommandPaletteProp
       run: () => navigate("/kcs/new"),
     });
     out.push({
+      id: "new-infographic-prompt",
+      label: "Create infographic from a prompt",
+      group: "Create",
+      icon: BarChart3,
+      hint: "Type a sentence",
+      run: () => navigate("/infographics/prompt"),
+    });
+    out.push({
       id: "new-infographic",
-      label: "Create new infographic",
+      label: "Create infographic (detailed brief)",
       group: "Create",
       icon: BarChart3,
       run: () => navigate("/infographics/new"),

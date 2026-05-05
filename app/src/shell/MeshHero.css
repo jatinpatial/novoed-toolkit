@@ -275,32 +275,31 @@
   width: 100%;
   height: 100%;
 }
-/* Top-right brain — primary visual anchor */
+/* QQ1 v4 — opacities bumped from v3's 0.25-0.35 to 0.55-0.65. Old
+   values were tuned for ambient invisibility; the new hand-crafted
+   neural-pulse + shimmer-loading are designed to be SEEN. Three
+   corners collapsed to two — TR + BL diagonal feels more designed
+   than three (the third corner gears was off-brand industrial). */
+
+/* Top-right neural-pulse — primary visual anchor (square aspect) */
 .mesh-lottie-tr {
   top: 5%;
   right: 4%;
-  width: 200px;
-  height: 200px;
-  opacity: 0.35;
+  width: 220px;
+  height: 220px;
+  opacity: 0.65;
   animation: mesh-lottie-float-1 12s ease-in-out infinite;
 }
-/* Bottom-left glow-loading — counter-balance */
+/* Bottom-left shimmer-loading — counter-balance. Wide aspect (240x48)
+   matches the JSON's 400x80 source so the gradient sweep reads
+   correctly without distortion. */
 .mesh-lottie-bl {
-  bottom: 8%;
-  left: 3%;
-  width: 160px;
-  height: 160px;
-  opacity: 0.28;
+  bottom: 12%;
+  left: 5%;
+  width: 240px;
+  height: 48px;
+  opacity: 0.55;
   animation: mesh-lottie-float-2 14s ease-in-out infinite;
-}
-/* Bottom-right gears — accent */
-.mesh-lottie-br {
-  bottom: 10%;
-  right: 18%;
-  width: 110px;
-  height: 110px;
-  opacity: 0.25;
-  animation: mesh-lottie-float-3 10s ease-in-out infinite;
 }
 @keyframes mesh-lottie-float-1 {
   0%, 100% { transform: translateY(0) translateX(0); }
@@ -309,10 +308,6 @@
 @keyframes mesh-lottie-float-2 {
   0%, 100% { transform: translateY(0) translateX(0); }
   50% { transform: translateY(14px) translateX(-8px); }
-}
-@keyframes mesh-lottie-float-3 {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(15deg); }
 }
 
 /* ─── Content slot ────────────────────────────────────────────────────────── */

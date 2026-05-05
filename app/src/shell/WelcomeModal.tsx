@@ -234,12 +234,14 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         <div className="welcome-lottie-particles">
           <LottiePlayer src="splash-particles" className="welcome-lottie-fill" />
         </div>
-        {/* QQ1 v2: Big glowing brain in the splash center, only on the
-            splash stage (auto-hides via CSS as we transition). Properly
-            visible difference vs the static welcome bg. */}
+        {/* QQ1 v4: hand-crafted neural-pulse mesh in the splash center.
+            Replaces the dud brain.json (rendered as a small black blob).
+            neural-pulse is a constellation of BCG-green nodes + teal
+            connections that breathe at 60fps — Apple-Intelligence-style
+            "AI thinking" without literal-brain iconography. */}
         {stage === "splash" && (
           <div className="welcome-lottie-brain">
-            <LottiePlayer src="brain" className="welcome-lottie-brain-fill" />
+            <LottiePlayer src="neural-pulse" className="welcome-lottie-brain-fill" />
           </div>
         )}
       </div>

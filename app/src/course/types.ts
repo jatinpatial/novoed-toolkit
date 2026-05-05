@@ -137,12 +137,44 @@ export interface Module {
   caseStudyId?: string;
 }
 
+/**
+ * Track-SD (Source-Deck deepen): structured slide metadata.
+ *
+ * For PPTX uploads only. The backend's /parse endpoint returns this
+ * alongside the flat text so downstream prompts can:
+ *   - cite slide ranges per generated lesson ("drafted from slides 4-6")
+ *   - detect natural module boundaries from `isSection` slides
+ *   - chunk large decks (30+ slides) into LLM-context-friendly pieces
+ *
+ * PDFs / DOCX / TXT have no analog (no slide concept) — `structured`
+ * stays undefined for those. Old materials uploaded before this
+ * landed also have no `structured` field; the agent falls back to
+ * the flat text in those cases.
+ */
+export interface SlideMeta {
+  /** 1-indexed slide number. */
+  n: number;
+  title: string;
+  body: string;
+  notes: string;
+  /** Heuristic — short title + no body + not slide 1 → section divider. */
+  isSection: boolean;
+}
+
+export interface MaterialStructured {
+  slides: SlideMeta[];
+  totalSlides: number;
+  sectionCount: number;
+}
+
 export interface Material {
   id: string;
   filename: string;
   text: string;
   charCount: number;
   addedAt: number;
+  /** Track-SD: PPTX-only structured slide metadata. */
+  structured?: MaterialStructured;
 }
 
 /**

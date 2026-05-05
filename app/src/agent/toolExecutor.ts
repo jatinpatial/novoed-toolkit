@@ -177,7 +177,34 @@ export async function dispatchToolCall(
       const text = materials
         .map((m) => `=== ${m.filename} ===\n${m.text}`)
         .join("\n\n");
-      return { ok: true, count: materials.length, charCount: text.length, text };
+
+      // Track-SD (Source-Deck deepen): for PPTX materials with
+      // structured slide metadata, surface the slide list to the
+      // agent. The agent's MODE 1 (Course Architect) prompt instructs
+      // it to use these for module boundary detection + slide-range
+      // citation per generated lesson. Agents that don't need them
+      // (e.g. MODE 6 Infographic Builder) will simply ignore the
+      // field. Decks that were uploaded BEFORE this field existed
+      // have undefined `structured` and fall through to flat text.
+      const structuredMaterials = materials
+        .filter((m) => m.structured && m.structured.slides.length > 0)
+        .map((m) => ({
+          filename: m.filename,
+          totalSlides: m.structured!.totalSlides,
+          sectionCount: m.structured!.sectionCount,
+          slides: m.structured!.slides,
+        }));
+
+      const response: Record<string, unknown> = {
+        ok: true,
+        count: materials.length,
+        charCount: text.length,
+        text,
+      };
+      if (structuredMaterials.length > 0) {
+        response.structured = structuredMaterials;
+      }
+      return response;
     }
     case "list_structure": {
       const course = actions.getCourse();

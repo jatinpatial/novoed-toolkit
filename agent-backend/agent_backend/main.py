@@ -51,12 +51,25 @@ async def parse_endpoint(file: UploadFile):
         text = parse_file(filename, data)
     except ParseError as exc:
         raise HTTPException(status_code=415, detail=str(exc))
-    return {
+    response: dict = {
         "filename": filename,
         "text": text,
         "charCount": len(text),
         "supported": SUPPORTED_EXTENSIONS,
     }
+    # Track-SD (Source-Deck deepen): for PPTX, ALSO return the
+    # structured slide-level metadata so downstream prompts can cite
+    # slide ranges + detect natural module breaks. Failure here doesn't
+    # block the upload — flat text still flows. PDFs / DOCX don't have
+    # an analog (no "slide" concept), so this field is PPTX-only.
+    if filename.lower().endswith(".pptx"):
+        try:
+            from .parse import _parse_pptx_structured
+            response["structured"] = _parse_pptx_structured(data)
+        except ParseError as exc:
+            log.warning("structured PPTX parse failed for %s: %s", filename, exc)
+            # Soft-fail: keep flat text response, just no structured field.
+    return response
 
 
 # Word-document exporters — script, case study, and (Phase 1 #6) the

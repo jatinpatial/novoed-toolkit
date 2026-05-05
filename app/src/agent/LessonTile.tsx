@@ -271,11 +271,13 @@ export function BuildProgressBand() {
 
   return (
     <div className="build-progress-band" role="status" aria-live="polite">
-      {/* QQ1: Lottie brain animation as the "AI thinking" anchor. Sits
-          on the left of the band; falls back silently to nothing if
-          the JSON is missing (band still renders + works). */}
+      {/* QQ1 (v4): hand-crafted neural-pulse Lottie as the "AI thinking"
+          anchor. Replaces the dud brain.json (2fps + pure black, rendered
+          as an invisible blob). neural-pulse is BCG green + teal, breathes
+          at 60fps. Falls back silently to nothing if JSON missing — band
+          still renders + works. */}
       <div className="build-progress-band-lottie">
-        <LottiePlayer src="brain" className="build-progress-band-lottie-fill" />
+        <LottiePlayer src="neural-pulse" className="build-progress-band-lottie-fill" />
       </div>
       <div className="build-progress-band-content">
         <div className="build-progress-band-track">

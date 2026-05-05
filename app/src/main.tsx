@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import InfographicStudio from "./pages/InfographicStudio";
 import CreateInfographicPage from "./pages/CreateInfographicPage";
+import CreateInfographicPromptPage from "./pages/CreateInfographicPromptPage";
 import ComponentCatalogLegacy from "./pages/ComponentCatalogLegacy";
 import CourseStudio from "./pages/CourseStudio";
 import CreateCoursePage from "./pages/CreateCoursePage";
@@ -34,6 +35,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         {/* Track-G: Infographic Studio (4th in the suite). Brief form
             + result viewer wrapped in <AgentProvider> — both use
             useAgent for the build round-trip. */}
+        {/* Track-SS (Deckster-style): Quick Prompt Infographic. The
+            hero entry — type a sentence, AI picks layout + content.
+            Detailed brief stays available at /infographics/new for
+            LDs who want surgical control. */}
+        <Route path="/infographics/prompt" element={<AgentProvider><CreateInfographicPromptPage /></AgentProvider>} />
         <Route path="/infographics/new" element={<AgentProvider><CreateInfographicPage /></AgentProvider>} />
         <Route path="/infographics/:id" element={<AgentProvider><InfographicStudio /></AgentProvider>} />
         {/* Legacy components-catalog editor — kept under /infographics

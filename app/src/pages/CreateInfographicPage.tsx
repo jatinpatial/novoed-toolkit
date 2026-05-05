@@ -223,7 +223,15 @@ export default function CreateInfographicPage() {
               <h2 className="section-title">Build an infographic.</h2>
               <p className="section-sub">
                 Drop a deck or doc, name a topic, pick a layout. Studio Copilot
-                composes a structured visual you can download as a PNG.
+                composes a structured visual you can download as a PNG.{" "}
+                {/* Track-SS: link to the Deckster-style quick-prompt mode
+                    for LDs who'd rather just describe what they want. */}
+                <Link
+                  to="/infographics/prompt"
+                  className="text-brand-700 font-semibold hover:underline"
+                >
+                  Or describe in plain words →
+                </Link>
               </p>
             </div>
           </header>

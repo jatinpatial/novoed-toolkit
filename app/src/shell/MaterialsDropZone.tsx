@@ -58,6 +58,13 @@ export function MaterialsDropZone({
         filename: string;
         text: string;
         charCount: number;
+        // Track-SD: backend includes structured slide metadata for
+        // PPTX uploads. Undefined for other formats.
+        structured?: {
+          slides: { n: number; title: string; body: string; notes: string; isSection: boolean }[];
+          totalSlides: number;
+          sectionCount: number;
+        };
       };
       attachPendingMaterial({
         id: crypto.randomUUID(),
@@ -65,6 +72,7 @@ export function MaterialsDropZone({
         text: data.text,
         charCount: data.charCount,
         addedAt: Date.now(),
+        structured: data.structured,
       });
     } catch (e) {
       setUploadError((e as Error).message);

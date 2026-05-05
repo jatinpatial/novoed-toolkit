@@ -121,20 +121,21 @@ export function MeshHero({ children }: MeshHeroProps) {
         <div className="deco-shape s6" />
       </div>
 
-      {/* QQ1 v3: ambient Lottie layer — three animations positioned at
-          corners for visible motion across the hero. Each has its own
-          float animation so they drift independently of each other.
+      {/* QQ1 v4: ambient Lottie layer — TWO animations on a diagonal
+          (TR + BL) instead of three corners. The previous v3 used brain
+          (dud, 2fps black blob), glow-loading (off-brand teal), and gears
+          (off-brand industrial). Now uses hand-crafted neural-pulse +
+          shimmer-loading, both on-brand BCG green. The third corner was
+          dropped — the hero already has constellation + blobs + deco
+          shapes, so two corner accents read more designed than three.
           aria-hidden because they're decorative; pointer-events none
           so the entire hero stays interactive. */}
       <div className="mesh-lottie-layer" aria-hidden="true">
         <div className="mesh-lottie mesh-lottie-tr">
-          <LottiePlayer src="brain" className="mesh-lottie-fill" />
+          <LottiePlayer src="neural-pulse" className="mesh-lottie-fill" />
         </div>
         <div className="mesh-lottie mesh-lottie-bl">
-          <LottiePlayer src="glow-loading" className="mesh-lottie-fill" />
-        </div>
-        <div className="mesh-lottie mesh-lottie-br">
-          <LottiePlayer src="gears" className="mesh-lottie-fill" />
+          <LottiePlayer src="shimmer-loading" className="mesh-lottie-fill" />
         </div>
       </div>
 
