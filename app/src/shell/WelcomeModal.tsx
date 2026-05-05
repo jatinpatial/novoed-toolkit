@@ -241,7 +241,7 @@ export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
             "AI thinking" without literal-brain iconography. */}
         {stage === "splash" && (
           <div className="welcome-lottie-brain">
-            <LottiePlayer src="neural-pulse" className="welcome-lottie-brain-fill" />
+            <LottiePlayer src="simple-orb" className="welcome-lottie-brain-fill" />
           </div>
         )}
       </div>

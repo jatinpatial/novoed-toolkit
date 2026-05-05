@@ -90,6 +90,13 @@ TargetStatus = Literal["idle", "building", "done", "error"]
 # call.
 LESSON_MAX_ATTEMPTS = 2
 LESSON_RETRY_BACKOFF_SECONDS = 5
+# Bug-fix B2: per-attempt hard timeout. Without this, an SDK hang or
+# Anthropic API stall could block a lesson mini-session indefinitely —
+# the FE would show "Retrying lesson 1…" stuck at 0/10 with no error
+# ever reaching the LD. 6 minutes is generous for a normal write_lesson
+# (typically 60-120s) but short enough that a hung session surfaces
+# within 6 min instead of forever.
+LESSON_ATTEMPT_TIMEOUT_SECONDS = 360
 
 
 @dataclass
@@ -638,7 +645,14 @@ class BuildOrchestrator:
         last_exc: Exception | None = None
         for attempt in range(1, LESSON_MAX_ATTEMPTS + 1):
             try:
-                result = await self._run_lesson_session(t)
+                # Bug-fix B2: hard timeout per attempt so a hung SDK call
+                # can't stall the build indefinitely. If we hit the
+                # timeout, raise a clear TimeoutError that the retry +
+                # paused-state path will surface to the LD.
+                result = await asyncio.wait_for(
+                    self._run_lesson_session(t),
+                    timeout=LESSON_ATTEMPT_TIMEOUT_SECONDS,
+                )
                 # polish-16b: defensive verify. Inside the retry loop
                 # so a verification failure triggers the retry path
                 # rather than going to paused state.

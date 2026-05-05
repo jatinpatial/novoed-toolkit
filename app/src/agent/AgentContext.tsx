@@ -322,9 +322,84 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Bug-fix B1 (course-proposal blank failure): augment the registered
+  // page-level actions with safe context-level fallbacks so optional
+  // handlers like setOutlineProposal never come back undefined to the
+  // tool executor. Pages that DO register their own override (e.g.
+  // CourseStudio) keep using their version; pages that don't (e.g.
+  // ScriptStudio, KcStudio, the bare /courses/new form) fall through
+  // to the default that stashes the proposal in localStorage and
+  // routes to /courses, where CourseStudioInner's mount effect picks
+  // it up.
+  const augmentedGetActions = useCallback((): AgentActions | null => {
+    const a = actionsRef.current;
+    // The default-setOutlineProposal handler — used when the current
+    // page didn't register one. Always navigates to /courses so the
+    // LD lands somewhere that can render the proposal.
+    const defaultSetOutlineProposal = (proposal: CourseOutlineProposal) => {
+      // Persist before nav so CourseStudio's mount effect can read it.
+      try {
+        localStorage.setItem(
+          "studio.pendingOutlineProposal",
+          JSON.stringify(proposal),
+        );
+      } catch {
+        // Private mode / quota — fall back to in-memory context state
+        // (loses the proposal on hard refresh, but works for SPA nav).
+      }
+      // Mirror to the current AgentProvider's state too — if we're
+      // already inside a CourseStudio AgentProvider, the page's
+      // outlineProposal slice updates immediately.
+      setOutlineProposal(proposal);
+      // SPA navigate to the no-project Course Studio view. We use
+      // history.pushState + popstate so react-router picks up the
+      // route change without a full reload (preserves the agent
+      // socket + chat context).
+      try {
+        const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+        const target = `${base}/courses`;
+        if (window.location.pathname !== target) {
+          window.history.pushState({}, "", target);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      } catch {
+        // window unavailable (SSR / test) — silent no-op.
+      }
+    };
+    if (!a) {
+      // No page registered actions — return a thin object containing
+      // ONLY the safe defaults. Other handlers throw clearly when the
+      // tool needs them. (write_lesson without a course will still
+      // throw, which is correct — no point auto-creating a course
+      // from thin air.)
+      return {
+        navigate: () => {},
+        setBrand: () => {},
+        getCourse: () => null,
+        addModule: () => { throw new Error("No course is open."); },
+        addLesson: () => { throw new Error("No course is open."); },
+        addBlock: () => { throw new Error("No course is open."); },
+        updateBlock: () => { throw new Error("No course is open."); },
+        deleteBlock: () => { throw new Error("No course is open."); },
+        reorder: () => {},
+        exportLesson: () => {},
+        writeLesson: () => { throw new Error("No course is open. Open a course before asking for a lesson to be written."); },
+        writeScript: () => { throw new Error("No course is open. Open a course and add a video block before asking for a script."); },
+        writeKnowledgeCheck: () => { throw new Error("No course is open. Open a course before asking for a knowledge check."); },
+        regenerateQuestion: () => { throw new Error("No course is open. Open a course before regenerating questions."); },
+        designCaseStudy: () => { throw new Error("No course is open. Open a course (Course Architect plants the case-study slots) before asking to design one."); },
+        setOutlineProposal: defaultSetOutlineProposal,
+      };
+    }
+    // Page registered actions — use them, but fill in setOutlineProposal
+    // when missing.
+    if (a.setOutlineProposal) return a;
+    return { ...a, setOutlineProposal: defaultSetOutlineProposal };
+  }, []);
+
   const { status, sendUserMessage, sendRaw } = useAgentSocket({
     url: WS_URL,
-    getActions: () => actionsRef.current,
+    getActions: augmentedGetActions,
     onAssistantText: (text) => {
       // B3-tune-a: previously cleared isThinking on the FIRST text
       // token. That left the loading indicator dark for 10-20s during

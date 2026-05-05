@@ -72,6 +72,25 @@ export function LessonBanner({
   // Re-runs if the query (lesson title) changes AND the lesson still
   // has no image — the LD's edits to the title shouldn't churn an
   // already-set banner.
+  // Bug-fix B6: previously bailed on `cancelled` AND kept the
+  // fetchedForRef set to the query — which meant a parent re-render
+  // mid-fetch (extremely common because CourseStudio passes a fresh
+  // onChange arrow every render) would cancel the in-flight request,
+  // and then the next effect pass would see the query already in the
+  // ref and skip refetching. Result: lessons rendered with the
+  // gradient placeholder until the LD manually clicked Regenerate.
+  //
+  // Two fixes layered:
+  //   1. onChangeRef keeps the latest onChange handler accessible
+  //      without making it an effect dep — so the effect doesn't
+  //      churn on every parent render.
+  //   2. On cancel, we clear fetchedForRef so a follow-up render
+  //      can retry. Combined with (1), the effect now re-runs only
+  //      when query OR imageUrl actually change, AND a cancelled
+  //      run doesn't poison the next attempt.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
   useEffect(() => {
     const trimmed = query?.trim();
     if (!trimmed || imageUrl) return;
@@ -81,15 +100,22 @@ export function LessonBanner({
     let cancelled = false;
     (async () => {
       const results = await searchImagesCached(trimmed, "banner");
-      if (cancelled || results.length === 0) return;
+      if (cancelled) return;
+      if (results.length === 0) return;
       setCached(results);
       const first = results[0];
-      onChange(first.url, first.photographer, first.photographerUrl);
+      onChangeRef.current(first.url, first.photographer, first.photographerUrl);
     })();
     return () => {
       cancelled = true;
+      // Allow the next effect pass to retry. Without this, a quick
+      // re-render during the in-flight fetch meant the lesson stayed
+      // stuck on the gradient until manual Regenerate.
+      if (fetchedForRef.current === trimmed) {
+        fetchedForRef.current = null;
+      }
     };
-  }, [query, imageUrl, onChange]);
+  }, [query, imageUrl]);
 
   // Reset the loaded/fade-in flag whenever the URL flips so a swap
   // re-triggers the cross-fade rather than snap-cutting.

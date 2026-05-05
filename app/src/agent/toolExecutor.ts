@@ -19,8 +19,18 @@ export async function dispatchToolCall(
     }
     case "propose_course_outline": {
       const proposal = parseProposal(args);
+      // Bug-fix B1: AgentContext's augmentedGetActions ALWAYS provides
+      // setOutlineProposal (either the page-registered one OR a
+      // localStorage-stash + navigate fallback), so this branch should
+      // be unreachable. Kept as a defensive log + soft-success rather
+      // than a throw — failing here used to leave the LD staring at a
+      // blank "this page can't accept proposals" error with no recovery.
       if (!actions.setOutlineProposal) {
-        throw new Error("This page can't accept course proposals — open Course Studio with no course selected to propose a new one.");
+        console.error("[agent] propose_course_outline: no setOutlineProposal registered — this should never happen with the AgentProvider augmentation. Check getActions wiring.");
+        return {
+          ok: false,
+          message: "Couldn't show the outline — agent state is in an unexpected shape. Refresh the page and re-paste the brief; the agent will retry cleanly.",
+        };
       }
       actions.setOutlineProposal(proposal);
       return {

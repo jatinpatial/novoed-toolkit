@@ -277,7 +277,7 @@ export function BuildProgressBand() {
           at 60fps. Falls back silently to nothing if JSON missing — band
           still renders + works. */}
       <div className="build-progress-band-lottie">
-        <LottiePlayer src="neural-pulse" className="build-progress-band-lottie-fill" />
+        <LottiePlayer src="simple-orb" className="build-progress-band-lottie-fill" />
       </div>
       <div className="build-progress-band-content">
         <div className="build-progress-band-track">

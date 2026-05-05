@@ -54,7 +54,7 @@ export function SuiteTiles() {
             Pointer-events disabled so the entire tile click target stays
             intact. */}
         <div className="suite-hero-lottie" aria-hidden="true">
-          <LottiePlayer src="neural-pulse" className="suite-hero-lottie-fill" />
+          <LottiePlayer src="simple-orb" className="suite-hero-lottie-fill" />
         </div>
         <div className="suite-hero-icon">
           <BookOpen size={28} strokeWidth={2} />

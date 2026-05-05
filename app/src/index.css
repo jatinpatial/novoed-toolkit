@@ -2221,59 +2221,158 @@
     overflow: hidden;
   }
 
-  /* v3: dark-mode variant of the rendered infographic. Inverts the
-     ig-frame background to a deep brand-tinted dark, flips text to
-     light, and dims the chrome so the BCG-green accents pop against
-     the dark backdrop. PNG capture honors this — the entire render
-     host snapshots in dark when the toggle is on.
+  /* v3 (bug-fix B7): dark-mode variant of the rendered infographic.
+     Previous version only targeted a handful of class names and missed
+     all the layout-specific containers (ig-numbered-row, ig-cycle-node,
+     ig-five-forces-grid, etc.) — so a numbered_list rendered in "dark
+     mode" still showed white cards with light-green body text on white
+     (illegible). This rebuild uses a CSS-variable approach plus an
+     all-elements-inherit text rule, so every text node becomes light
+     by default and every card-like container becomes a dark glassy
+     surface. PNG capture honors this. */
 
-     Strategy: scoped selectors to .ig-dark so we don't bleed onto
-     anything outside the host. CSS-vars-driven where possible so
-     the brand cascade still works. */
+  /* Strategy:
+     1. Set color: light on the .ig-frame so EVERY descendant inherits
+        unless they override.
+     2. Force all text-class overrides to !important so any nested
+        Tailwind / brand-cascade colors get overridden.
+     3. Promote "card-like" containers to a translucent fill so they
+        sit ON the dark backdrop rather than blocking it.
+     4. Brand-green accents (eyebrows, dividers, icons, large numbers)
+        get a brighter green-300 so they pop on the dark surface.    */
+
   .infographic-render-host.ig-dark {
-    background: #0a1f17;
+    background: #051712;
     border-color: rgba(255, 255, 255, 0.08);
   }
   .infographic-render-host.ig-dark .ig-frame {
-    background: linear-gradient(155deg, #0d2e22 0%, #051712 100%);
-    color: #e6f5ec;
+    background: linear-gradient(155deg, #0d2e22 0%, #051712 100%) !important;
+    color: #e6f5ec !important;
   }
+
+  /* Universal text override — anything inside .ig-dark renders light
+     unless explicitly green-accented below. Catches headings, body,
+     labels, numbers, quotes, captions, the lot. */
+  .infographic-render-host.ig-dark .ig-frame,
+  .infographic-render-host.ig-dark .ig-frame * {
+    color: #e6f5ec !important;
+  }
+
+  /* Specific text classes — the same light treatment, but kept as
+     explicit selectors so cascading order is unambiguous + we can
+     override the universal rule if a layout needs different shade. */
   .infographic-render-host.ig-dark h1,
   .infographic-render-host.ig-dark h2,
   .infographic-render-host.ig-dark h3,
   .infographic-render-host.ig-dark h4,
   .infographic-render-host.ig-dark p,
-  .infographic-render-host.ig-dark .ig-eyebrow,
+  .infographic-render-host.ig-dark span,
   .infographic-render-host.ig-dark .ig-title,
   .infographic-render-host.ig-dark .ig-subtitle,
   .infographic-render-host.ig-dark .ig-point-heading,
-  .infographic-render-host.ig-dark .ig-point-body {
+  .infographic-render-host.ig-dark .ig-point-body,
+  .infographic-render-host.ig-dark .ig-numbered-content,
+  .infographic-render-host.ig-dark .ig-process-content,
+  .infographic-render-host.ig-dark .ig-comparison-col,
+  .infographic-render-host.ig-dark .ig-comparison-header,
+  .infographic-render-host.ig-dark .ig-quadrant-cell,
+  .infographic-render-host.ig-dark .ig-quadrant-heading-row,
+  .infographic-render-host.ig-dark .ig-pyramid-level,
+  .infographic-render-host.ig-dark .ig-pyramid-level-body,
+  .infographic-render-host.ig-dark .ig-pyramid-level-heading,
+  .infographic-render-host.ig-dark .ig-pyramid-level-text,
+  .infographic-render-host.ig-dark .ig-cycle-node,
+  .infographic-render-host.ig-dark .ig-cycle-node-body,
+  .infographic-render-host.ig-dark .ig-cycle-node-heading,
+  .infographic-render-host.ig-dark .ig-stat-cell,
+  .infographic-render-host.ig-dark .ig-stat-body,
+  .infographic-render-host.ig-dark .ig-stat-headline,
+  .infographic-render-host.ig-dark .ig-five-forces-node-body,
+  .infographic-render-host.ig-dark .ig-five-forces-node-heading,
+  .infographic-render-host.ig-dark .ig-five-forces-center-title,
+  .infographic-render-host.ig-dark .ig-five-forces-center-subtitle,
+  .infographic-render-host.ig-dark .ig-timeline-content {
     color: #e6f5ec !important;
   }
-  .infographic-render-host.ig-dark .ig-eyebrow {
+
+  /* Brand-green accents — eyebrows, large numbers, decorative steps,
+     icons. Use the brighter green-300 (#73d98c) so they pop against
+     the dark backdrop. */
+  .infographic-render-host.ig-dark .ig-eyebrow,
+  .infographic-render-host.ig-dark .ig-numbered-large,
+  .infographic-render-host.ig-dark .ig-process-number,
+  .infographic-render-host.ig-dark .ig-pyramid-level-eyebrow,
+  .infographic-render-host.ig-dark .ig-cycle-node-step,
+  .infographic-render-host.ig-dark .ig-five-forces-center-eyebrow {
     color: #73d98c !important;
   }
+
+  /* "Card-like" containers — promote to a translucent dark glassy
+     surface so they sit ON the gradient backdrop instead of looking
+     like white blocks pasted on. */
   .infographic-render-host.ig-dark .ig-point-card,
-  .infographic-render-host.ig-dark .ig-point,
-  .infographic-render-host.ig-dark .ig-quad-cell,
-  .infographic-render-host.ig-dark .ig-pyramid-row,
+  .infographic-render-host.ig-dark .ig-numbered-row,
+  .infographic-render-host.ig-dark .ig-process-item,
+  .infographic-render-host.ig-dark .ig-comparison-col,
+  .infographic-render-host.ig-dark .ig-quadrant-cell,
+  .infographic-render-host.ig-dark .ig-pyramid-level,
+  .infographic-render-host.ig-dark .ig-pyramid-level-inner,
   .infographic-render-host.ig-dark .ig-cycle-node,
+  .infographic-render-host.ig-dark .ig-cycle-node-inner,
   .infographic-render-host.ig-dark .ig-stat-cell,
-  .infographic-render-host.ig-dark .ig-force-card {
-    background: rgba(255, 255, 255, 0.04) !important;
-    border-color: rgba(115, 217, 140, 0.20) !important;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.30) !important;
+  .infographic-render-host.ig-dark .ig-five-forces-node,
+  .infographic-render-host.ig-dark .ig-five-forces-grid > div,
+  .infographic-render-host.ig-dark .ig-timeline-item {
+    background: rgba(255, 255, 255, 0.05) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(115, 217, 140, 0.18) !important;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28) !important;
   }
+
+  /* Center node of the five forces gets a stronger brand-tinted fill
+     so it reads as the visual anchor. */
+  .infographic-render-host.ig-dark .ig-five-forces-center {
+    background: linear-gradient(135deg, #00a651 0%, #006b3f 100%) !important;
+    border-color: transparent !important;
+    box-shadow: 0 12px 32px rgba(0, 166, 81, 0.32) !important;
+  }
+
+  /* Icons, SVGs, decorative dots — bright green-300 stroke/fill. */
   .infographic-render-host.ig-dark .ig-icon,
+  .infographic-render-host.ig-dark .ig-cycle-node-icon,
+  .infographic-render-host.ig-dark .ig-five-forces-node-icon,
+  .infographic-render-host.ig-dark .ig-pyramid-level-icon,
+  .infographic-render-host.ig-dark .ig-stat-icon,
   .infographic-render-host.ig-dark svg {
     color: #73d98c !important;
+    fill: currentColor;
   }
+
+  /* Header underline + decorative rules — bright accent. */
   .infographic-render-host.ig-dark .ig-header {
-    border-bottom-color: #73d98c;
+    border-bottom-color: #73d98c !important;
   }
   .infographic-render-host.ig-dark .ig-divider,
+  .infographic-render-host.ig-dark .ig-stat-rule,
+  .infographic-render-host.ig-dark .ig-timeline-line,
   .infographic-render-host.ig-dark hr {
-    border-color: rgba(115, 217, 140, 0.25);
+    border-color: rgba(115, 217, 140, 0.30) !important;
+    background-color: rgba(115, 217, 140, 0.30) !important;
+  }
+
+  /* Cycle ring (the central loop visual) — light stroke against dark. */
+  .infographic-render-host.ig-dark .ig-cycle-ring {
+    border-color: rgba(115, 217, 140, 0.28) !important;
+  }
+  .infographic-render-host.ig-dark .ig-cycle-hub {
+    background: rgba(0, 166, 81, 0.22) !important;
+    border-color: rgba(115, 217, 140, 0.45) !important;
+  }
+
+  /* Timeline marker dots — solid green on dark. */
+  .infographic-render-host.ig-dark .ig-timeline-marker {
+    background: #73d98c !important;
+    box-shadow: 0 0 0 4px rgba(115, 217, 140, 0.18) !important;
   }
 
   /* v3: hide-title variant — strips the header (title + subtitle)

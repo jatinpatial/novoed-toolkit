@@ -358,6 +358,137 @@ function buildShimmer() {
   };
 }
 
+// ─── simple-orb.json (bug-fix B3 v3) ─────────────────────────────────────
+//
+// Replaces neural-pulse where the constellation reading was visually
+// confused for a "black thing" against the green mesh. Simple-orb is
+// what the user actually asked for: a single pulsing circle with a
+// soft halo and a breathe scale. Reads instantly as "AI thinking",
+// no interpretation required.
+//
+// 600x600 canvas, 120 frames @ 60fps = 2s loop.
+// Three concentric layers (outer halo, mid glow, inner orb) all
+// animated independently for an organic breathing feel.
+
+function buildSimpleOrb() {
+  const W = 600, H = 600;
+  const TOTAL = 120;
+  const cx = W / 2, cy = H / 2;
+  const layers = [];
+
+  // ── Outer halo — large, very transparent, slow scale + opacity pulse
+  const haloOpKfs = [
+    { t: 0,        s: 8 },
+    { t: TOTAL/2,  s: 22 },
+    { t: TOTAL,    s: 8 },
+  ];
+  const haloScaleKfs = [
+    { t: 0,        s: [90, 90] },
+    { t: TOTAL/2,  s: [115, 115] },
+    { t: TOTAL,    s: [90, 90] },
+  ];
+  layers.push({
+    ddd: 0,
+    ind: 1,
+    ty: 4,
+    nm: "halo-outer",
+    sr: 1,
+    ks: {
+      ...transform({ position: [cx, cy] }),
+      o: animatedVal(haloOpKfs, 1),
+      s: animatedVal(haloScaleKfs, 2),
+    },
+    shapes: [ellipse(420, GREEN, 100)],
+    ip: 0, op: TOTAL, st: 0, bm: 0,
+  });
+
+  // ── Mid glow — medium size, brand-tinted, breathes faster
+  const glowOpKfs = [
+    { t: 0,        s: 30 },
+    { t: TOTAL/2,  s: 55 },
+    { t: TOTAL,    s: 30 },
+  ];
+  const glowScaleKfs = [
+    { t: 0,        s: [95, 95] },
+    { t: TOTAL/2,  s: [110, 110] },
+    { t: TOTAL,    s: [95, 95] },
+  ];
+  layers.push({
+    ddd: 0,
+    ind: 2,
+    ty: 4,
+    nm: "glow-mid",
+    sr: 1,
+    ks: {
+      ...transform({ position: [cx, cy] }),
+      o: animatedVal(glowOpKfs, 1),
+      s: animatedVal(glowScaleKfs, 2),
+    },
+    shapes: [ellipse(260, GREEN, 100)],
+    ip: 0, op: TOTAL, st: 0, bm: 0,
+  });
+
+  // ── Inner orb — solid, small, gentle breathe + teal accent ring
+  const orbScaleKfs = [
+    { t: 0,        s: [100, 100] },
+    { t: TOTAL/2,  s: [108, 108] },
+    { t: TOTAL,    s: [100, 100] },
+  ];
+  layers.push({
+    ddd: 0,
+    ind: 3,
+    ty: 4,
+    nm: "orb-inner",
+    sr: 1,
+    ks: {
+      ...transform({ position: [cx, cy], opacity: 100 }),
+      s: animatedVal(orbScaleKfs, 2),
+    },
+    shapes: [
+      // outer ring
+      ellipse(160, TEAL, 60),
+      // inner solid
+      ellipse(130, GREEN, 100),
+    ],
+    ip: 0, op: TOTAL, st: 0, bm: 0,
+  });
+
+  // ── Bright highlight on top-left of the orb — gives it dimensionality
+  const highlightOpKfs = [
+    { t: 0,        s: 60 },
+    { t: TOTAL/2,  s: 90 },
+    { t: TOTAL,    s: 60 },
+  ];
+  layers.push({
+    ddd: 0,
+    ind: 4,
+    ty: 4,
+    nm: "highlight",
+    sr: 1,
+    ks: {
+      ...transform({ position: [cx - 28, cy - 28] }),
+      o: animatedVal(highlightOpKfs, 1),
+    },
+    shapes: [ellipse(40, [1, 1, 1, 1], 100)],
+    ip: 0, op: TOTAL, st: 0, bm: 0,
+  });
+
+  return {
+    v: "5.7.0",
+    fr: 60,
+    ip: 0,
+    op: TOTAL,
+    w: W,
+    h: H,
+    nm: "simple-orb",
+    ddd: 0,
+    assets: [],
+    layers,
+    markers: [],
+    meta: { g: "BCG U Studio handcrafted v3 — simple-orb" },
+  };
+}
+
 // ─── Write outputs ────────────────────────────────────────────────────────
 
 function write(name, data) {
@@ -369,5 +500,6 @@ function write(name, data) {
 
 write("neural-pulse", buildNeuralPulse());
 write("shimmer-loading", buildShimmer());
+write("simple-orb", buildSimpleOrb());
 
 console.log("\nDone. Reload your dev server to see the new animations.");

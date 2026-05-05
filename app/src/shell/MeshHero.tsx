@@ -132,7 +132,7 @@ export function MeshHero({ children }: MeshHeroProps) {
           so the entire hero stays interactive. */}
       <div className="mesh-lottie-layer" aria-hidden="true">
         <div className="mesh-lottie mesh-lottie-tr">
-          <LottiePlayer src="neural-pulse" className="mesh-lottie-fill" />
+          <LottiePlayer src="simple-orb" className="mesh-lottie-fill" />
         </div>
         <div className="mesh-lottie mesh-lottie-bl">
           <LottiePlayer src="shimmer-loading" className="mesh-lottie-fill" />

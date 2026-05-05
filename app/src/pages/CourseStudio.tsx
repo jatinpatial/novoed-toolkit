@@ -217,6 +217,32 @@ function CoursesHome({ onOpen, brand }: { onOpen: (c: Course, id: string) => voi
   const [params, setParams] = useSearchParams();
   const { outlineProposal, setOutlineProposal, clearOutlineProposal, setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, sendBuildFullCourse, pendingMaterials, clearPendingMaterials } = useAgent();
 
+  // Bug-fix B1 (course-proposal blank failure): when the agent's
+  // propose_course_outline tool fired from a page that didn't have
+  // setOutlineProposal registered, AgentContext's augmentedGetActions
+  // fallback stashed the proposal in localStorage and SPA-navigated
+  // here. Pick it up on mount and clear the stash so the proposal
+  // renders inline. Empty / missing key is the normal case.
+  useEffect(() => {
+    try {
+      const stash = localStorage.getItem("studio.pendingOutlineProposal");
+      if (stash) {
+        const proposal = JSON.parse(stash) as import("../agent/types").CourseOutlineProposal;
+        if (proposal && Array.isArray(proposal.modules)) {
+          setOutlineProposal(proposal);
+          setChatOpen(true);
+        }
+        localStorage.removeItem("studio.pendingOutlineProposal");
+      }
+    } catch {
+      // Bad JSON / quota / private mode — clear the bad value.
+      try { localStorage.removeItem("studio.pendingOutlineProposal"); } catch { /* ignore */ }
+    }
+    // Run once on mount; subsequent proposals come through the normal
+    // registered handler.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Brief handoff from the Dashboard hero composer (Phase 2 #1c) +
   // /courses/new structured intake form (C0).
   //
@@ -510,7 +536,7 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
   // flow. Without this, the brief sat in the URL but never reached
   // the agent (CoursesHome's handler doesn't run with project loaded).
   const [canvasParams, setCanvasParams] = useSearchParams();
-  const { setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, lastBuildProgress } = useAgent();
+  const { setOpen: setChatOpen, prefillInput, sendMessage, status: agentStatus, lastBuildProgress, setOutlineProposal: setAgentOutlineProposal } = useAgent();
   useEffect(() => {
     const brief = canvasParams.get("brief");
     const autosend = canvasParams.get("autosend") === "1";
@@ -912,7 +938,22 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
       });
       return { ok };
     },
-  }), [course, mutate]);
+    // bug-1: when an LD with a course already open asks the agent for
+    // a NEW course, propose_course_outline used to throw "this page
+    // can't accept course proposals" because CourseCanvas's actions
+    // omitted setOutlineProposal. Now we accept the proposal AND drop
+    // the ?project= param — CourseStudioInner's existing effect clears
+    // course state, CoursesHome takes over, and the proposal card
+    // renders. The open course is autosaved, so nothing's lost.
+    setOutlineProposal: (proposal) => {
+      setAgentOutlineProposal(proposal);
+      setChatOpen(true);
+      setCanvasParams(
+        (prev) => { const n = new URLSearchParams(prev); n.delete("project"); return n; },
+        { replace: true },
+      );
+    },
+  }), [course, mutate, setAgentOutlineProposal, setChatOpen, setCanvasParams]);
 
   useRegisterAgentActions(agentActions);
 
