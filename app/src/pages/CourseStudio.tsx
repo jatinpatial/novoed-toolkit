@@ -129,12 +129,13 @@ function BlockIcon({ type, size = 14 }: { type: string; size?: number }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    TOP-LEVEL
    ═══════════════════════════════════════════════════════════════════════════ */
+// AgentProvider hoist: previously CourseStudio wrapped its own
+// AgentProvider here, which spawned a new WebSocket on every nav
+// into /courses and dropped any in-flight agent tool calls. Now
+// AgentProvider lives once at the root in main.tsx. All routes
+// share one socket — agent responses survive navigation.
 export default function CourseStudio() {
-  return (
-    <AgentProvider>
-      <CourseStudioInner />
-    </AgentProvider>
-  );
+  return <CourseStudioInner />;
 }
 
 function CourseStudioInner() {
