@@ -277,11 +277,13 @@ export default function CreateInfographicPromptPage() {
   function applyFramework(fw: BcgFramework) {
     setFramework(fw);
     setOverrideStyle(fw.style);
-    // If the textarea is empty, seed it with the framework's
-    // placeholder topic so the LD sees what shape to type in. If
-    // they've already typed something, leave their text alone —
-    // frameworks layer on top of an in-progress prompt.
-    setPrompt((current) => current.trim() ? current : fw.placeholder);
+    // v3 fix: do NOT touch the textarea. Original v2 seeded it with
+    // the framework's placeholder topic; user feedback was that this
+    // felt like the form was "rewriting itself" mid-edit. Now the
+    // framework only locks layout + sends framework guidance via
+    // notes — the textarea stays exactly as the LD typed it. The
+    // placeholder example shows up as a textarea placeholder
+    // attribute instead (see textarea below).
   }
   function clearFramework() {
     setFramework(null);
@@ -382,13 +384,20 @@ export default function CreateInfographicPromptPage() {
             <ArrowLeft size={14} /> Back to dashboard
           </Link>
 
-          <header className="section-header mb-8 animate-fade-up">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-[10px] font-bold uppercase tracking-wider text-brand-700 mb-3">
+          {/* v3 fix: header was wrapping "Describe your infographic."
+              awkwardly because section-header puts the NEW pill +
+              title on the same row. Restructured so the pill sits
+              above the title cleanly, and the title doesn't try to
+              wrap around it. */}
+          <header className="mb-8 animate-fade-up">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-[10px] font-bold uppercase tracking-wider text-brand-700 mb-3">
               <Sparkles size={11} strokeWidth={2.5} />
               New
             </div>
-            <h2 className="section-title">Describe your infographic.</h2>
-            <p className="section-sub">
+            <h2 className="text-h1 text-ink-900 font-extrabold tracking-tight mb-3">
+              Describe your infographic.
+            </h2>
+            <p className="text-sm text-ink-500 leading-relaxed max-w-2xl">
               Type a sentence. Studio Copilot picks the layout, drafts the
               points, and renders it for download. Need surgical control?{" "}
               <Link
@@ -400,31 +409,30 @@ export default function CreateInfographicPromptPage() {
             </p>
           </header>
 
-          {/* Track-SS (Deckster v2): output format trio.
-              Surfaced upfront so the LD knows the prompt will yield
-              ALL three: a printable PNG, a paste-into-NovoEd HTML
-              embed, and a standalone interactive HTML (click-to-flip /
-              reveal / expand). The first two are handed off to the
-              existing Studio export buttons; the interactive variant
-              is new in v2 and uses the SCORM component library
-              under the hood. */}
+          {/* Track-SS v3: output format trio — corrected per NovoEd
+              toolkit's HTML-vs-SCORM split. HTML is STATIC (Froala
+              embed only — no JS supported), SCORM is INTERACTIVE
+              (.zip with imsmanifest.xml, uploadable to any LMS).
+              Three formats, three workflows: print/slide deck (PNG),
+              embed in a NovoEd lesson (Static HTML), upload as a
+              standalone interactive activity (SCORM). */}
           <div className="mb-10 grid grid-cols-3 gap-3 animate-fade-up">
             <div className="px-3 py-2.5 rounded-lg bg-white border border-ink-100">
               <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-0.5">
-                Static
+                Print / Slide
               </div>
               <div className="text-xs font-semibold text-ink-900">PNG image</div>
               <div className="text-[10px] text-ink-400 leading-tight mt-0.5">
-                Slides, decks, print
+                Decks, exports, social
               </div>
             </div>
             <div className="px-3 py-2.5 rounded-lg bg-white border border-ink-100">
               <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-0.5">
-                Embed
+                Static embed
               </div>
-              <div className="text-xs font-semibold text-ink-900">HTML for NovoEd</div>
+              <div className="text-xs font-semibold text-ink-900">HTML for Froala</div>
               <div className="text-[10px] text-ink-400 leading-tight mt-0.5">
-                Paste into Froala
+                Paste into NovoEd lesson
               </div>
             </div>
             <div className="px-3 py-2.5 rounded-lg bg-brand-50 border border-brand-200">
@@ -432,9 +440,9 @@ export default function CreateInfographicPromptPage() {
                 <Sparkles size={9} strokeWidth={2.5} />
                 Interactive
               </div>
-              <div className="text-xs font-semibold text-ink-900">SCORM-ready HTML</div>
+              <div className="text-xs font-semibold text-ink-900">SCORM .zip</div>
               <div className="text-[10px] text-ink-400 leading-tight mt-0.5">
-                Flip, expand, reveal
+                Click, flip, reveal — any LMS
               </div>
             </div>
           </div>
@@ -454,9 +462,17 @@ export default function CreateInfographicPromptPage() {
                   value={prompt}
                   onChange={(e) => {
                     setPrompt(e.target.value);
-                    setOverrideStyle(null); // re-derive when prompt changes
+                    // Don't clear framework on every keystroke — the
+                    // framework only clears via the explicit "Clear
+                    // framework ×" button. Otherwise a typo would
+                    // un-lock the layout, surprising the LD.
+                    if (!framework) setOverrideStyle(null);
                   }}
-                  placeholder="e.g. Five forces shaping AI adoption in pharma&#10;e.g. 3 stages of digital transformation for retail banks&#10;e.g. 2x2 of risk vs reward for emerging market expansion"
+                  placeholder={
+                    framework
+                      ? `e.g. ${framework.placeholder}`
+                      : "e.g. Five forces shaping AI adoption in pharma\ne.g. 3 stages of digital transformation for retail banks\ne.g. 2x2 of risk vs reward for emerging market expansion"
+                  }
                   rows={5}
                   className="form-textarea text-base"
                   autoFocus

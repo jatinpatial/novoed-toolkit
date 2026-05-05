@@ -274,10 +274,32 @@ function EditableText({
       style: colorStyle,
     };
     if (multiline) {
+      // v3 fix: auto-size to content. Old code forced rows=2 minimum
+      // which gave a "huge box" feel for 3-word headings. Now we
+      // start at 1 row and grow on input via scrollHeight, so the
+      // edit affordance fits the text exactly.
       return (
         <textarea
           {...(commonProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-          rows={Math.max(2, draft.split("\n").length)}
+          rows={1}
+          style={{
+            ...commonProps.style,
+            resize: "none",
+            overflow: "hidden",
+          }}
+          ref={(el) => {
+            (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+            if (el) {
+              // Sync height to content on mount + every render
+              el.style.height = "auto";
+              el.style.height = el.scrollHeight + "px";
+            }
+          }}
+          onInput={(e) => {
+            const el = e.currentTarget;
+            el.style.height = "auto";
+            el.style.height = el.scrollHeight + "px";
+          }}
         />
       );
     }

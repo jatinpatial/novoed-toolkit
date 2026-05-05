@@ -23,13 +23,15 @@ import {
 } from "../store/infographics";
 import { InfographicRenderer } from "../infographic/InfographicRenderer";
 import { searchImagesCached } from "../lib/images";
-// Track-SS (Deckster v2): interactive output exports. The infographic's
-// style + points map to one of the existing NovoEd toolkit components
-// (20 static HTML + 12 interactive SCORM). genHTML produces a Froala-
-// embeddable HTML string; genSCORMhtml produces a standalone runnable
-// HTML page with embedded animations + click handlers.
+// Track-SS (Deckster v2 → v3 fix): exports honor the NovoEd toolkit
+// split — HTML must be STATIC (Froala embed only; NovoEd's native
+// HTML embed doesn't support interactive HTML), SCORM is the
+// INTERACTIVE one and must be a packaged .zip with imsmanifest.xml,
+// not a single .html file. v2 conflated the two; v3 fixes:
+//   - "Copy HTML" still calls genHTML → static Froala embed (correct)
+//   - "Download SCORM" now calls downloadSCORM → real .zip
 import { genHTML } from "../generators/html/genHTML";
-import { genSCORMhtml } from "../generators/scorm/genSCORM";
+import { downloadSCORM } from "../scorm/zipBuilder";
 import { infographicToComponent } from "../lib/infographicToComponent";
 import { useActiveBrand } from "../shell/TopBar";
 
@@ -82,6 +84,16 @@ export default function InfographicStudio() {
   // EditableText so PNG export can clear it before capture and so
   // only one picker is open at a time. null = all closed.
   const [openPickerKey, setOpenPickerKey] = useState<string | null>(null);
+  // v3: dark-mode toggle for the rendered infographic. Applies a
+  // .ig-dark class to the render host, which inverts the palette
+  // (white-on-deep-green) without disturbing brand cascade vars.
+  // PNG capture honors this — flip dark, click PNG, get dark export.
+  const [darkMode, setDarkMode] = useState(false);
+  // v3: hide-title toggle. When on, the title + subtitle area on the
+  // rendered infographic is hidden — useful for embeds where the LD
+  // wants the visual standalone (e.g. dropping the design into a
+  // slide that already has its own header).
+  const [hideTitle, setHideTitle] = useState(false);
   const renderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -398,20 +410,17 @@ export default function InfographicStudio() {
   }
 
   /**
-   * Track-SS (Deckster v2): export the infographic as a standalone
-   * interactive HTML file. Maps the current style + points to one of
-   * the 12 SCORM components (five_forces → s_reveal, comparison →
-   * s_tabs, quadrant → s_flipcard, etc.) and downloads the resulting
-   * fully-self-contained HTML.
+   * Track-SS v3 (HTML/SCORM split correctness): export the infographic
+   * as a proper SCORM .zip — not a single .html file. NovoEd's native
+   * HTML/Froala embed CAN'T host interactive HTML, so the interactive
+   * variant has to be SCORM. The .zip wraps the interactive HTML
+   * (genSCORMhtml output) plus an imsmanifest.xml so any LMS can
+   * upload + render the activity.
    *
-   * The output IS the SCORM-compatible activity HTML. Wrapping it in
-   * a SCORM zip with imsmanifest.xml is a separate step (Track-SS3,
-   * not in this MVP). For now the LD can:
-   *   - Open the .html locally to preview the interaction
-   *   - Embed via iframe in NovoEd
-   *   - Hand to a SCORM packager downstream
+   * Calls downloadSCORM (existing helper from scorm/zipBuilder.ts)
+   * which already does the manifest + zip assembly.
    */
-  function downloadInteractiveHtml() {
+  function downloadInteractiveScorm() {
     if (!infographic || infographic.points.length === 0) return;
     try {
       const transform = infographicToComponent({
@@ -420,26 +429,10 @@ export default function InfographicStudio() {
         style: infographic.style,
         points: infographic.points,
       });
-      const html = genSCORMhtml(transform.scormComponentId, transform.data, brand);
-      const stem = (infographic.title || infographic.topic || "infographic")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 60) || "infographic";
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${stem}-interactive.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // Defer revoke a tick so the download actually starts (some
-      // browsers race the revoke and abort the download).
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      downloadSCORM(transform.scormComponentId, transform.data, brand);
     } catch (err) {
       setDownloadError(
-        `Couldn't generate interactive HTML: ${(err as Error).message || "Unknown error"}`,
+        `Couldn't generate SCORM package: ${(err as Error).message || "Unknown error"}`,
       );
     }
   }
@@ -545,9 +538,28 @@ export default function InfographicStudio() {
 
         {!isBuilding && !isFailed && hasPoints && (
           <>
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
               <h3 className="text-h3 text-ink-900">Generated infographic</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* v3: visual-mode toggles. Dark mode + hide title both
+                    affect the rendered output AND the PNG export. The
+                    SCORM export uses its own theming (the SCORM HTML
+                    has its own light backdrop) — to be addressed in
+                    a follow-on commit. */}
+                <button
+                  onClick={() => setDarkMode((v) => !v)}
+                  className={darkMode ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+                  title={darkMode ? "Switch to light mode" : "Switch to dark mode (PNG export honors this)"}
+                >
+                  {darkMode ? "Light" : "Dark"} mode
+                </button>
+                <button
+                  onClick={() => setHideTitle((v) => !v)}
+                  className={hideTitle ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+                  title={hideTitle ? "Show title + subtitle" : "Hide title + subtitle (export design only)"}
+                >
+                  {hideTitle ? "Show title" : "Hide title"}
+                </button>
                 {/* BB1: edit-mode toggle. Off → text reads as final
                     rendered output; on → click-to-edit affordance
                     on every text element. Visual cue: when active,
@@ -575,15 +587,17 @@ export default function InfographicStudio() {
                 >
                   <Download size={14} /> {downloading ? "Rendering…" : "Download PNG"}
                 </button>
-                {/* Track-SS (Deckster v2): static HTML embed for NovoEd
-                    Froala paste. Copies to clipboard rather than
-                    downloading — the LD's flow is button → switch tab →
-                    paste. */}
+                {/* Track-SS v3: STATIC HTML embed for NovoEd's Froala
+                    editor. Static = no JS, no click handlers, just
+                    layout HTML — that's what Froala accepts. Click-to-
+                    flip / accordion / reveal interactivity is NOT here
+                    (NovoEd's native HTML embed strips JS); for that,
+                    use the SCORM export → "Interactive SCORM (.zip)". */}
                 <button
                   onClick={copyHtmlEmbed}
                   disabled={!infographic.points.length}
                   className="btn-secondary btn-sm"
-                  title="Copy a NovoEd-paste-ready HTML embed"
+                  title="Copy NovoEd-paste-ready static HTML (Froala-embed compatible)"
                 >
                   {htmlCopied ? (
                     <>
@@ -591,20 +605,23 @@ export default function InfographicStudio() {
                     </>
                   ) : (
                     <>
-                      <Code size={14} /> Copy HTML
+                      <Code size={14} /> Static HTML
                     </>
                   )}
                 </button>
-                {/* Track-SS (Deckster v2): standalone interactive HTML
-                    using the SCORM component library. Click-to-flip /
-                    expand / reveal mapped from the layout style. */}
+                {/* Track-SS v3: INTERACTIVE SCORM .zip — packaged with
+                    imsmanifest.xml so any LMS (NovoEd, Rise, Cornerstone,
+                    Docebo) can upload + run it. The HTML inside has
+                    click-to-flip / expand / reveal handlers — that's
+                    the variant that needs SCORM packaging because
+                    Froala embed strips JS. */}
                 <button
-                  onClick={downloadInteractiveHtml}
+                  onClick={downloadInteractiveScorm}
                   disabled={!infographic.points.length}
                   className="btn-cta-primary btn-sm"
-                  title="Download a standalone interactive HTML page"
+                  title="Download an interactive SCORM .zip — upload to any LMS"
                 >
-                  <Sparkles size={14} /> Interactive HTML
+                  <Sparkles size={14} /> Interactive SCORM
                 </button>
               </div>
             </div>
@@ -618,7 +635,10 @@ export default function InfographicStudio() {
                 Download failed: {downloadError}
               </div>
             )}
-            <div ref={renderRef} className="infographic-render-host">
+            <div
+              ref={renderRef}
+              className={`infographic-render-host${darkMode ? " ig-dark" : ""}${hideTitle ? " ig-hide-title" : ""}`}
+            >
               <InfographicRenderer
                 title={infographic.title}
                 subtitle={infographic.subtitle}

@@ -1967,11 +1967,10 @@
     gap: 12px;
   }
   @media (min-width: 768px) {
-    /* Track-PC: 4-up grid now that Podcast Studio joins Script + KC +
-       Infographic. 4 columns at md and up — fits comfortably on 1280+
-       widths with the hero above; on 768-1024 widths the 4 tiles share
-       a row but each still has reasonable width thanks to fr units. */
-    .suite-secondary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    /* Track-PC v3: back to 3-up after Podcast Studio tile was pulled
+       (re-enable with TTS later). 3 secondary tiles: Script / KC /
+       Infographic, each gets a comfortable column width. */
+    .suite-secondary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   .suite-tile-compact {
     padding: 14px 16px 16px;
@@ -2170,6 +2169,72 @@
     border-radius: 14px;
     border: 1px solid theme("colors.ink.200");
     overflow: hidden;
+  }
+
+  /* v3: dark-mode variant of the rendered infographic. Inverts the
+     ig-frame background to a deep brand-tinted dark, flips text to
+     light, and dims the chrome so the BCG-green accents pop against
+     the dark backdrop. PNG capture honors this — the entire render
+     host snapshots in dark when the toggle is on.
+
+     Strategy: scoped selectors to .ig-dark so we don't bleed onto
+     anything outside the host. CSS-vars-driven where possible so
+     the brand cascade still works. */
+  .infographic-render-host.ig-dark {
+    background: #0a1f17;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .infographic-render-host.ig-dark .ig-frame {
+    background: linear-gradient(155deg, #0d2e22 0%, #051712 100%);
+    color: #e6f5ec;
+  }
+  .infographic-render-host.ig-dark h1,
+  .infographic-render-host.ig-dark h2,
+  .infographic-render-host.ig-dark h3,
+  .infographic-render-host.ig-dark h4,
+  .infographic-render-host.ig-dark p,
+  .infographic-render-host.ig-dark .ig-eyebrow,
+  .infographic-render-host.ig-dark .ig-title,
+  .infographic-render-host.ig-dark .ig-subtitle,
+  .infographic-render-host.ig-dark .ig-point-heading,
+  .infographic-render-host.ig-dark .ig-point-body {
+    color: #e6f5ec !important;
+  }
+  .infographic-render-host.ig-dark .ig-eyebrow {
+    color: #73d98c !important;
+  }
+  .infographic-render-host.ig-dark .ig-point-card,
+  .infographic-render-host.ig-dark .ig-point,
+  .infographic-render-host.ig-dark .ig-quad-cell,
+  .infographic-render-host.ig-dark .ig-pyramid-row,
+  .infographic-render-host.ig-dark .ig-cycle-node,
+  .infographic-render-host.ig-dark .ig-stat-cell,
+  .infographic-render-host.ig-dark .ig-force-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(115, 217, 140, 0.20) !important;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.30) !important;
+  }
+  .infographic-render-host.ig-dark .ig-icon,
+  .infographic-render-host.ig-dark svg {
+    color: #73d98c !important;
+  }
+  .infographic-render-host.ig-dark .ig-header {
+    border-bottom-color: #73d98c;
+  }
+  .infographic-render-host.ig-dark .ig-divider,
+  .infographic-render-host.ig-dark hr {
+    border-color: rgba(115, 217, 140, 0.25);
+  }
+
+  /* v3: hide-title variant — strips the header (title + subtitle)
+     so the LD can export "just the design." Useful when the export
+     lands inside a slide that already has its own header. */
+  .infographic-render-host.ig-hide-title .ig-header,
+  .infographic-render-host.ig-hide-title .ig-title-row {
+    display: none !important;
+  }
+  .infographic-render-host.ig-hide-title .ig-frame {
+    padding-top: 24px;
   }
   /* OO5a: BCG-grade sophistication pass — deeper shadows, tighter
      typography, gradient brand-color combinations, generous breathing

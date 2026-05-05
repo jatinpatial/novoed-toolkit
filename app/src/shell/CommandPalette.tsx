@@ -131,14 +131,8 @@ export function CommandPalette({ onShowWelcome, onShowHelp }: CommandPaletteProp
       icon: Mic,
       run: () => navigate("/scripts/new"),
     });
-    out.push({
-      id: "new-podcast",
-      label: "Create new podcast script",
-      group: "Create",
-      icon: Mic,
-      hint: "2-host editable dialogue",
-      run: () => navigate("/scripts/new?format=podcast"),
-    });
+    // Track-PC v3: podcast palette entry removed — surfaces re-enable
+    // when TTS is wired. Format toggle on /scripts/new still works.
     out.push({
       id: "new-kc",
       label: "Create new knowledge check",
