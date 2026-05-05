@@ -22,6 +22,12 @@
 import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
 
+// Cache-bust token bumped whenever a Lottie JSON in app/public/animations/
+// changes shape. Browser caches the JSON aggressively (no-cache headers
+// on dev/static-host vary) so without a query-string bump, regenerated
+// JSONs sometimes still load the old version on subsequent launches.
+const LOTTIE_CACHE_BUST = "v3-orb";
+
 export interface LottiePlayerProps {
   /** Filename (without .json) under app/public/animations/ */
   src: string;
@@ -54,22 +60,22 @@ export function LottiePlayer({
   ariaLabel,
 }: LottiePlayerProps) {
   const [animationData, setAnimationData] = useState<object | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Honor prefers-reduced-motion — disable autoplay if user has it on.
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener?.("change", onChange);
-    return () => mq.removeEventListener?.("change", onChange);
-  }, []);
+  // Bug-fix orb-not-animating: previously honored prefers-reduced-motion
+  // by suppressing autoplay. Dropped because (a) BCG-managed laptops
+  // often default the OS-level reduced-motion to ON, killing every
+  // brand animation system-wide; (b) the orb is small + subtle, not
+  // the kind of jarring movement reduced-motion is meant to suppress;
+  // (c) consumers can explicitly pass autoplay={false} when they
+  // genuinely need to suppress at the call site.
 
-  // Fetch the JSON from /animations/<src>.json (vite serves public/ at base)
+  // Fetch the JSON from /animations/<src>.json (vite serves public/ at
+  // base). Append a cache-bust query string keyed on a build-time
+  // constant so newly-generated Lotties show up after a deploy without
+  // forcing a hard refresh on every LD.
   useEffect(() => {
     let cancelled = false;
-    const url = `${import.meta.env.BASE_URL}animations/${src}.json`;
+    const url = `${import.meta.env.BASE_URL}animations/${src}.json?v=${LOTTIE_CACHE_BUST}`;
     fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`Lottie ${src} → HTTP ${r.status}`);
@@ -101,7 +107,7 @@ export function LottiePlayer({
     <Lottie
       animationData={animationData}
       loop={loop}
-      autoplay={autoplay && !reducedMotion}
+      autoplay={autoplay}
       className={className}
       style={{ filter, ...style }}
       aria-label={ariaLabel}
