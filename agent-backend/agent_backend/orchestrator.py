@@ -709,27 +709,37 @@ class BuildOrchestrator:
     async def _verify_lesson_written(self, t: _LessonTarget) -> bool:
         """polish-16b: defensive check after a lesson mini-session
         completes successfully. Calls list_structure via the bridge
-        and inspects the lesson's block count. If still zero, the
-        write_lesson tool didn't actually land — bug surfaces in the
-        log so it doesn't silently look like a success.
+        and inspects the lesson's block count.
 
-        Returns True if the lesson has writer-authored blocks, False
-        otherwise. Caller decides whether to fail the lesson, retry,
-        or just log.
+        Bug-fix NB6/NB7 (lesson succeeded but marked failed): the
+        previous version forced a retry whenever list_structure
+        couldn't find the lesson_id. Real-world repro: when the FE
+        WebSocket reconnects mid-build (which Edge does whenever
+        the user opens DevTools, switches tabs, or hits a transient
+        network blip), the agent's write_lesson lands on the FE
+        successfully BUT the follow-up list_structure roundtrip
+        either gets a stale snapshot or returns empty — orchestrator
+        sees no lesson_id, treats as failure, retries, retry hits the
+        same race, lesson dies after attempt 2 even though 14 blocks
+        of real content are sitting in the LD's outline tree.
 
-        Cheap call — list_structure returns the whole course tree
-        and parses fast on the FE side.
+        Relaxed contract: if list_structure fails OR the lesson_id
+        isn't present, return True (let the build proceed). The
+        actual block state is visible to the LD in the canvas — if
+        write_lesson genuinely failed, they'll see an empty lesson
+        and can regenerate manually. Better than crashing the build
+        on a verification race.
+
+        We still log loudly so a real silent-success regression
+        surfaces in the backend log without breaking the UX.
         """
         try:
             structure = await self._bridge.call("list_structure", {})
         except Exception as exc:
             log.warning(
-                "verify_lesson_written: list_structure failed for lesson %d: %s",
+                "verify_lesson_written: list_structure failed for lesson %d: %s — assuming success, the LD will see the actual block state in the canvas",
                 t.idx, exc,
             )
-            # Don't fail the lesson on a verification glitch — return
-            # True so the build keeps moving; the LD will see the
-            # actual block state in the canvas anyway.
             return True
         course = structure.get("course") if isinstance(structure, dict) else None
         modules = (course or {}).get("modules") or []
@@ -737,14 +747,25 @@ class BuildOrchestrator:
             for lesson in mod.get("lessons") or []:
                 if lesson.get("id") == t.lesson_id:
                     block_count = len(lesson.get("blocks") or [])
-                    return block_count > 0
-        # Lesson not found in the structure — that's a different bug
-        # but we surface it as "not written" so it gets attention.
+                    if block_count == 0:
+                        # Found the lesson but it really has no blocks.
+                        # That's a true silent-success bug — keep the
+                        # retry path active for this case only.
+                        log.warning(
+                            "verify_lesson_written: lesson %s found but empty — true silent-success regression",
+                            t.lesson_id,
+                        )
+                        return False
+                    return True
+        # Lesson_id not in the snapshot — most likely a sync race
+        # between the write and the verify roundtrip. Don't block the
+        # build; log it so we can spot a real regression in logs if
+        # the same lesson_id keeps disappearing across builds.
         log.warning(
-            "verify_lesson_written: lesson %s not found in list_structure",
+            "verify_lesson_written: lesson %s not found in list_structure snapshot — assuming success (FE-BE state-sync race, not a write failure)",
             t.lesson_id,
         )
-        return False
+        return True
 
     async def _run_lesson_session(self, t: _LessonTarget) -> tuple[dict[str, Any], int]:
         """Spawn a fresh ClaudeSDKClient for one lesson. Returns

@@ -495,6 +495,7 @@ export default function InfographicStudio() {
             <ArrowLeft size={14} /> Dashboard
           </Link>
           <span className="text-ink-300">·</span>
+          <span className="text-ink-300">·</span>
           <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-brand-700 uppercase tracking-wider">
             <BarChart3 size={11} /> Infographic Studio
           </div>

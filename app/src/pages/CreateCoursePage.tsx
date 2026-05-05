@@ -497,8 +497,17 @@ function FormField({
   optional?: boolean;
   children: React.ReactNode;
 }) {
+  // Bug-fix NB2 (file-dialog double-open): switched outer wrapper
+  // from <label> to <div>. The MaterialsDropZone is rendered as a
+  // child of FormField — when wrapped in a <label>, browser auto-
+  // triggers the file input's click on label-click AND our explicit
+  // onClick triggers it again. Two dialogs. <div> keeps the layout
+  // identical without the label's auto-focus side effect; text/
+  // textarea/select inputs inside FormField still work fine — they
+  // don't NEED the label association for click-to-focus (they're
+  // visible+clickable directly).
   return (
-    <label className="block">
+    <div className="block">
       <div className="flex items-baseline gap-2 mb-1.5">
         <span className="text-sm font-bold text-ink-900">{label}</span>
         {required && (
@@ -514,6 +523,6 @@ function FormField({
       </div>
       {hint && <div className="text-xs text-ink-500 mb-2">{hint}</div>}
       {children}
-    </label>
+    </div>
   );
 }

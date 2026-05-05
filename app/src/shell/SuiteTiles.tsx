@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-react";
 import type { CSSProperties } from "react";
-import { LottiePlayer } from "../components/LottiePlayer";
 
 /**
  * polish-18a (Track-E) + Track-P (P1) + Y4 + OO4: two-tier Studio suite.
@@ -47,15 +46,9 @@ export function SuiteTiles() {
         </span>
         <div className="suite-hero-grain" aria-hidden="true" />
         <div className="suite-hero-shimmer" aria-hidden="true" />
-        {/* QQ1 v4: hand-crafted neural-pulse replaces the off-brand teal
-            glow-loading. Constellation of BCG-green nodes + teal connections
-            breathing at 60fps — "AI ready to think" energy on the Course
-            hero. The 600x600 aspect fits the 280x280 wrapper cleanly.
-            Pointer-events disabled so the entire tile click target stays
-            intact. */}
-        <div className="suite-hero-lottie" aria-hidden="true">
-          <LottiePlayer src="simple-orb" className="suite-hero-lottie-fill" />
-        </div>
+        {/* Orb on the Course Studio hero removed per LD feedback —
+            felt overkill against the photo background. Kept the
+            shimmer + grain layers for subtle motion. */}
         <div className="suite-hero-icon">
           <BookOpen size={28} strokeWidth={2} />
         </div>
