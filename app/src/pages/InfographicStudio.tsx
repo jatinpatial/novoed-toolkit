@@ -35,6 +35,7 @@ import { InfographicTranslateButton } from "../components/InfographicTranslateBu
 import { genHTML } from "../generators/html/genHTML";
 import { downloadSCORM } from "../scorm/zipBuilder";
 import { infographicToComponent } from "../lib/infographicToComponent";
+import { HTML_COMPS, SCORM_COMPS } from "../generators/registry";
 import { useActiveBrand } from "../shell/TopBar";
 
 /**
@@ -96,6 +97,14 @@ export default function InfographicStudio() {
   // wants the visual standalone (e.g. dropping the design into a
   // slide that already has its own header).
   const [hideTitle, setHideTitle] = useState(false);
+  // V3: per-export component template overrides. Default null = use
+  // the primary mapping for the infographic's style. When the LD
+  // picks an alternate from the "Switch template" dropdown, that id
+  // overrides the primary at export time. Static + interactive are
+  // tracked independently — picking a different static template
+  // doesn't affect the SCORM export and vice versa.
+  const [staticTemplateId, setStaticTemplateId] = useState<string | null>(null);
+  const [interactiveTemplateId, setInteractiveTemplateId] = useState<string | null>(null);
   const renderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -400,7 +409,10 @@ export default function InfographicStudio() {
         style: infographic.style,
         points: infographic.points,
       });
-      const html = genHTML(transform.htmlComponentId, brand, transform.data);
+      // V3: honor the LD's static template override if one is picked
+      // in the Switch-template dropdown; otherwise use the primary.
+      const componentId = staticTemplateId || transform.htmlComponentId;
+      const html = genHTML(componentId, brand, transform.data);
       await navigator.clipboard.writeText(html);
       setHtmlCopied(true);
       window.setTimeout(() => setHtmlCopied(false), 2000);
@@ -431,7 +443,10 @@ export default function InfographicStudio() {
         style: infographic.style,
         points: infographic.points,
       });
-      downloadSCORM(transform.scormComponentId, transform.data, brand);
+      // V3: honor the LD's interactive template override if one is
+      // picked; otherwise use the primary mapping.
+      const componentId = interactiveTemplateId || transform.scormComponentId;
+      downloadSCORM(componentId, transform.data, brand);
     } catch (err) {
       setDownloadError(
         `Couldn't generate SCORM package: ${(err as Error).message || "Unknown error"}`,
@@ -643,6 +658,63 @@ export default function InfographicStudio() {
                 </button>
               </div>
             </div>
+            {/* V3: Switch-template dropdowns. Each style maps to a
+                primary component + 2-4 alternates. The LD can swap
+                without re-running the agent — same content, different
+                visual treatment. Static + interactive picked
+                independently. */}
+            {(() => {
+              const transform = infographicToComponent({
+                title: infographic.title || infographic.topic,
+                subtitle: infographic.subtitle || "",
+                style: infographic.style,
+                points: infographic.points,
+              });
+              const htmlOptions = transform.htmlAlternates;
+              const scormOptions = transform.scormAlternates;
+              const labelFor = (id: string, table: { id: string; n: string }[]) =>
+                table.find((c) => c.id === id)?.n ?? id;
+              if (htmlOptions.length <= 1 && scormOptions.length <= 1) return null;
+              return (
+                <div className="mb-4 px-4 py-3 bg-ink-50 border border-ink-100 rounded-lg flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                  <span className="font-bold uppercase tracking-wider text-ink-500">
+                    Switch template
+                  </span>
+                  {htmlOptions.length > 1 && (
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-ink-600">Static HTML →</span>
+                      <select
+                        value={staticTemplateId || transform.htmlComponentId}
+                        onChange={(e) => setStaticTemplateId(e.target.value)}
+                        className="px-2 py-1 rounded border border-ink-200 bg-white text-ink-900 font-semibold"
+                      >
+                        {htmlOptions.map((id) => (
+                          <option key={id} value={id}>
+                            {labelFor(id, HTML_COMPS)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {scormOptions.length > 1 && (
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-ink-600">Interactive SCORM →</span>
+                      <select
+                        value={interactiveTemplateId || transform.scormComponentId}
+                        onChange={(e) => setInteractiveTemplateId(e.target.value)}
+                        className="px-2 py-1 rounded border border-ink-200 bg-white text-ink-900 font-semibold"
+                      >
+                        {scormOptions.map((id) => (
+                          <option key={id} value={id}>
+                            {labelFor(id, SCORM_COMPS)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              );
+            })()}
             {editMode && (
               <div className="mb-4 text-xs text-brand-700 italic">
                 Edit mode is on — click any text in the infographic to revise it. Click Done editing when finished.
