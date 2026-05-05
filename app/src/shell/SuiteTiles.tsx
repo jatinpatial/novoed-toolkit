@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Video } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, ClipboardCheck, Headphones, Video } from "lucide-react";
 import type { CSSProperties } from "react";
 import { LottiePlayer } from "../components/LottiePlayer";
 
@@ -81,6 +81,24 @@ export function SuiteTiles() {
           </div>
           <div className="suite-tile-title">Script Studio</div>
           <p className="suite-tile-desc">Synthesia-ready video script</p>
+          <span className="suite-tile-cta">
+            Start <ArrowRight size={13} strokeWidth={2.5} />
+          </span>
+        </Link>
+        {/* Track-PC (Podcast Creator): 5th studio tile. Points to the
+            shared Script intake with format=podcast pre-selected via
+            query param. The LD lands on the same form as Script Studio
+            but with the Podcast format card already active and the
+            duration defaulted to 8 min. */}
+        <Link to="/scripts/new?format=podcast" className="suite-tile suite-tile-compact">
+          <div className="suite-tile-icon">
+            <Headphones size={20} strokeWidth={2} />
+          </div>
+          <div className="suite-tile-title">
+            Podcast Studio{" "}
+            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 align-middle">New</span>
+          </div>
+          <p className="suite-tile-desc">2-host editable dialogue</p>
           <span className="suite-tile-cta">
             Start <ArrowRight size={13} strokeWidth={2.5} />
           </span>

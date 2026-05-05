@@ -1967,7 +1967,11 @@
     gap: 12px;
   }
   @media (min-width: 768px) {
-    .suite-secondary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    /* Track-PC: 4-up grid now that Podcast Studio joins Script + KC +
+       Infographic. 4 columns at md and up — fits comfortably on 1280+
+       widths with the hero above; on 768-1024 widths the 4 tiles share
+       a row but each still has reasonable width thanks to fr units. */
+    .suite-secondary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
   .suite-tile-compact {
     padding: 14px 16px 16px;
@@ -4514,6 +4518,42 @@
     border-color: var(--green-500);
     color: theme("colors.brand.700");
     font-weight: 700;
+    box-shadow: var(--shadow-resting);
+  }
+
+  /* Track-PC: format-card variant of the chip. Used for high-stakes
+     decisions (Synthesia vs Podcast) where the LD's choice changes
+     downstream form fields. Larger surface, icon + multi-line copy,
+     reads as a "card" rather than a chip. Same active treatment
+     vocabulary so brand cohesion holds. */
+  .form-format-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 18px 18px;
+    border-radius: 14px;
+    background: white;
+    border: 1.5px solid theme("colors.ink.200");
+    color: theme("colors.ink.700");
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-sana),
+                border-color var(--duration-fast) var(--ease-sana),
+                color var(--duration-fast) var(--ease-sana),
+                box-shadow var(--duration-fast) var(--ease-sana),
+                transform var(--duration-fast) var(--ease-sana);
+  }
+  .form-format-card:hover:not(.form-format-card-active) {
+    border-color: var(--green-500);
+    background: theme("colors.brand.50");
+    color: theme("colors.brand.700");
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-resting);
+  }
+  .form-format-card-active {
+    background: theme("colors.brand.50");
+    border-color: var(--green-500);
+    color: theme("colors.brand.900");
     box-shadow: var(--shadow-resting);
   }
 

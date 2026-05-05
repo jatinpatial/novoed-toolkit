@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Mic, Upload, Headphones } from "lucide-react";
 import { AppShell } from "../shell/AppShell";
 import { saveScript, type Script } from "../store/scripts";
 
@@ -31,12 +31,21 @@ import { saveScript, type Script } from "../store/scripts";
  * forms.
  */
 
-const DURATION_OPTIONS: Array<{ value: string; label: string; seconds: number }> = [
+// Track-PC: duration options are format-aware. Synthesia videos run
+// 30s-3min; podcast episodes typically run 5-15 min.
+const SYNTHESIA_DURATION_OPTIONS: Array<{ value: string; label: string; seconds: number }> = [
   { value: "30s",    label: "30 sec",  seconds: 30 },
   { value: "60s",    label: "60 sec",  seconds: 60 },
   { value: "90s",    label: "90 sec",  seconds: 90 },
   { value: "2min",   label: "2 min",   seconds: 120 },
   { value: "3min",   label: "3 min",   seconds: 180 },
+  { value: "custom", label: "Custom",  seconds: 0 },
+];
+const PODCAST_DURATION_OPTIONS: Array<{ value: string; label: string; seconds: number }> = [
+  { value: "5min",   label: "5 min",   seconds: 300 },
+  { value: "8min",   label: "8 min",   seconds: 480 },
+  { value: "12min",  label: "12 min",  seconds: 720 },
+  { value: "15min",  label: "15 min",  seconds: 900 },
   { value: "custom", label: "Custom",  seconds: 0 },
 ];
 
@@ -50,14 +59,32 @@ const rid = () => "s" + Math.random().toString(36).slice(2, 10);
 
 export default function CreateScriptPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
+  // Track-PC: format toggles between Synthesia video script (existing
+  // SCENE / SPOKEN / VISUAL spec) and Podcast dialogue (NotebookLM-
+  // style 2-host conversation). Format change re-defaults duration to
+  // a sensible per-format value so the LD doesn't pick "30 sec" for a
+  // podcast. Initial format reads from ?format=podcast so the
+  // Podcast Studio tile in SuiteTiles lands users in the right mode.
+  const initialFormat: "synthesia" | "podcast" =
+    searchParams.get("format") === "podcast" ? "podcast" : "synthesia";
+  const [format, setFormat] = useState<"synthesia" | "podcast">(initialFormat);
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("");
-  const [duration, setDuration] = useState<string>("90s");
+  const [duration, setDuration] = useState<string>(
+    initialFormat === "podcast" ? "8min" : "90s",
+  );
   const [customDuration, setCustomDuration] = useState("");
   const [tone, setTone] = useState<typeof TONE_OPTIONS[number]>("Conversational");
   const [speakerMode, setSpeakerMode] = useState<"speaker" | "narration">("narration");
+  const [hostA, setHostA] = useState("Alex");
+  const [hostB, setHostB] = useState("Jordan");
   const [notes, setNotes] = useState("");
+
+  const DURATION_OPTIONS = format === "podcast"
+    ? PODCAST_DURATION_OPTIONS
+    : SYNTHESIA_DURATION_OPTIONS;
 
   const topicValid = topic.trim().length > 0;
   const audienceValid = audience.trim().length > 0;
@@ -82,12 +109,17 @@ export default function CreateScriptPage() {
     const now = Date.now();
     const script: Script = {
       id: scriptId,
-      title: topic.trim().slice(0, 80) || "Synthesia script",
+      title:
+        topic.trim().slice(0, 80) ||
+        (format === "podcast" ? "Podcast script" : "Synthesia script"),
       topic: topic.trim(),
       audience: audience.trim(),
       duration: durationLabel,
       tone,
       speakerMode,
+      format,
+      podcastHostA: format === "podcast" ? hostA.trim() || "Alex" : undefined,
+      podcastHostB: format === "podcast" ? hostB.trim() || "Jordan" : undefined,
       notes: notes.trim(),
       content: "",
       createdAt: now,
@@ -98,15 +130,38 @@ export default function CreateScriptPage() {
     // ScriptStudio's mount effect detects ?autosend=1 and fires the
     // brief once the agent socket opens. The brief mirrors
     // buildVideoScriptPrefill's shape so MODE 3 picks it up cleanly.
-    const briefLines = [
-      `Write a ${tone.toLowerCase()} ${speakerMode === "speaker" ? "on-camera speaker" : "voice-over"} Synthesia script.`,
-      `Video block id: ${scriptId}`,
-      `Topic: ${topic.trim()}.`,
-      `Audience: ${audience.trim()}.`,
-      `Target: ~${durationLabel}.`,
-    ];
-    if (notes.trim()) briefLines.push(`\nNotes: ${notes.trim()}`);
-    const brief = briefLines.join("\n");
+    let brief: string;
+    if (format === "podcast") {
+      // Track-PC: podcast brief routes the agent to its podcast
+      // dialogue path (MODE 3 will branch on `Podcast format` cue).
+      // We pass host names + duration explicitly so the agent doesn't
+      // guess them.
+      const hA = hostA.trim() || "Alex";
+      const hB = hostB.trim() || "Jordan";
+      const briefLines = [
+        `Write a ${tone.toLowerCase()} podcast script as a 2-host dialogue.`,
+        `Format: Podcast (NotebookLM-style — two hosts in conversation, NOT a Synthesia video).`,
+        `Video block id: ${scriptId}`,
+        `Topic: ${topic.trim()}.`,
+        `Audience: ${audience.trim()}.`,
+        `Target duration: ~${durationLabel}.`,
+        `Host A name: ${hA}`,
+        `Host B name: ${hB}`,
+        `Output format: alternating dialogue lines labeled "${hA.toUpperCase()}:" and "${hB.toUpperCase()}:" — one beat per line, conversational rhythm. NO scene markers, NO visual cues.`,
+      ];
+      if (notes.trim()) briefLines.push(`\nNotes: ${notes.trim()}`);
+      brief = briefLines.join("\n");
+    } else {
+      const briefLines = [
+        `Write a ${tone.toLowerCase()} ${speakerMode === "speaker" ? "on-camera speaker" : "voice-over"} Synthesia script.`,
+        `Video block id: ${scriptId}`,
+        `Topic: ${topic.trim()}.`,
+        `Audience: ${audience.trim()}.`,
+        `Target: ~${durationLabel}.`,
+      ];
+      if (notes.trim()) briefLines.push(`\nNotes: ${notes.trim()}`);
+      brief = briefLines.join("\n");
+    }
 
     navigate(
       `/scripts/${encodeURIComponent(scriptId)}?brief=${encodeURIComponent(brief)}&autosend=1`,
@@ -126,16 +181,68 @@ export default function CreateScriptPage() {
 
           <header className="section-header mb-12 animate-fade-up">
             <div>
-              <h2 className="section-title">Draft a Synthesia script.</h2>
+              <h2 className="section-title">
+                {format === "podcast" ? "Draft a podcast script." : "Draft a Synthesia script."}
+              </h2>
               <p className="section-sub">
-                Avatar-paced narration script. ~150 wpm. Studio Copilot writes
-                the SPOKEN / VISUAL scene structure; you refine in Script
-                Studio.
+                {format === "podcast"
+                  ? "2-host dialogue, NotebookLM-style — but fully editable. Studio Copilot writes the conversation; you refine in Script Studio. Future iteration adds TTS audio export."
+                  : "Avatar-paced narration script. ~150 wpm. Studio Copilot writes the SPOKEN / VISUAL scene structure; you refine in Script Studio."}
               </p>
             </div>
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-7 stagger-children">
+            {/* Track-PC: Format toggle is the FIRST decision the LD makes
+                — it changes which downstream fields apply (host names
+                appear for podcast; speaker/visual options apply only to
+                Synthesia). Visual treatment is two big cards rather than
+                a chip group so the choice reads as significant. */}
+            <FormField label="Format" required>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormat("synthesia");
+                    setDuration("90s");
+                  }}
+                  className={
+                    format === "synthesia"
+                      ? "form-format-card form-format-card-active"
+                      : "form-format-card"
+                  }
+                >
+                  <Mic size={22} strokeWidth={2} className="mb-2" />
+                  <div className="text-sm font-bold mb-0.5">Synthesia video</div>
+                  <div className="text-[11px] opacity-80 leading-snug">
+                    Single-presenter avatar script, SCENE / SPOKEN / VISUAL.
+                    30 sec – 3 min.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormat("podcast");
+                    setDuration("8min");
+                  }}
+                  className={
+                    format === "podcast"
+                      ? "form-format-card form-format-card-active"
+                      : "form-format-card"
+                  }
+                >
+                  <Headphones size={22} strokeWidth={2} className="mb-2" />
+                  <div className="text-sm font-bold mb-0.5 inline-flex items-center gap-1.5">
+                    Podcast
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-100 text-brand-700">New</span>
+                  </div>
+                  <div className="text-[11px] opacity-80 leading-snug">
+                    2-host dialogue, NotebookLM-style. Editable. 5-15 min.
+                  </div>
+                </button>
+              </div>
+            </FormField>
+
             <FormField label="Topic" required hint="What's the script about?">
               <input
                 type="text"
@@ -148,17 +255,64 @@ export default function CreateScriptPage() {
               />
             </FormField>
 
-            <FormField label="Audience" required hint="Who's watching?">
+            <FormField
+              label="Audience"
+              required
+              hint={format === "podcast" ? "Who's listening?" : "Who's watching?"}
+            >
               <input
                 type="text"
                 value={audience}
                 onChange={(e) => setAudience(e.target.value)}
-                placeholder="e.g. senior managers leading restructurings"
+                placeholder={
+                  format === "podcast"
+                    ? "e.g. consultants commuting / multitasking"
+                    : "e.g. senior managers leading restructurings"
+                }
                 className="form-input"
                 required
                 aria-invalid={!audienceValid && audience.length > 0}
               />
             </FormField>
+
+            {/* Track-PC: Host names — only relevant for podcast format.
+                Defaults Alex / Jordan are gender-neutral and work in
+                most contexts. LD can rename for character / brand. */}
+            {format === "podcast" && (
+              <FormField
+                label="Host names"
+                hint="Defaults are gender-neutral. Rename to fit the show."
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-1">
+                      Host A
+                    </div>
+                    <input
+                      type="text"
+                      value={hostA}
+                      onChange={(e) => setHostA(e.target.value)}
+                      placeholder="Alex"
+                      className="form-input"
+                      maxLength={40}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-1">
+                      Host B
+                    </div>
+                    <input
+                      type="text"
+                      value={hostB}
+                      onChange={(e) => setHostB(e.target.value)}
+                      placeholder="Jordan"
+                      className="form-input"
+                      maxLength={40}
+                    />
+                  </div>
+                </div>
+              </FormField>
+            )}
 
             <FormField
               label="Duration"
@@ -208,25 +362,30 @@ export default function CreateScriptPage() {
               </div>
             </FormField>
 
-            <FormField
-              label="Speaker mode"
-              hint="On-camera = avatar talking head with sparse visuals. Voice-over = narration over rich full-screen visuals."
-            >
-              <div className="flex flex-wrap gap-2">
-                {SPEAKER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setSpeakerMode(opt.value)}
-                    className={
-                      speakerMode === opt.value ? "form-chip form-chip-active" : "form-chip"
-                    }
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </FormField>
+            {/* Track-PC: Speaker mode applies only to Synthesia format —
+                podcasts have two hosts in dialogue, no on-camera/voice-
+                over distinction. Hidden when format=podcast. */}
+            {format === "synthesia" && (
+              <FormField
+                label="Speaker mode"
+                hint="On-camera = avatar talking head with sparse visuals. Voice-over = narration over rich full-screen visuals."
+              >
+                <div className="flex flex-wrap gap-2">
+                  {SPEAKER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSpeakerMode(opt.value)}
+                      className={
+                        speakerMode === opt.value ? "form-chip form-chip-active" : "form-chip"
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </FormField>
+            )}
 
             <FormField
               label="Source materials"

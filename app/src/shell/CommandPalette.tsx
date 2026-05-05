@@ -126,10 +126,18 @@ export function CommandPalette({ onShowWelcome, onShowHelp }: CommandPaletteProp
     });
     out.push({
       id: "new-script",
-      label: "Create new script",
+      label: "Create new Synthesia script",
       group: "Create",
       icon: Mic,
       run: () => navigate("/scripts/new"),
+    });
+    out.push({
+      id: "new-podcast",
+      label: "Create new podcast script",
+      group: "Create",
+      icon: Mic,
+      hint: "2-host editable dialogue",
+      run: () => navigate("/scripts/new?format=podcast"),
     });
     out.push({
       id: "new-kc",

@@ -30,8 +30,21 @@ export interface Script {
   tone: string;
   /** Avatar mode — picks the script voice + visual density. */
   speakerMode: "speaker" | "narration";
+  /** Track-PC (Podcast Creator): output format — "synthesia" produces
+   *  the existing SCENE / SPOKEN / VISUAL spec for a single-presenter
+   *  Synthesia video. "podcast" produces a 2-host dialogue (NotebookLM
+   *  style) suitable for an editable podcast script that can later be
+   *  voiced via TTS. Defaults to "synthesia" for backward compat —
+   *  scripts created before this field landed read as Synthesia. */
+  format?: "synthesia" | "podcast";
+  /** Track-PC: when format = "podcast", the LD can name the two hosts.
+   *  Defaults: "Alex" + "Jordan" — gender-neutral names that work in
+   *  most contexts. Used by the agent to label dialogue lines. */
+  podcastHostA?: string;
+  podcastHostB?: string;
   notes: string;
-  /** The agent-written SPOKEN / VISUAL scene text. Empty when the
+  /** The agent-written SPOKEN / VISUAL scene text (Synthesia format)
+   *  OR HOST_A / HOST_B dialogue (podcast format). Empty when the
    *  Script is freshly created and the agent hasn't run yet. */
   content: string;
   /** HH3 / JJ: themed cover image for the home Recent-scripts strip
