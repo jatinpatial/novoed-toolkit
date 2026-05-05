@@ -21,6 +21,7 @@ import { BTYPES, BDEFAULTS } from "../course/blockTypes";
 import { previewBlock, renderTextBlockBody } from "../course/previewBlock";
 import { renderInlineMd } from "../course/renderInlineMarkdown";
 import { exportLessonSCORM, exportCourseJSON, exportOutlineText } from "../course/exportLesson";
+import { exportMicrolearningHtml } from "../course/exportMicrolearning";
 import type { Block, BlockData, BlockItem, CaseStudy, Course, Lesson, Material, Module, Quiz, QuizQuestion } from "../course/types";
 import { deleteProject, getProject, listProjects, saveProject, subscribeProjects, uid, type Project } from "../store/projects";
 import { AgentProvider, useAgent, useRegisterAgentActions, type AgentActions } from "../agent/AgentContext";
@@ -959,6 +960,14 @@ function CourseCanvas({ course, setCourse, projectId, onClose }: CanvasProps) {
             toast(`Course download failed: ${(e as Error).message}`, false);
           }
         }}
+        onExportMicrolearning={() => {
+          // Track-MLE: extract all lessons → standalone swipeable card
+          // deck. Pure FE — uses lesson titles + first text block per
+          // lesson + first KC question (if present) as the card body.
+          // No agent call required.
+          exportMicrolearningHtml(course);
+          toast("Microlearning cards downloaded");
+        }}
         onClose={onClose}
         projectId={projectId}
       />
@@ -1165,7 +1174,7 @@ function CourseThemePicker({
 /* ═══════════════════════════════════════════════════════════════════════════
    TOP BAR
    ═══════════════════════════════════════════════════════════════════════════ */
-function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onThemeChange, onPreview, onExportScorm, onExportJson, onExportOutline, onExportCourseDocx, onClose, projectId }: any) {
+function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onThemeChange, onPreview, onExportScorm, onExportJson, onExportOutline, onExportCourseDocx, onExportMicrolearning, onClose, projectId }: any) {
   const [saved, setSaved] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -1289,6 +1298,20 @@ function CourseTopBar({ course, lesson, onTitleChange, onBrandChange, onThemeCha
                 <div>
                   <div className="font-semibold text-ink-900">Course as Word doc (.docx)</div>
                   <div className="text-[10px] text-ink-400">Full course — paste-ready for NovoEd / Rise</div>
+                </div>
+              </button>
+              {/* Track-MLE: 5th export — microlearning HTML. Standalone
+                  swipeable card deck for mobile-first review. Each
+                  card is one lesson distilled to title + 1-2 sentence
+                  takeaway + retrieval prompt. */}
+              <button onClick={() => { setMenuOpen(false); onExportMicrolearning(); }} className="w-full text-left px-3 py-2 text-xs hover:bg-ink-50 flex items-center gap-2">
+                <Sparkles size={13} className="text-brand-600" />
+                <div>
+                  <div className="font-semibold text-ink-900 flex items-center gap-1.5">
+                    Microlearning cards (.html)
+                    <span className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-brand-100 text-brand-700">New</span>
+                  </div>
+                  <div className="text-[10px] text-ink-400">Swipeable mobile-first cards from your lessons</div>
                 </div>
               </button>
             </div>
