@@ -1,9 +1,13 @@
+import logging
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+_log = logging.getLogger(__name__)
 
 GIT_BASH_PATH = os.getenv("CLAUDE_CODE_GIT_BASH_PATH")
 if GIT_BASH_PATH:
@@ -15,8 +19,30 @@ if GIT_BASH_PATH:
 # inherited from a Claude-Code-spawned terminal, etc.), the SDK would
 # silently prefer it and fail with 401 when the key is stale. Drop it
 # here so the auth path is deterministic regardless of how the backend
-# was launched.
-os.environ.pop("ANTHROPIC_API_KEY", None)
+# was launched. We log when one was actually present so an LD who
+# expected API-key auth doesn't waste time hunting for why their key
+# isn't being read — the subscription path is intentional.
+if "ANTHROPIC_API_KEY" in os.environ:
+    _log.info(
+        "Stripping inherited ANTHROPIC_API_KEY — backend always uses "
+        "Claude CLI subscription auth. (Architectural commitment: no "
+        "API key UI on the LD-facing install.)",
+    )
+    os.environ.pop("ANTHROPIC_API_KEY", None)
+
+# Pre-flight: warn early if the claude CLI isn't on PATH. The SDK will
+# fail later with a less clear message ("subprocess could not spawn")
+# once a chat turn fires; catching it at startup gives the LD a clean
+# pointer to install.bat / install.sh while their backend window is
+# still empty and easy to read.
+if shutil.which("claude") is None:
+    _log.warning(
+        "claude CLI not found on PATH. The agent backend authenticates "
+        "by shelling out to it; without it, every chat turn will fail. "
+        "Run install.bat (Windows) or install.sh (macOS) — step [3/4] "
+        "installs '@anthropic-ai/claude-code' globally, then run "
+        "'claude' once to log in.",
+    )
 
 # CORS allowlist for the FastAPI HTTP routes (/health, /parse,
 # /export/*). The /ws WebSocket endpoint isn't subject to CORS at the
